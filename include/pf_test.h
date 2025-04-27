@@ -55,8 +55,8 @@
 #ifndef POLYFILL_TEST
 #define POLYFILL_TEST
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 
 typedef int (*pf_test_fn)(int seed, int i);
@@ -67,46 +67,54 @@ typedef struct pf_test {
 } pf_test;
 
 #ifndef PF_TEST_NO_COLOR
-#define PF_TEST_TODO  "\x1b[33mTODO\x1b[0m"
-#define PF_TEST_OK    "\x1b[32m OK \x1b[0m"
-#define PF_TEST_FAIL  "\x1b[31mFAIL\x1b[0m"
+    #define PF_TEST_TODO "\x1b[33mTODO\x1b[0m"
+    #define PF_TEST_OK "\x1b[32m OK \x1b[0m"
+    #define PF_TEST_FAIL "\x1b[31mFAIL\x1b[0m"
 #else
-#define PF_TEST_TODO  "TODO"
-#define PF_TEST_OK    " OK "
-#define PF_TEST_FAIL  "FAIL"
+    #define PF_TEST_TODO "TODO"
+    #define PF_TEST_OK " OK "
+    #define PF_TEST_FAIL "FAIL"
 #endif
+
+#include <signal.h>
 
 #if !defined(PF_TEST_NO_FORK) && defined(__unix__)
     #include <sys/wait.h>
     #include <unistd.h>
 #else
-    #include <signal.h>
     #include <setjmp.h>
-    static volatile sig_atomic_t pf_test_signal;
-    static jmp_buf pf_test_jmp;
-    static void pf_test_signal_handler(int signal) {
-        pf_test_signal = signal;
-        longjmp(pf_test_jmp, 1);
-    }
+static volatile sig_atomic_t pf_test_signal;
+static jmp_buf pf_test_jmp;
+static void pf_test_signal_handler(int signal) {
+    pf_test_signal = signal;
+    longjmp(pf_test_jmp, 1);
+}
 
-    static void pf_test_catch_signals(void) {
-        signal(SIGSEGV, &pf_test_signal_handler);
-        signal(SIGINT, &pf_test_signal_handler);
-        signal(SIGILL, &pf_test_signal_handler);
-        signal(SIGABRT, &pf_test_signal_handler);
-        signal(SIGFPE, &pf_test_signal_handler);
-    }
+static void pf_test_catch_signals(void) {
+    signal(SIGSEGV, &pf_test_signal_handler);
+    signal(SIGINT, &pf_test_signal_handler);
+    signal(SIGILL, &pf_test_signal_handler);
+    signal(SIGABRT, &pf_test_signal_handler);
+    signal(SIGFPE, &pf_test_signal_handler);
+}
 #endif
 
 static const char *pf_test_signal_format(int signal) {
     switch (signal) {
-        case SIGTERM: return "\tSignal %d: Termination signal in %s!\n";
-        case SIGSEGV: return "\tSignal %d: Segmentation fault occured in %s!\n";
-        case SIGINT:  return "\tSignal %d: Interrupt occured in %s!\n";
-        case SIGILL:  return "\tSignal %d: Illegal instruction in %s!\n";
-        case SIGABRT: return "\tSignal %d: Aborted in %s!\n";
-        case SIGFPE:  return "\tSignal %d: Arithmetic exception in %s!\n";
-        default:      return "\tSignal %d: Unknown signal appeared in %s!\n";
+    case SIGTERM:
+        return "\tSignal %d: Termination signal in %s!\n";
+    case SIGSEGV:
+        return "\tSignal %d: Segmentation fault occured in %s!\n";
+    case SIGINT:
+        return "\tSignal %d: Interrupt occured in %s!\n";
+    case SIGILL:
+        return "\tSignal %d: Illegal instruction in %s!\n";
+    case SIGABRT:
+        return "\tSignal %d: Aborted in %s!\n";
+    case SIGFPE:
+        return "\tSignal %d: Arithmetic exception in %s!\n";
+    default:
+        return "\tSignal %d: Unknown signal appeared in %s!\n";
     }
 }
 
@@ -132,7 +140,12 @@ static int pf_test_exec(const pf_test *test, int seed, unsigned int i) {
 
     if (testPid == newPid && WIFEXITED(status)) {
         if (WEXITSTATUS(status) != EXIT_SUCCESS) {
-            fprintf(stderr, "\tTest %s exited with %d!", test->name, WEXITSTATUS(status));
+            fprintf(
+                stderr,
+                "\tTest %s exited with %d!",
+                test->name,
+                WEXITSTATUS(status)
+            );
             return -1;
         }
     } else {
@@ -202,8 +215,13 @@ static inline int pf_suite_run(const pf_test *tests, int seed) {
 
     int count = passed + skipped + failed;
     fprintf(
-        stdout, "%u of %u (%u) tests passed, %u skipped. (seed: %#x)\n",
-        passed, count, (passed * 100) / count, skipped, seed
+        stdout,
+        "%u of %u (%u%%) tests passed, %u skipped. (seed: %#x)\n",
+        passed,
+        count,
+        (passed * 100) / count,
+        skipped,
+        seed
     );
     return failed > 0 ? -1 : 0;
 }
@@ -227,8 +245,13 @@ static inline int pf_suite_run_all(const pf_test **suites, int seed) {
 
     int count = passed + skipped + failed;
     fprintf(
-        stdout, "%u of %u (%u%%) tests passed, %u skipped. (seed: %#x)\n",
-        passed, count, (passed * 100) / count, skipped, seed
+        stdout,
+        "%u of %u (%u%%) tests passed, %u skipped. (seed: %#x)\n",
+        passed,
+        count,
+        (passed * 100) / count,
+        skipped,
+        seed
     );
     return failed > 0 ? -1 : 0;
 }
