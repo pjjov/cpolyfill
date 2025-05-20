@@ -11,9 +11,9 @@
     - pf_check_type, pf_check_const
     - PF_ALIGN_PAD, PF_ALIGN_DOWN, PF_ALIGN_UP
 
-    If a feature is missing 'PF_NO_*feature*' will be defined and a warning
-    will be emited. If you don't want warnings you can define 'PF_NO_WARN'
-    or define 'PF_NO_*feature*' to disable missing feature.
+    If a feature is missing 'PF_NO_*feature*' will be defined and a
+    warning can be emitted (by defining 'PF_WARN'). You can also define
+    'PF_NO_*feature*' to disable the missing feature.
 
     SPDX-FileCopyrightText: 2025 Predrag Jovanović
     SPDX-License-Identifier: Apache-2.0
@@ -70,7 +70,7 @@
     #elif defined(__alignof__)
         #define alignof __alignof__
     #else
-        #ifndef PF_NO_WARN
+        #ifdef PF_WARN
             #warning "Polyfill for 'alignof' is not available."
         #endif
         #define PF_NO_ALIGNOF
@@ -87,7 +87,7 @@
         /* TODO: fix passing a type */
         #define alignas(...) __attribute__((aligned(__VA_ARGS__)))
     #else
-        #ifndef PF_NO_WARN
+        #ifdef PF_WARN
             #warning "Polyfill for 'alignas' is not available."
         #endif
         #define PF_NO_ALIGNAS
@@ -111,7 +111,7 @@ typedef pf_max_align_t max_align_t;
         || defined(__chibicc__)
         #define typeof(expr) __typeof__(expr)
     #else
-        #ifndef PF_NO_WARN
+        #ifdef PF_WARN
             #warning "Polyfill for 'typeof' is not available."
         #endif
         #define PF_NO_TYPEOF
@@ -123,7 +123,7 @@ typedef pf_max_align_t max_align_t;
     #if defined(__typeof_unqual__)
         #define typeof_unqual(expr) __typeof_unqual__(expr)
     #else
-        #ifndef PF_NO_WARN
+        #ifdef PF_WARN
             #warning "Polyfill for 'typeof_unqual' is not available."
         #endif
         #define PF_NO_TYPEOF_UNQUAL
