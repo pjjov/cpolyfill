@@ -62,8 +62,8 @@
     #endif
 #endif
 
-#if !defined(PF_NO_ALIGNOF) && !defined(alignof) && \
-    !defined(__alignof_is_defined) && __STDC_VERSION__ < 202311L
+#if !defined(PF_NO_ALIGNOF) && !defined(alignof)                    \
+    && !defined(__alignof_is_defined) && __STDC_VERSION__ < 202311L
 
     #if __STDC_VERSION__ >= 201112L
         #define alignof _Alignof
@@ -74,11 +74,12 @@
             #warning "Polyfill for 'alignof' is not available."
         #endif
         #define PF_NO_ALIGNOF
+        #define alignof sizeof
     #endif
 #endif
 
-#if !defined(PF_NO_ALIGNAS) && !defined(alignas) && \
-    !defined(__alignas_is_defined) && __STDC_VERSION__ < 202311L
+#if !defined(PF_NO_ALIGNAS) && !defined(alignas)                    \
+    && !defined(__alignas_is_defined) && __STDC_VERSION__ < 202311L
 
     #if __STDC_VERSION__ >= 201112L
         #define alignas _Alignas
@@ -93,11 +94,21 @@
     #endif
 #endif
 
+#ifdef __BIGGEST_ALIGNMENT__
+typedef char pf_max_align_t alignas(__BIGGEST_ALIGNMENT__);
+#else
+typedef long double pf_max_align_t;
+#endif
+
+#if __STDC_VERSION__ < 201112L
+typedef pf_max_align_t max_align_t;
+#endif
+
 #if !defined(PF_NO_TYPEOF) && !defined(typeof) && __STDC_VERSION__ < 202311L
     #if defined(__cplusplus) && (__cpp_decltype >= 200707L || _MSC_VER >= 1600)
         #define typeof(expr) decltype(expr)
-    #elif defined(__MCST__) || defined(__GNUC__) \
-        || defined(__clang__) || defined(__chibicc__)
+    #elif defined(__MCST__) || defined(__GNUC__) || defined(__clang__) \
+        || defined(__chibicc__)
         #define typeof(expr) __typeof__(expr)
     #else
         #ifndef PF_NO_WARN
@@ -107,7 +118,8 @@
     #endif
 #endif
 
-#if !defined(PF_NO_TYPEOF_UNQUAL) && !defined(typeof_unqual) && __STDC_VERSION__ < 202311L
+#if !defined(PF_NO_TYPEOF_UNQUAL) && !defined(typeof_unqual) \
+    && __STDC_VERSION__ < 202311L
     #if defined(__typeof_unqual__)
         #define typeof_unqual(expr) __typeof_unqual__(expr)
     #else
@@ -119,77 +131,87 @@
 #endif
 
 #if !defined(PF_NO_OFFSETOF) && !defined(offsetof) && !defined(__STDC__)
-    #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
+    #define offsetof(TYPE, MEMBER) ((size_t)&((TYPE *)0)->MEMBER)
 #endif
 
 #if !defined(container_of) && !defined(PF_NO_CONTAINEROF)
     #ifdef PF_HAS_STMT_EXPR
-        #define pf_container_of(ptr, type, member) ({               \
-            const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
-            (type *)( (char *)__mptr - offsetof(type,member) );})
+        #define pf_container_of(ptr, type, member)                 \
+            ({                                                     \
+                const typeof(((type *)0)->member) *__mptr = (ptr); \
+                (type *)((char *)__mptr - offsetof(type, member)); \
+            })
     #else
-        #define pf_container_of(ptr, type, member) ( \
-            (type *)((char *)(1 ? (ptr) : &((type *)0)->member) - offsetof(type, member)) \
-        )
+        #define pf_container_of(ptr, type, member)               \
+            ((type *)((char *)(1 ? (ptr) : &((type *)0)->member) \
+                      - offsetof(type, member)))
     #endif
 #endif
 
 #if !defined(PF_NO_IS_CONST) && !defined(pf_is_const)
     #if pf_has_builtin(__builtin_types_compatible_p)
-        #define pf_is_const(type) __builtin_types_compatible_p(const typeof(type) *, typeof(type) *)
+        #define pf_is_const(type)                                              \
+            __builtin_types_compatible_p(const typeof(type) *, typeof(type) *)
     #else
         #define PF_NO_IS_CONST
     #endif
 #endif
 
 #if pf_has_builtin(__builtin_choose_expr) && !defined(PF_NO_IS_CONST)
-    #define pf_if_const(type, exp1, exp2) \
+    #define pf_if_const(type, exp1, exp2)                        \
         __builtin_choose_expr(pf_is_const(type), (exp1), (exp2))
-    #define pf_if_not_const(type, exp1, exp2) \
+    #define pf_if_not_const(type, exp1, exp2)                     \
         __builtin_choose_expr(!pf_is_const(type), (exp1), (exp2))
 #else
-    #define pf_if_const(type, exp1, exp2)     (exp1)
+    #define pf_if_const(type, exp1, exp2) (exp1)
     #define pf_if_not_const(type, exp1, exp2) (exp2)
 #endif
 
 #if !defined(PF_NO_IS_TYPE) && !defined(pf_is_type)
     #if pf_has_builtin(__builtin_types_compatible_p)
-        #define pf_is_type(type, expr) __builtin_types_compatible_p(type *, typeof(expr) *)
+        #define pf_is_type(type, expr)                           \
+            __builtin_types_compatible_p(type *, typeof(expr) *)
     #else
         #define PF_NO_IS_TYPE
     #endif
 #endif
 
 #if pf_has_builtin(__builtin_choose_expr) && !defined(PF_NO_IS_TYPE)
-    #define pf_if_type(type, exp1, exp2) \
+    #define pf_if_type(type, exp1, exp2)                        \
         __builtin_choose_expr(pf_is_type(type), (exp1), (exp2))
-    #define pf_if_not_type(type, exp1, exp2) \
+    #define pf_if_not_type(type, exp1, exp2)                     \
         __builtin_choose_expr(!pf_is_type(type), (exp1), (exp2))
 #else
-    #define pf_if_type(type, exp1, exp2)     (exp1)
+    #define pf_if_type(type, exp1, exp2) (exp1)
     #define pf_if_not_type(type, exp1, exp2) (exp2)
 #endif
 
 #if !defined(pf_check_type) && !defined(PF_NO_CHECK_TYPE)
     #ifdef PF_HAS_STMT_EXPR
-        #if !defined(PF_NO_IS_TYPE) && (defined(_Static_assert) || __STDC_VERSION__ >= 201112L)
-            #define pf_check_type(type, expr) ({ \
-                _Static_assert(pf_is_type(type, (expr)), \
-                    "Incompatible type passed to 'pf_check_type': " \
-                    "expected '" #expr "' to be of type '" #type "'" \
-                ); (expr); \
-            })
+        #if !defined(PF_NO_IS_TYPE)                                     \
+            && (defined(_Static_assert) || __STDC_VERSION__ >= 201112L)
+            #define pf_check_type(type, expr)                            \
+                ({                                                       \
+                    _Static_assert(                                      \
+                        pf_is_type(type, (expr)),                        \
+                        "Incompatible type passed to 'pf_check_type': "  \
+                        "expected '" #expr "' to be of type '" #type "'" \
+                    );                                                   \
+                    (expr);                                              \
+                })
         #elif !defined(PF_NO_IS_TYPE) && pf_has_builtin(__builtin_choose_expr)
             #define pf_check_type(type, expr) \
-                __builtin_choose_expr( \
-                    pf_is_type(type, (expr)), \
-                    (expr), (void)0 \
-                )
+                __builtin_choose_expr(pf_is_type(type, (expr)), (expr), (void)0)
         #else
-            #define pf_check_type(type, expr) ({ type pf__tmp = (expr); pf__tmp; })
+            #define pf_check_type(type, expr) \
+                ({                            \
+                    type pf__tmp = (expr);    \
+                    pf__tmp;                  \
+                })
         #endif
     #else
-        #define pf_check_type(type, expr) (1 ? (expr) : ((struct { type pf__tmp; } *)0)->pf__tmp)
+        #define pf_check_type(type, expr)                           \
+            (1 ? (expr) : ((struct { type pf__tmp; } *)0)->pf__tmp)
     #endif
 #endif
 
