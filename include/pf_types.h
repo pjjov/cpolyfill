@@ -76,6 +76,10 @@
         #define PF_NO_ALIGNOF
         #define alignof sizeof
     #endif
+
+    #if __STDC_VERSION__ < 201112L
+        #define _Alignof alignof
+    #endif
 #endif
 
 #if !defined(PF_NO_ALIGNAS) && !defined(alignas)                    \
@@ -106,10 +110,10 @@ typedef pf_max_align_t max_align_t;
 
 #if !defined(PF_NO_TYPEOF) && !defined(typeof) && __STDC_VERSION__ < 202311L
     #if defined(__cplusplus) && (__cpp_decltype >= 200707L || _MSC_VER >= 1600)
-        #define typeof(expr) decltype(expr)
+        #define typeof decltype
     #elif defined(__MCST__) || defined(__GNUC__) || defined(__clang__) \
         || defined(__chibicc__)
-        #define typeof(expr) __typeof__(expr)
+        #define typeof __typeof__
     #else
         #ifdef PF_WARN
             #warning "Polyfill for 'typeof' is not available."
