@@ -21,6 +21,7 @@
 #include "../include/pf_overflow.h"
 #include "../include/pf_test.h"
 #include <limits.h>
+#include <stdint.h>
 
 #ifdef __GNUC__
     #pragma GCC diagnostic ignored "-Woverflow"
@@ -110,30 +111,73 @@
 TEST_OF_SIGNED(test_overflow_int, int, , INT_MIN, INT_MAX)
 TEST_OF_SIGNED(test_overflow_long, long, l, LONG_MIN, LONG_MAX)
 TEST_OF_SIGNED(test_overflow_llong, long long, ll, LLONG_MIN, LLONG_MAX)
+TEST_OF_SIGNED(test_overflow_int32, int32_t, 32, INT32_MIN, INT32_MAX)
+TEST_OF_SIGNED(test_overflow_int64, int64_t, 64, INT64_MIN, INT64_MAX)
+TEST_OF_SIGNED(test_overflow_intmax, intmax_t, max, INTMAX_MIN, INTMAX_MAX)
+TEST_OF_SIGNED(test_overflow_intptr, intptr_t, ptr, INTPTR_MIN, INTPTR_MAX)
+TEST_OF_SIGNED(test_overflow_ptrdiff, ptrdiff_t, diff, PTRDIFF_MIN, PTRDIFF_MAX)
+
 TEST_OF_UNSIGNED(test_overflow_uint, unsigned int, , UINT_MAX)
 TEST_OF_UNSIGNED(test_overflow_ulong, unsigned long, l, ULONG_MAX)
 TEST_OF_UNSIGNED(test_overflow_ullong, unsigned long long, ll, ULLONG_MAX)
+TEST_OF_UNSIGNED(test_overflow_uint32, uint32_t, 32, UINT32_MAX)
+TEST_OF_UNSIGNED(test_overflow_uint64, uint64_t, 64, UINT64_MAX)
+TEST_OF_UNSIGNED(test_overflow_uintmax, uintmax_t, max, UINTMAX_MAX)
+TEST_OF_UNSIGNED(test_overflow_uintptr, uintptr_t, ptr, UINTPTR_MAX)
+TEST_OF_UNSIGNED(test_overflow_size, size_t, size, SIZE_MAX)
 
 TEST_SA_SIGNED(test_saturated_int, , INT_MIN, INT_MAX)
 TEST_SA_SIGNED(test_saturated_long, l, LONG_MIN, LONG_MAX)
 TEST_SA_SIGNED(test_saturated_llong, ll, LLONG_MIN, LLONG_MAX)
+TEST_SA_SIGNED(test_saturated_int32, 32, INT32_MIN, INT32_MAX)
+TEST_SA_SIGNED(test_saturated_int64, 64, INT64_MIN, INT64_MAX)
+TEST_SA_SIGNED(test_saturated_intmax, max, INTMAX_MIN, INTMAX_MAX)
+TEST_SA_SIGNED(test_saturated_intptr, ptr, INTPTR_MIN, INTPTR_MAX)
+TEST_SA_SIGNED(test_saturated_ptrdiff, diff, PTRDIFF_MIN, PTRDIFF_MAX)
+
 TEST_SA_UNSIGNED(test_saturated_uint, , UINT_MAX)
 TEST_SA_UNSIGNED(test_saturated_ulong, l, ULONG_MAX)
 TEST_SA_UNSIGNED(test_saturated_ullong, ll, ULLONG_MAX)
+TEST_SA_UNSIGNED(test_saturated_uint32, 32, UINT32_MAX)
+TEST_SA_UNSIGNED(test_saturated_uint64, 64, UINT64_MAX)
+TEST_SA_UNSIGNED(test_saturated_uintmax, max, UINTMAX_MAX)
+TEST_SA_UNSIGNED(test_saturated_uintptr, ptr, UINTPTR_MAX)
+TEST_SA_UNSIGNED(test_saturated_size, size, SIZE_MAX)
 
 static pf_test suite_overflow[] = {
     { &test_overflow_int, "/overflow/int", 1 },
     { &test_overflow_long, "/overflow/long", 1 },
     { &test_overflow_llong, "/overflow/llong", 1 },
+    { &test_overflow_int32, "/overflow/int32", 1 },
+    { &test_overflow_int64, "/overflow/int64", 1 },
+    { &test_overflow_intmax, "/overflow/intmax", 1 },
+    { &test_overflow_intptr, "/overflow/intptr", 1 },
+    { &test_overflow_ptrdiff, "/overflow/ptrdiff", 1 },
     { &test_overflow_uint, "/overflow/uint", 1 },
     { &test_overflow_ulong, "/overflow/ulong", 1 },
     { &test_overflow_ullong, "/overflow/ullong", 1 },
+    { &test_overflow_uint32, "/overflow/uint32", 1 },
+    { &test_overflow_uint64, "/overflow/uint64", 1 },
+    { &test_overflow_uintmax, "/overflow/uintmax", 1 },
+    { &test_overflow_uintptr, "/overflow/uintptr", 1 },
+    { &test_overflow_size, "/overflow/size_t", 1 },
+
     { &test_saturated_int, "/saturated/int", 1 },
     { &test_saturated_long, "/saturated/long", 1 },
     { &test_saturated_llong, "/saturated/llong", 1 },
+    { &test_saturated_int32, "/saturated/int32", 1 },
+    { &test_saturated_int64, "/saturated/int64", 1 },
+    { &test_saturated_intmax, "/saturated/intmax", 1 },
+    { &test_saturated_intptr, "/saturated/intptr", 1 },
+    { &test_saturated_ptrdiff, "/saturated/ptrdiff", 1 },
     { &test_saturated_uint, "/saturated/uint", 1 },
     { &test_saturated_ulong, "/saturated/ulong", 1 },
     { &test_saturated_ullong, "/saturated/ullong", 1 },
+    { &test_saturated_uint32, "/saturated/uint32", 1 },
+    { &test_saturated_uint64, "/saturated/uint64", 1 },
+    { &test_saturated_uintmax, "/saturated/uintmax", 1 },
+    { &test_saturated_uintptr, "/saturated/uintptr", 1 },
+    { &test_saturated_size, "/saturated/size_t", 1 },
     { 0 },
 };
 
