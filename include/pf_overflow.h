@@ -17,7 +17,7 @@
     pf_saturated_*  Performs saturated arithmetic, i.e. overflow returns
                     the maximum value and underflow returns the minimum.
 
-    C23's checked arithmetic and generic builtins are currently not supported.
+    Generic builtins are currently not supported.
     The fallback algorithm is not optimal and should be improved upon.
 
     Resources used:
@@ -78,7 +78,11 @@ typedef int pf_bool;
 #define PF_IMPL_SA_sub (!(a < -1 && b > 0))
 #define PF_IMPL_SA_mul ((a > 0 && b > 0) || (a < 0 && b < 0))
 
-#if defined(_MSC_VER)
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+    #include <stdckdint.h>
+    #define PF_IMPL_OF(m_op, m_ch, m_gcc, m_msvc, m_type, m_min, m_max) \
+        return ckd_##m_op((m_type *)out, (m_type)a, (m_type)b)
+#elif defined(_MSC_VER)
     #include <intsafe.h>
     #define PF_IMPL_OF(m_op, m_ch, m_gcc, m_msvc, m_type, m_min, m_max) \
         return m_msvc(a, b, out)
