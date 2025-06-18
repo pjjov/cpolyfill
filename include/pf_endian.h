@@ -92,10 +92,10 @@ static const union {
     char little;
 } pf__endian = { 1 };
 
-#define PF_BIG_ENDIAN (pf__endian.little)
-#define PF_LITTLE_ENDIAN (!pf__endian.little)
+#define PF_BIG_ENDIAN (!pf__endian.little)
+#define PF_LITTLE_ENDIAN (pf__endian.little)
 
-#if __has_include(<endian.h>) || defined(__GNUC__)
+#if __has_include(<endian.h>)
     #include <endian.h>
 #else
 
