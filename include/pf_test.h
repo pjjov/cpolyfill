@@ -5,15 +5,16 @@
     The library is barebones on purpose, expecting you to bring
     your own utilities, like custom assertions with `pf_assert.h`.
 
-    On Unix-like systems forking is used if possible, resorting to
-    signal catching if not available (or if PF_TEST_NO_FORK is defined).
+    For POSIX systems tests are run with `fork` if possible.
+    You can define PF_TEST_NO_FORK to disable forking.
 
     Tests are run multiple times, depending on their `count`. If count
     is zero or test's callback is NULL, the test is marked as TODO.
     Current repetion index is passed to test functions, alongside a
     seed for randomization, which can be supplied by the user.
 
-    If you want to see `pf_test.h` in action, take a look at our tests.
+    If you want to see `pf_test.h` in action, you can take a look
+    in the `test` directory of the 'cpolyfill' repository.
 
     The API reference:
     ```c
@@ -25,14 +26,13 @@
     } pf_test;
 
     int pf_test_run(const pf_test *test, int seed);
-    int pf_suite_run(const pf_test *tests, int seed);
-    int pf_suite_run_all(const pf_test **suites, int seed);
+    int pf_suite_run(const pf_test *tests, int seed, FILE *out);
+    int pf_suite_run_all(const pf_test **suites, int seed, FILE *out);
     ```
 
     You can define following configuration macros:
     - PF_TEST_NO_COLOR
     - PF_TEST_NO_FORK
-    - PF_TEST_EXIT_ON_FAIL
 
     SPDX-FileCopyrightText: 2025 Predrag Jovanović
     SPDX-License-Identifier: Apache-2.0
@@ -55,6 +55,7 @@
 #ifndef POLYFILL_TEST
 #define POLYFILL_TEST
 
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -76,184 +77,145 @@ typedef struct pf_test {
     #define PF_TEST_FAIL "FAIL"
 #endif
 
-#include <signal.h>
+#ifndef __unix__
+    #define PF_TEST_NO_FORK
+#endif
 
-#if !defined(PF_TEST_NO_FORK) && defined(__unix__)
+#ifndef PF_TEST_NO_FORK
     #include <sys/wait.h>
     #include <unistd.h>
-#else
-    #include <setjmp.h>
-static volatile sig_atomic_t pf_test_signal;
-static jmp_buf pf_test_jmp;
-static void pf_test_signal_handler(int signal) {
-    pf_test_signal = signal;
-    longjmp(pf_test_jmp, 1);
-}
-
-static void pf_test_catch_signals(void) {
-    signal(SIGSEGV, &pf_test_signal_handler);
-    signal(SIGINT, &pf_test_signal_handler);
-    signal(SIGILL, &pf_test_signal_handler);
-    signal(SIGABRT, &pf_test_signal_handler);
-    signal(SIGFPE, &pf_test_signal_handler);
-}
 #endif
 
-static const char *pf_test_signal_format(int signal) {
+static const char *pf__test_message(int signal) {
     switch (signal) {
     case SIGTERM:
-        return "\tSignal %d: Termination signal in %s!\n";
+        return "Signal %d: Termination signal in %s!";
     case SIGSEGV:
-        return "\tSignal %d: Segmentation fault occured in %s!\n";
+        return "Signal %d: Segmentation fault occured in %s!";
     case SIGINT:
-        return "\tSignal %d: Interrupt occured in %s!\n";
+        return "Signal %d: Interrupt occured in %s!";
     case SIGILL:
-        return "\tSignal %d: Illegal instruction in %s!\n";
+        return "Signal %d: Illegal instruction in %s!";
     case SIGABRT:
-        return "\tSignal %d: Aborted in %s!\n";
+        return "Signal %d: Aborted in %s!\n";
     case SIGFPE:
-        return "\tSignal %d: Arithmetic exception in %s!\n";
+        return "Signal %d: Arithmetic exception in %s!";
+    case -1:
+        return "Signal %d: Test %s exited abnormally!";
     default:
-        return "\tSignal %d: Unknown signal appeared in %s!\n";
+        return "Signal %d: Unknown signal appeared in %s!";
     }
 }
 
-static void pf_test_log(const char *name, const char *level, double elapsed) {
-    fprintf(stdout, "%-24s [ %s ] [ %.6fs ]\n", name, level, elapsed);
-}
-
-static void pf_test_log_signal(const char *name, int signal) {
-    fprintf(stderr, pf_test_signal_format(signal), signal, name);
-}
-
-static int pf_test_exec(const pf_test *test, int seed, unsigned int i) {
-#if !defined(PF_TEST_NO_FORK) && defined(__unix__)
+static int pf__test_exec(const pf_test *test, int seed, unsigned int i) {
+#ifndef PF_TEST_NO_FORK
     pid_t testPid = fork();
+
     if (testPid == 0)
         exit(test->fn(seed, i));
-    else if (testPid == -1)
-        return test->fn(seed, i);
 
-    /* parent process */
-    int status;
-    pid_t newPid = waitpid(testPid, &status, 0);
+    if (testPid != -1) {
+        /* parent process */
+        int status;
+        pid_t newPid = waitpid(testPid, &status, 0);
 
-    if (testPid == newPid && WIFEXITED(status)) {
-        if (WEXITSTATUS(status) != EXIT_SUCCESS) {
-            fprintf(
-                stderr,
-                "\tTest %s exited with %d!",
-                test->name,
-                WEXITSTATUS(status)
-            );
-            return -1;
-        }
-    } else {
-        if (WIFSIGNALED(status))
-            pf_test_log_signal(test->name, WTERMSIG(status));
+        if (testPid == newPid && WIFEXITED(status))
+            return WEXITSTATUS(status) != EXIT_SUCCESS ? -1 : 0;
+        else if (WIFSIGNALED(status))
+            return WTERMSIG(status);
         else if (WIFSTOPPED(status))
-            pf_test_log_signal(test->name, WSTOPSIG(status));
-        return -1;
-    }
+            return WSTOPSIG(status);
 
-    return 0;
-#else
-    if (setjmp(pf_test_jmp)) {
-        pf_test_log_signal(test->name, pf_test_signal);
         return -1;
     }
+#endif
 
     return test->fn(seed, i);
-#endif
 }
 
 static inline int pf_test_run(const pf_test *test, int seed) {
-    if (!test || !test->name)
+    if (!test || !test->name || !test->fn)
         return -1;
-
-    if (!test->fn || test->count == 0) {
-        pf_test_log(test->name, PF_TEST_TODO, 0);
-        return -1;
-    }
-
-#if defined(PF_TEST_NO_FORK) || !defined(__unix__)
-    pf_test_catch_signals();
-#endif
 
     if (seed == 0)
         seed = time(NULL);
 
-    long startTime = clock();
-    int result = 0;
-    for (unsigned int i = 0; i < test->count && !result; i++)
-        result = pf_test_exec(test, seed, i);
+    int i, result = 0;
+    for (i = 0; i < test->count && !result; i++)
+        result = pf__test_exec(test, seed, i);
 
-    double elapsed = (double)(clock() - startTime) / CLOCKS_PER_SEC;
-    pf_test_log(test->name, result ? PF_TEST_FAIL : PF_TEST_OK, elapsed);
-
-#ifdef PF_TEST_EXIT_ON_FAIL
+#ifdef PF_TEST_NO_FORK
     if (result)
         exit(result);
 #endif
     return result;
 }
 
-static inline int pf_suite_run(const pf_test *tests, int seed) {
+static inline int pf_suite_run(const pf_test *tests, int seed, FILE *out) {
     if (!tests)
         return 0;
 
-    int passed = 0, skipped = 0, failed = 0;
-    for (int i = 0; tests[i].name; i++) {
-        if (!tests[i].fn || tests[i].count == 0)
-            skipped++;
+    if (!out)
+        out = stdout;
 
-        if (pf_test_run(&tests[i], seed))
-            failed++;
-        else
-            passed++;
+    int i, skip = 0, fail = 0;
+    for (i = 0; tests[i].name; i++) {
+        if (!tests[i].fn || tests[i].count == 0) {
+            fprintf(stdout, "%-24s [ %s ]\n", tests[i].name, PF_TEST_TODO);
+            skip++;
+            continue;
+        }
+
+        double elapsed, start = clock();
+        int result = pf_test_run(&tests[i], seed);
+        elapsed = ((double)clock() - start) / CLOCKS_PER_SEC;
+
+        fprintf(
+            out,
+            "%-24s [ %s ] [ %.6fs ]",
+            tests[i].name,
+            result ? PF_TEST_FAIL : PF_TEST_OK,
+            elapsed
+        );
+
+        if (result) {
+            fprintf(out, pf__test_message(result), result, tests[i].name);
+            fail++;
+        }
+
+        fputc('\n', out);
     }
 
-    int count = passed + skipped + failed;
     fprintf(
-        stdout,
+        out,
         "%u of %u (%u%%) tests passed, %u skipped. (seed: %#x)\n",
-        passed,
-        count,
-        (passed * 100) / count,
-        skipped,
+        i - fail,
+        i,
+        (i - fail) * 100 / i,
+        skip,
         seed
     );
-    return failed > 0 ? -1 : 0;
+
+    return fail;
 }
 
-static inline int pf_suite_run_all(const pf_test **suites, int seed) {
+static inline int pf_suite_run_all(
+    const pf_test **suites, int seed, FILE *out
+) {
     if (!suites)
         return 0;
 
-    int passed = 0, skipped = 0, failed = 0;
-    for (int s = 0; suites[s]; s++) {
-        for (int i = 0; suites[s][i].name; i++) {
-            if (!suites[s][i].fn || suites[s][i].count == 0)
-                skipped++;
+    int i, fail = 0;
+    for (i = 0; suites[i]; i++)
+        fail += pf_suite_run(suites[i], seed, out);
 
-            if (pf_test_run(&suites[s][i], seed))
-                failed++;
-            else
-                passed++;
-        }
-    }
-
-    int count = passed + skipped + failed;
     fprintf(
-        stdout,
-        "%u of %u (%u%%) tests passed, %u skipped. (seed: %#x)\n",
-        passed,
-        count,
-        (passed * 100) / count,
-        skipped,
-        seed
+        out ? out : stdout,
+        "total: failed %d tests across %d suites!\n",
+        fail,
+        i
     );
-    return failed > 0 ? -1 : 0;
+    return fail;
 }
 
 #endif
