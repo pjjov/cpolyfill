@@ -144,7 +144,7 @@ TEST_SA_UNSIGNED(test_saturated_uintmax, max, UINTMAX_MAX)
 TEST_SA_UNSIGNED(test_saturated_uintptr, ptr, UINTPTR_MAX)
 TEST_SA_UNSIGNED(test_saturated_size, size, SIZE_MAX)
 
-static pf_test suite_overflow[] = {
+pf_test suite_overflow[] = {
     { &test_overflow_int, "/overflow/int", 1 },
     { &test_overflow_long, "/overflow/long", 1 },
     { &test_overflow_llong, "/overflow/llong", 1 },
@@ -180,7 +180,3 @@ static pf_test suite_overflow[] = {
     { &test_saturated_size, "/saturated/size_t", 1 },
     { 0 },
 };
-
-int main(int argc, char *argv[]) {
-    return pf_suite_run(suite_overflow, argc == 2 ? atoi(argv[1]) : 0);
-}
