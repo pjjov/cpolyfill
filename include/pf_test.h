@@ -13,6 +13,8 @@
     Current repetion index is passed to test functions, alongside a
     seed for randomization, which can be supplied by the user.
 
+    The `Test Anything Protocol` is used by `pf_suite_run_tap`.
+
     If you want to see `pf_test.h` in action, you can take a look
     in the `test` directory of the 'cpolyfill' repository.
 
@@ -27,6 +29,7 @@
 
     int pf_test_run(const pf_test *test, int seed);
     int pf_suite_run(const pf_test *tests, int seed, FILE *out);
+    void pf_suite_run_tap(const pf_test *tests, int seed, FILE *out);
     int pf_suite_run_all(const pf_test **suites, int seed, FILE *out);
     ```
 
@@ -216,6 +219,28 @@ static inline int pf_suite_run_all(
         i
     );
     return fail;
+}
+
+static inline void pf_suite_run_tap(const pf_test *tests, int seed, FILE *out) {
+    if (!tests)
+        return;
+
+    if (!out)
+        out = stdout;
+
+    int i = 0;
+    fputs("TAP version 14\n", out);
+    for (i = 0; tests[i].name; i++) {
+        if (!tests[i].fn || tests[i].count == 0) {
+            fprintf(out, "not ok %d - %s # TODO\n", i + 1, tests[i].name);
+        } else {
+            int result = pf_test_run(&tests[i], seed);
+            const char *fmt = result ? "not ok %d - %s\n" : "ok %d - %s\n";
+            fprintf(out, fmt, i + 1, tests[i].name);
+        }
+    }
+
+    fprintf(out, "1..%d\n", i);
 }
 
 #endif
