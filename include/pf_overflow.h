@@ -125,7 +125,8 @@ typedef int pf_bool;
     }                                                                     \
     PF_API m_type pf_checked_##m_gcc(m_type a, m_type b) {                \
         m_type out;                                                       \
-        pf_overflow_assert(!pf_overflow_##m_gcc(a, b, &out));             \
+        pf_bool overflow = pf_overflow_##m_gcc(a, b, &out);               \
+        pf_overflow_assert(!overflow);                                    \
         return out;                                                       \
     }                                                                     \
     PF_API m_type pf_saturated_##m_gcc(m_type a, m_type b) {              \
