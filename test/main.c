@@ -29,23 +29,31 @@ static const pf_test *suites[] = {
     NULL,
 };
 
+static const char *names[] = { "endian", "overflow", NULL };
+
 int main(int argc, char *argv[]) {
     if (argc > 2) {
-        perror(
-            "usage: cpolyfill-test [suite]\n"
-            "suites:\n"
-            "\tendian\n"
-            "\toverflow\n"
-        );
-        return -1;
-    } else if (argc == 1)
-        return pf_suite_run_all(suites, 0);
-    else if (0 == strcmp(argv[1], "endian"))
-        return pf_suite_run(suite_endian, 0);
-    else if (0 == strcmp(argv[1], "overflow"))
-        return pf_suite_run(suite_overflow, 0);
-    else {
-        fprintf(stderr, "cpolyfill-test: unknown suite '%s'\n", argv[1]);
+        fputs("usage: cpolyfill-test [suite]\nsuites:", stderr);
+
+        for (int i = 0; names[i]; i++) {
+            fputc(' ', stderr);
+            fputs(names[i], stderr);
+        }
+
+        fputc('\n', stderr);
         return -1;
     }
+
+    if (argc == 1)
+        return pf_suite_run_all(suites, 0, NULL);
+
+    for (int i = 0; names[i]; i++) {
+        if (0 == strcmp(argv[1], names[i])) {
+            pf_suite_run_tap(suites[i], 0, NULL);
+            return 0;
+        }
+    }
+
+    fprintf(stderr, "cpolyfill-test: unknown suite '%s'\n", argv[1]);
+    return -1;
 }

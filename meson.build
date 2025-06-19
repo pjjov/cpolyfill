@@ -12,6 +12,7 @@ meson.override_dependency('cpolyfill', cpolyfill_dep)
 
 tests = executable(
     'cpolyfill-test',
+    c_args: ['-DPF_TEST_NO_FORK'],
     dependencies: [cpolyfill_dep],
     sources: [
         'test/endian.c',
@@ -20,5 +21,5 @@ tests = executable(
     ]
 )
 
-test('cpolyfill/endian', tests, args: ['endian'])
-test('cpolyfill/overflow', tests, args: ['overflow'])
+test('cpolyfill/endian', tests, args: ['endian'], protocol: 'tap')
+test('cpolyfill/overflow', tests, args: ['overflow'], protocol: 'tap')
