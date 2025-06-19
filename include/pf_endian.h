@@ -87,13 +87,24 @@ static inline uint64_t pf_bswap64(uint64_t x) {
 #endif
 }
 
-static const union {
+union pf__endian {
     int bytes;
     char little;
-} pf__endian = { 1 };
+};
 
-#define PF_BIG_ENDIAN (!pf__endian.little)
-#define PF_LITTLE_ENDIAN (pf__endian.little)
+#ifdef _MSC_VER
+    #define PF_BIG_ENDIAN (0)
+    #define PF_LITTLE_ENDIAN (1)
+#elif defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    #define PF_BIG_ENDIAN (0)
+    #define PF_LITTLE_ENDIAN (1)
+#elif defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    #define PF_BIG_ENDIAN (1)
+    #define PF_LITTLE_ENDIAN (0)
+#else
+    #define PF_BIG_ENDIAN (!((union pf__endian) { .bytes = 1 }).little)
+    #define PF_LITTLE_ENDIAN (((union pf__endian) { .bytes = 1 }).little)
+#endif
 
 #if __has_include(<endian.h>)
     #include <endian.h>
