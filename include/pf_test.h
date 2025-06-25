@@ -112,6 +112,7 @@ static const char *pf__test_message(int signal) {
 
 static int pf__test_exec(const pf_test *test, int seed, unsigned int i) {
 #ifndef PF_TEST_NO_FORK
+    fflush(stdout);
     pid_t testPid = fork();
 
     if (testPid == 0)
