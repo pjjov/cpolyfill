@@ -14,11 +14,13 @@ tests = executable(
     'cpolyfill-test',
     dependencies: [cpolyfill_dep],
     sources: [
+        'test/bitwise.c',
         'test/endian.c',
         'test/main.c',
         'test/overflow.c',
     ]
 )
 
+test('cpolyfill/bitwise', tests, args: ['bitwise'], protocol: 'tap')
 test('cpolyfill/endian', tests, args: ['endian'], protocol: 'tap')
 test('cpolyfill/overflow', tests, args: ['overflow'], protocol: 'tap')

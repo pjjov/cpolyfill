@@ -20,16 +20,18 @@
 #include "../include/pf_test.h"
 #include <string.h>
 
+extern pf_test suite_bitwise[];
 extern pf_test suite_endian[];
 extern pf_test suite_overflow[];
 
 static const pf_test *suites[] = {
+    suite_bitwise,
     suite_endian,
     suite_overflow,
     NULL,
 };
 
-static const char *names[] = { "endian", "overflow", NULL };
+static const char *names[] = { "bitwise", "endian", "overflow", NULL };
 
 int main(int argc, char *argv[]) {
     if (argc > 2) {
