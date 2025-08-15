@@ -16,6 +16,7 @@ tests = executable(
     sources: [
         'test/bitwise.c',
         'test/endian.c',
+        'test/macro.c',
         'test/main.c',
         'test/overflow.c',
     ]
@@ -23,4 +24,5 @@ tests = executable(
 
 test('cpolyfill/bitwise', tests, args: ['bitwise'], protocol: 'tap')
 test('cpolyfill/endian', tests, args: ['endian'], protocol: 'tap')
+test('cpolyfill/macro', tests, args: ['macro'], protocol: 'tap')
 test('cpolyfill/overflow', tests, args: ['overflow'], protocol: 'tap')

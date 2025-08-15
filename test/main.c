@@ -22,16 +22,14 @@
 
 extern pf_test suite_bitwise[];
 extern pf_test suite_endian[];
+extern pf_test suite_macro[];
 extern pf_test suite_overflow[];
 
 static const pf_test *suites[] = {
-    suite_bitwise,
-    suite_endian,
-    suite_overflow,
-    NULL,
+    suite_bitwise, suite_endian, suite_macro, suite_overflow, NULL,
 };
 
-static const char *names[] = { "bitwise", "endian", "overflow", NULL };
+static const char *names[] = { "bitwise", "endian", "macro", "overflow", NULL };
 
 int main(int argc, char *argv[]) {
     if (argc > 2) {
