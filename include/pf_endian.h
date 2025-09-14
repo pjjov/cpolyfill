@@ -42,6 +42,7 @@
 
 #include <limits.h>
 #include <stdint.h>
+#include <string.h>
 
 static inline uint16_t pf_bswap16(uint16_t x) {
 #if __has_include(<byteswap.h>) || defined(__GNUC__)
@@ -115,8 +116,8 @@ union pf__endian {
             return (check) ? pf_bswap##size(x) : x;           \
         }
 
-    #define PF__IMPL_BE(name, size) PF__IMPL(name, size, pf__endian.little)
-    #define PF__IMPL_LE(name, size) PF__IMPL(name, size, !pf__endian.little)
+    #define PF__IMPL_BE(name, size) PF__IMPL(name, size, PF_BIG_ENDIAN)
+    #define PF__IMPL_LE(name, size) PF__IMPL(name, size, !PF_BIG_ENDIAN)
 
 PF__IMPL_BE(htobe16, 16)
 PF__IMPL_BE(be16toh, 16)
@@ -138,5 +139,29 @@ PF__IMPL_LE(le64toh, 64)
     #undef PF__IMPL
 
 #endif
+
+#define PF__IMPL_X(m_name, m_check, m_f16, m_f32, m_f64)                   \
+    void m_name(void *out, const void *in, size_t size) {                  \
+        if (size == 2)                                                     \
+            *(uint16_t *)out = m_f16(*(const uint16_t *)in);               \
+        if (size == 4)                                                     \
+            *(uint32_t *)out = m_f32(*(const uint32_t *)in);               \
+        if (size == 8)                                                     \
+            *(uint64_t *)out = m_f64(*(const uint64_t *)in);               \
+                                                                           \
+        if ((m_check)) {                                                   \
+            memcpy(out, in, size);                                         \
+        } else {                                                           \
+            for (size_t i = 0; i < size; i++)                              \
+                ((uint8_t *)out)[i] = ((const uint8_t *)in)[size - i - 1]; \
+        }                                                                  \
+    }
+
+PF__IMPL_X(htobex, PF_BIG_ENDIAN, htobe16, htobe32, htobe64);
+PF__IMPL_X(htolex, !PF_BIG_ENDIAN, htole16, htole32, htole64);
+PF__IMPL_X(bextoh, PF_BIG_ENDIAN, be16toh, be32toh, be64toh);
+PF__IMPL_X(lextoh, !PF_BIG_ENDIAN, be16toh, be32toh, be64toh);
+
+#undef PF__IMPL_X
 
 #endif
