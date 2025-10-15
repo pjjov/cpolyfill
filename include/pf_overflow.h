@@ -89,164 +89,185 @@ typedef int pf_bool;
     #endif
 #endif
 
+#if SIZE_MAX == UINT_MAX
+    #define PF_OVERFLOW_SIZE PF_OVERFLOW_UINT
+#elif SIZE_MAX == ULONG_MAX
+    #define PF_OVERFLOW_SIZE PF_OVERFLOW_ULONG
+#elif SIZE_MAX == ULLONG_MAX
+    #define PF_OVERFLOW_SIZE PF_OVERFLOW_ULLONG
+#endif
+
+#if PTRDIFF_MAX == INT_MAX
+    #define PF_OVERFLOW_PTRDIFF PF_OVERFLOW_INT
+#elif PTRDIFF_MAX == LONG_MAX
+    #define PF_OVERFLOW_PTRDIFF PF_OVERFLOW_LONG
+#elif PTRDIFF_MAX == LLONG_MAX
+    #define PF_OVERFLOW_PTRDIFF PF_OVERFLOW_LLONG
+#endif
+
+#if UINT32_MAX == UINT_MAX
+    #define PF_OVERFLOW_INT32 PF_OVERFLOW_INT
+    #define PF_OVERFLOW_UINT32 PF_OVERFLOW_UINT
+#elif UINT32_MAX == ULONG_MAX
+    #define PF_OVERFLOW_INT32 PF_OVERFLOW_LONG
+    #define PF_OVERFLOW_UINT32 PF_OVERFLOW_ULONG
+#elif UINT32_MAX == ULLONG_MAX
+    #define PF_OVERFLOW_INT32 PF_OVERFLOW_LLONG
+    #define PF_OVERFLOW_UINT32 PF_OVERFLOW_ULLONG
+#endif
+
+#if UINT64_MAX == UINT_MAX
+    #define PF_OVERFLOW_INT64 PF_OVERFLOW_INT
+    #define PF_OVERFLOW_UINT64 PF_OVERFLOW_UINT
+#elif UINT64_MAX == ULONG_MAX
+    #define PF_OVERFLOW_INT64 PF_OVERFLOW_LONG
+    #define PF_OVERFLOW_UINT64 PF_OVERFLOW_ULONG
+#elif UINT64_MAX == ULLONG_MAX
+    #define PF_OVERFLOW_INT64 PF_OVERFLOW_LLONG
+    #define PF_OVERFLOW_UINT64 PF_OVERFLOW_ULLONG
+#endif
+
+#if UINTMAX_MAX == UINT_MAX
+    #define PF_OVERFLOW_INTMAX PF_OVERFLOW_INT
+    #define PF_OVERFLOW_UINTMAX PF_OVERFLOW_UINT
+#elif UINTMAX_MAX == ULONG_MAX
+    #define PF_OVERFLOW_INTMAX PF_OVERFLOW_LONG
+    #define PF_OVERFLOW_UINTMAX PF_OVERFLOW_ULONG
+#elif UINTMAX_MAX == ULLONG_MAX
+    #define PF_OVERFLOW_INTMAX PF_OVERFLOW_LLONG
+    #define PF_OVERFLOW_UINTMAX PF_OVERFLOW_ULLONG
+#endif
+
+#if UINTPTR_MAX == UINT_MAX
+    #define PF_OVERFLOW_INTPTR PF_OVERFLOW_INT
+    #define PF_OVERFLOW_UINTPTR PF_OVERFLOW_UINT
+#elif UINTPTR_MAX == ULONG_MAX
+    #define PF_OVERFLOW_INTPTR PF_OVERFLOW_LONG
+    #define PF_OVERFLOW_UINTPTR PF_OVERFLOW_ULONG
+#elif UINTPTR_MAX == ULLONG_MAX
+    #define PF_OVERFLOW_INTPTR PF_OVERFLOW_LLONG
+    #define PF_OVERFLOW_UINTPTR PF_OVERFLOW_ULLONG
+#endif
+
 #ifndef PF_API
     #define PF_API static inline
 #endif
 
-#define PF_IMPL_OF_add(m_min, m_max)                         \
-    (b > 0 && a > (m_max) - b) || (b < 0 && a < (m_min) - b)
-#define PF_IMPL_OF_sub(m_min, m_max)                         \
-    (b > 0 && a < (m_min) + b) || (b < 0 && a > (m_max) + b)
-#define PF_IMPL_OF_mul(m_min, m_max) (a > (m_max) / b || a < (m_min) / b)
-#define PF_IMPL_SA_add (a > 0)
-#define PF_IMPL_SA_sub (!(a < -1 && b > 0))
-#define PF_IMPL_SA_mul ((a > 0 && b > 0) || (a < 0 && b < 0))
+#ifndef pf_has_builtin
+    #ifdef __has_builtin
+        #define pf_has_builtin __has_builtin
+    #else
+        #define pf_has_builtin(...) 0
+    #endif
+#endif
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
     #include <stdckdint.h>
-    #define PF_IMPL_OF(m_op, m_ch, m_gcc, m_msvc, m_type, m_min, m_max) \
-        return ckd_##m_op((m_type *)out, (m_type)a, (m_type)b)
+    #define PF__IMPL_OF_ADD(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
+        ckd_add(out, a, b)
+    #define PF__IMPL_OF_SUB(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
+        ckd_sub(out, a, b)
+    #define PF__IMPL_OF_MUL(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
+        ckd_mul(out, a, b)
 #elif defined(_MSC_VER)
     #include <intsafe.h>
-    #define PF_IMPL_OF(m_op, m_ch, m_gcc, m_msvc, m_type, m_min, m_max) \
-        return m_msvc(a, b, out)
-#elif defined(__GNUC__)
-    #define PF_IMPL_OF(m_op, m_ch, m_gcc, m_msvc, m_type, m_min, m_max) \
-        return __builtin_##m_gcc##_overflow(a, b, out)
+    #define PF__IMPL_OF_ADD(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
+        m_msvc##Add(a, b, out)
+    #define PF__IMPL_OF_SUB(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
+        m_msvc##Sub(a, b, out)
+    #define PF__IMPL_OF_MUL(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
+        m_msvc##Mult(a, b, out)
 #else
-    #define PF_IMPL_OF(m_op, m_ch, m_gcc, m_msvc, m_type, m_min, m_max) \
-        *out = a m_ch b;                                                \
-        return PF_IMPL_OF_##m_op(m_min, m_max)
+    #if pf_has_builtin(__builtin_add_overflow)
+        #define PF__IMPL_OF_ADD(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
+            __builtin_add_overflow(a, b, out)
+    #else
+        #define PF__IMPL_OF_ADD(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
+            (b > 0 && a > (m_max) - b) || (b < 0 && a < (m_min) - b)
+    #endif
+    #if pf_has_builtin(__builtin_sub_overflow)
+        #define PF__IMPL_OF_SUB(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
+            __builtin_sub_overflow(a, b, out)
+    #else
+        #define PF__IMPL_OF_SUB(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
+            (b > 0 && a < (m_min) + b) || (b < 0 && a > (m_max) + b)
+    #endif
+    #if pf_has_builtin(__builtin_mul_overflow)
+        #define PF__IMPL_OF_MUL(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
+            __builtin_mul_overflow(a, b, out)
+    #else
+        #define PF__IMPL_OF_MUL(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
+            (a > (m_max) / b || a < (m_min) / b)
+    #endif
 #endif
 
-#define PF_IMPL(m_op, m_ch, m_gcc, m_msvc, m_type, m_min, m_max)          \
-    PF_API pf_bool pf_overflow_##m_gcc(m_type a, m_type b, m_type *out) { \
-        PF_IMPL_OF(m_op, m_ch, m_gcc, m_msvc, m_type, m_min, m_max);      \
-    }                                                                     \
-    PF_API m_type pf_checked_##m_gcc(m_type a, m_type b) {                \
-        m_type out;                                                       \
-        pf_bool overflow = pf_overflow_##m_gcc(a, b, &out);               \
-        pf_overflow_assert(!overflow);                                    \
-        return out;                                                       \
-    }                                                                     \
-    PF_API m_type pf_saturated_##m_gcc(m_type a, m_type b) {              \
-        m_type result;                                                    \
-        if (pf_overflow_##m_gcc(a, b, &result))                           \
-            return (PF_IMPL_SA_##m_op) ? m_max : m_min;                   \
-        return result;                                                    \
+#define PF__IMPL_OF(m_macro, m_type, m_name, m_impl, m_op)                 \
+    PF_API pf_bool pf_overflow_##m_name(m_type a, m_type b, m_type *out) { \
+        *out = a m_op b;                                                   \
+        return m_macro(m_impl, m_type);                                    \
     }
+
+#define PF__IMPL_CKD(m_type, m_name)                         \
+    PF_API m_type pf_checked_##m_name(m_type a, m_type b) {  \
+        m_type out;                                          \
+        pf_bool overflow = pf_overflow_##m_name(a, b, &out); \
+        pf_overflow_assert(!overflow);                       \
+        return out;                                          \
+    }
+
+#define PF__IMPL_SA_(m_max, m_min, _1, _2, _3, m_type, m_name, m_impl) \
+    PF_API m_type pf_saturated_##m_name(m_type a, m_type b) {          \
+        m_type result;                                                 \
+        if (pf_overflow_##m_name(a, b, &result))                       \
+            return m_impl ? m_max : m_min;                             \
+        return result;                                                 \
+    }
+
+#define PF__IMPL_SA(m_macro, m_type, m_name, m_impl) \
+    m_macro(PF__IMPL_SA_, m_type, m_name, m_impl)
+
+#define PF_IMPL_OVERFLOW(m_macro, m_type, m_pre, m_post)                   \
+    PF__IMPL_OF(m_macro, m_type, m_pre##add##m_post, PF__IMPL_OF_ADD, +)   \
+    PF__IMPL_OF(m_macro, m_type, m_pre##sub##m_post, PF__IMPL_OF_SUB, -)   \
+    PF__IMPL_OF(m_macro, m_type, m_pre##mul##m_post, PF__IMPL_OF_MUL, *)   \
+    PF__IMPL_CKD(m_type, m_pre##add##m_post)                               \
+    PF__IMPL_CKD(m_type, m_pre##sub##m_post)                               \
+    PF__IMPL_CKD(m_type, m_pre##mul##m_post)                               \
+    PF__IMPL_SA(m_macro, m_type, m_pre##add##m_post, (a > 0))              \
+    PF__IMPL_SA(m_macro, m_type, m_pre##sub##m_post, (!(a < -1 && b > 0))) \
+    PF__IMPL_SA(                                                           \
+        m_macro,                                                           \
+        m_type,                                                            \
+        m_pre##mul##m_post,                                                \
+        ((a > 0 && b > 0) || (a < 0 && b < 0))                             \
+    )
 
 /* clang-format off */
 
-PF_IMPL(add, +, sadd,   IntAdd,        int,          INT_MIN, INT_MAX)
-PF_IMPL(add, +, saddl,  LongAdd,       long,        LONG_MIN, LONG_MAX)
-PF_IMPL(add, +, saddll, LongLongAdd,   long long,  LLONG_MIN, LLONG_MAX)
-PF_IMPL(add, +, uadd,   UIntAdd,       unsigned int,       0, UINT_MAX)
-PF_IMPL(add, +, uaddl,  ULongAdd,      unsigned long,      0, ULONG_MAX)
-PF_IMPL(add, +, uaddll, ULongLongAdd,  unsigned long long, 0, ULLONG_MAX)
+#define PF_OVERFLOW_INT(X, ...)    X(INT_MAX,    INT_MIN,    Int,   s, ,   __VA_ARGS__)
+#define PF_OVERFLOW_LONG(X, ...)   X(LONG_MAX,   LONG_MIN,   Long,  s, l,  __VA_ARGS__)
+#define PF_OVERFLOW_LLONG(X, ...)  X(LLONG_MAX,  LLONG_MIN,  Long,  s, ll, __VA_ARGS__)
+#define PF_OVERFLOW_UINT(X, ...)   X(UINT_MAX,   0,          UInt,  u, ,   __VA_ARGS__)
+#define PF_OVERFLOW_ULONG(X, ...)  X(ULONG_MAX,  0,          ULong, u, l,  __VA_ARGS__)
+#define PF_OVERFLOW_ULLONG(X, ...) X(ULLONG_MAX, 0,          ULong, u, ll, __VA_ARGS__)
 
-PF_IMPL(sub, -, ssub,   IntSub,        int,          INT_MIN, INT_MAX)
-PF_IMPL(sub, -, ssubl,  LongSub,       long,        LONG_MIN, LONG_MAX)
-PF_IMPL(sub, -, ssubll, LongLongSub,   long long,  LLONG_MIN, LLONG_MAX)
-PF_IMPL(sub, -, usub,   UIntSub,       unsigned int,       0, UINT_MAX)
-PF_IMPL(sub, -, usubl,  ULongSub,      unsigned long,      0, ULONG_MAX)
-PF_IMPL(sub, -, usubll, ULongLongSub,  unsigned long long, 0, ULLONG_MAX)
-
-PF_IMPL(mul, *, smul,   IntMult,       int,          INT_MIN, INT_MAX)
-PF_IMPL(mul, *, smull,  LongMult,      long,        LONG_MIN, LONG_MAX)
-PF_IMPL(mul, *, smulll, LongLongMult,  long long,  LLONG_MIN, LLONG_MAX)
-PF_IMPL(mul, *, umul,   UIntMult,      unsigned int,       0, UINT_MAX)
-PF_IMPL(mul, *, umull,  ULongMult,     unsigned long,      0, ULONG_MAX)
-PF_IMPL(mul, *, umulll, ULongLongMult, unsigned long long, 0, ULLONG_MAX)
+PF_IMPL_OVERFLOW(PF_OVERFLOW_INT,       int,                s,     )
+PF_IMPL_OVERFLOW(PF_OVERFLOW_LONG,      long,               s, l   )
+PF_IMPL_OVERFLOW(PF_OVERFLOW_LLONG,     long long,          s, ll  )
+PF_IMPL_OVERFLOW(PF_OVERFLOW_UINT,      unsigned int,       u,     )
+PF_IMPL_OVERFLOW(PF_OVERFLOW_ULONG,     unsigned long,      u, l   )
+PF_IMPL_OVERFLOW(PF_OVERFLOW_ULLONG,    unsigned long long, u, ll  )
+PF_IMPL_OVERFLOW(PF_OVERFLOW_SIZE,      size_t,             u, size)
+PF_IMPL_OVERFLOW(PF_OVERFLOW_PTRDIFF,   ptrdiff_t,          s, diff)
+PF_IMPL_OVERFLOW(PF_OVERFLOW_INT32,     int32_t,            s, 32  )
+PF_IMPL_OVERFLOW(PF_OVERFLOW_INT64,     int64_t,            s, 64  )
+PF_IMPL_OVERFLOW(PF_OVERFLOW_INTMAX,    intmax_t,           s, max )
+PF_IMPL_OVERFLOW(PF_OVERFLOW_INTPTR,    intptr_t,           s, ptr )
+PF_IMPL_OVERFLOW(PF_OVERFLOW_UINT32,    uint32_t,           u, 32  )
+PF_IMPL_OVERFLOW(PF_OVERFLOW_UINT64,    uint64_t,           u, 64  )
+PF_IMPL_OVERFLOW(PF_OVERFLOW_UINTMAX,   uintmax_t,          u, max )
+PF_IMPL_OVERFLOW(PF_OVERFLOW_UINTPTR,   uintptr_t,          u, ptr )
 
 /* clang-format on */
-
-#undef PF_IMPL
-#undef PF_IMPL_OF
-#undef PF_IMPL_OF_add
-#undef PF_IMPL_OF_sub
-#undef PF_IMPL_OF_mul
-#undef PF_IMPL_SA_add
-#undef PF_IMPL_SA_sub
-#undef PF_IMPL_SA_mul
-
-#define PF__IMPL(m_name, m_impl, m_type)                                   \
-    PF_API pf_bool pf_overflow_##m_name(m_type a, m_type b, m_type *out) { \
-        return pf_overflow_##m_impl(a, b, out);                            \
-    }                                                                      \
-    PF_API m_type pf_checked_##m_name(m_type a, m_type b) {                \
-        return pf_checked_##m_impl(a, b);                                  \
-    }                                                                      \
-    PF_API m_type pf_saturated_##m_name(m_type a, m_type b) {              \
-        return pf_saturated_##m_impl(a, b);                                \
-    }
-
-#define PF_IMPL(m_type, m_pre1, m_post1, m_pre2, m_post2)        \
-    PF__IMPL(m_pre1##add##m_post1, m_pre2##add##m_post2, m_type) \
-    PF__IMPL(m_pre1##sub##m_post1, m_pre2##sub##m_post2, m_type) \
-    PF__IMPL(m_pre1##mul##m_post1, m_pre2##mul##m_post2, m_type)
-
-#if SIZE_MAX == UINT_MAX
-PF_IMPL(size_t, u, size, u, )
-#elif SIZE_MAX == ULONG_MAX
-PF_IMPL(size_t, u, size, u, l)
-#elif SIZE_MAX == ULLONG_MAX
-PF_IMPL(size_t, u, size, u, ll)
-#endif
-
-#if PTRDIFF_MAX == INT_MAX
-PF_IMPL(ptrdiff_t, s, diff, s, )
-#elif PTRDIFF_MAX == LONG_MAX
-PF_IMPL(ptrdiff_t, s, diff, s, l)
-#elif PTRDIFF_MAX == LLONG_MAX
-PF_IMPL(ptrdiff_t, s, diff, s, ll)
-#endif
-
-#if UINT32_MAX == UINT_MAX
-PF_IMPL(int32_t, s, 32, s, )
-PF_IMPL(uint32_t, u, 32, u, )
-#elif UINT32_MAX == ULONG_MAX
-PF_IMPL(int32_t, s, 32, s, l)
-PF_IMPL(uint32_t, u, 32, u, l)
-#elif UINT32_MAX == ULLONG_MAX
-PF_IMPL(int32_t, s, 32, s, ll)
-PF_IMPL(uint32_t, u, 32, u, ll)
-#endif
-
-#if UINT64_MAX == UINT_MAX
-PF_IMPL(int64_t, s, 64, s, )
-PF_IMPL(uint64_t, u, 64, u, )
-#elif UINT64_MAX == ULONG_MAX
-PF_IMPL(int64_t, s, 64, s, l)
-PF_IMPL(uint64_t, u, 64, u, l)
-#elif UINT64_MAX == ULLONG_MAX
-PF_IMPL(int64_t, s, 64, s, ll)
-PF_IMPL(uint64_t, u, 64, u, ll)
-#endif
-
-#if UINTMAX_MAX == UINT_MAX
-PF_IMPL(intmax_t, s, max, s, )
-PF_IMPL(uintmax_t, u, max, u, )
-#elif UINTMAX_MAX == ULONG_MAX
-PF_IMPL(intmax_t, s, max, s, l)
-PF_IMPL(uintmax_t, u, max, u, l)
-#elif UINTMAX_MAX == ULLONG_MAX
-PF_IMPL(intmax_t, s, max, s, ll)
-PF_IMPL(uintmax_t, u, max, u, ll)
-#endif
-
-#if UINTPTR_MAX == UINT_MAX
-PF_IMPL(intptr_t, s, ptr, s, )
-PF_IMPL(uintptr_t, u, ptr, u, )
-#elif UINTPTR_MAX == ULONG_MAX
-PF_IMPL(intptr_t, s, ptr, s, l)
-PF_IMPL(uintptr_t, u, ptr, u, l)
-#elif UINTPTR_MAX == ULLONG_MAX
-PF_IMPL(intptr_t, s, ptr, s, ll)
-PF_IMPL(uintptr_t, u, ptr, u, ll)
-#endif
-
-#undef PF_IMPL
-#undef PF__IMPL
 
 #endif
