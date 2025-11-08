@@ -58,6 +58,7 @@
     XO(VOID,            void,            void,                 0, 0  ) \
     XO(PTR,             ptr,             void *,               0, 1  ) \
     XO(CHAR,            char,            char,                 0, 2  ) \
+    XO(CSTRING,         cstring,         char *,               0, 3  ) \
     XS(SCHAR,           schar,           signed char,          0, 4  ) \
     XU(UCHAR,           uchar,           unsigned char,        0, 5  ) \
     XS(SHRT,            shrt,            short,                0, 6  ) \
@@ -71,13 +72,13 @@
     XF(FLOAT,           float,           float,                0, 21 ) \
     XF(DOUBLE,          double,          double,               0, 22 ) \
     XF(LDOUBLE,         ldouble,         long double,          0, 23 ) \
-    /* <stdbool.h> */                                                  \
-    XO(BOOL,            bool,            _Boolean,             0, 3  ) \
     /* <stddef.h> types */                                             \
     XS(PTRDIFF,         ptrdiff,         ptrdiff_t,            0, 14 ) \
     XU(SIZE,            size,            size_t,               0, 15 ) \
     XO(MAX_ALIGN,       max_align,       max_align_t,          0, 16 ) \
     XO(NULLPTR,         nullptr,         nullptr_t,            0, 17 ) \
+    /* <stdbool.h> */                                                  \
+    XO(BOOL,            bool,            _Boolean,             0, 18 ) \
     /* <math.h> types */                                               \
     XF(MFLOAT,           mfloat,        float_t,               0, 24 ) \
     XF(MDOUBLE,          mdouble,       double_t,              0, 25 ) \
