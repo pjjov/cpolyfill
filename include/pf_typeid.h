@@ -34,6 +34,16 @@
     #define PF_API static inline
 #endif
 
+#ifdef __has_builtin
+    #if __has_builtin(__builtin_unreachable)
+        #define pf__unreachable __builtin_unreachable
+    #endif
+#endif
+
+#ifndef pf__unreachable
+    #define pf__unreachable()
+#endif
+
 /* clang-format off */
 
 /*
@@ -50,27 +60,27 @@
     XO(CHAR,            char,            char,                 0, 2  ) \
     XS(SCHAR,           schar,           signed char,          0, 4  ) \
     XU(UCHAR,           uchar,           unsigned char,        0, 5  ) \
-    XS(SHORT,           short,           short,                0, 6  ) \
-    XU(USHORT,          ushort,          unsigned short,       0, 7  ) \
+    XS(SHRT,            shrt,            short,                0, 6  ) \
+    XU(USHRT,           ushrt,           unsigned short,       0, 7  ) \
     XS(INT,             int,             int,                  0, 8  ) \
     XU(UINT,            uint,            unsigned int,         0, 9  ) \
     XS(LONG,            long,            long,                 0, 10 ) \
     XU(ULONG,           ulong,           unsigned long,        0, 11 ) \
     XS(LLONG,           llong,           long long,            0, 12 ) \
     XU(ULLONG,          ullong,          unsigned long long,   0, 13 ) \
-    XF(FLOAT,           float,           float,                0, 14 ) \
-    XF(DOUBLE,          double,          double,               0, 15 ) \
-    XF(LDOUBLE,         ldouble,         long double,          0, 16 ) \
+    XF(FLOAT,           float,           float,                0, 21 ) \
+    XF(DOUBLE,          double,          double,               0, 22 ) \
+    XF(LDOUBLE,         ldouble,         long double,          0, 23 ) \
     /* <stdbool.h> */                                                  \
     XO(BOOL,            bool,            _Boolean,             0, 3  ) \
     /* <stddef.h> types */                                             \
-    XU(SIZE,            size,            size_t,               0, 17 ) \
-    XS(PTRDIFF,         ptrdiff,         ptrdiff_t,            0, 18 ) \
-    XO(MAX_ALIGN,       max_align,       max_align_t,          0, 19 ) \
-    XO(NULLPTR,         nullptr,         nullptr_t,            0, 20 ) \
+    XS(PTRDIFF,         ptrdiff,         ptrdiff_t,            0, 14 ) \
+    XU(SIZE,            size,            size_t,               0, 15 ) \
+    XO(MAX_ALIGN,       max_align,       max_align_t,          0, 16 ) \
+    XO(NULLPTR,         nullptr,         nullptr_t,            0, 17 ) \
     /* <math.h> types */                                               \
-    XF(MFLOAT,           mfloat,        float_t,               0, 25 ) \
-    XF(MDOUBLE,          mdouble,       double_t,              0, 26 ) \
+    XF(MFLOAT,           mfloat,        float_t,               0, 24 ) \
+    XF(MDOUBLE,          mdouble,       double_t,              0, 25 ) \
     /* <stdint.h> types */                                             \
     XS(INTPTR,           intptr,        intptr_t,              0, 28 ) \
     XU(UINTPTR,          uintptr,       uintptr_t,             0, 29 ) \
@@ -111,8 +121,8 @@
     XO(TSS,              tss,           tss_t,                 0, 106) \
     XO(TSS_DTOR,         tss_dtor,      tss_dtor_t,            0, 107) \
     /* <time.h> types */                                               \
-    XF(TIME,             time,          time_t,                0, 108) \
-    XF(CLOCK,            clock,         clock_t,               0, 109) \
+    XO(TIME,             time,          time_t,                0, 108) \
+    XO(CLOCK,            clock,         clock_t,               0, 109) \
     XO(TM,               tm,            struct tm,             0, 110) \
     XO(TIMESPEC,         timespec,      struct timespec,       0, 111) \
     /* <uchar.h> types */                                              \
@@ -184,6 +194,221 @@ enum pf_typeid {
         PF__TYPE_STANDARD
     = 1024,
 };
+
+#undef PF__X
+
+#ifdef PF_TYPE_HELPERS
+
+    #include <limits.h>
+    #include <stddef.h>
+    #include <stdint.h>
+
+PF_API int pf_type_is_integer(int type) {
+    if (type >= PF_TYPE_SCHAR && type <= PF_TYPE_SIZE)
+        return 1;
+    if (type >= PF_TYPE_INTPTR && type <= PF_TYPE_UINT_LEAST64)
+        return 1;
+    return 0;
+}
+
+PF_API int pf_type_is_float(int type) {
+    return type >= PF_TYPE_FLOAT && type <= PF_TYPE_MDOUBLE;
+}
+
+PF_API int pf_type_is_unsigned(int type) {
+    if (pf_type_is_integer(type))
+        return type & 1;
+    return PF_TYPE_ERROR;
+}
+
+PF_API size_t pf_type_int_size(int type) {
+    if (!pf_type_is_integer(type))
+        return 0;
+
+    #define PF__XU(u, l, t, f, i) \
+    case PF_TYPE_##u:             \
+        return sizeof(t);
+
+    switch (type | 1) {
+        PF_TYPEID(PF__XIGNORE, PF__XU, PF__XIGNORE, PF__XIGNORE, PF__XIGNORE)
+    default:
+        pf__unreachable();
+        break;
+    }
+
+    #undef PF__X
+
+    return 0;
+}
+
+PF_API uintmax_t pf_type_int_max(int type) {
+    if (!pf_type_is_integer(type))
+        return 0;
+
+    #define PF__X(u, l, t, f, i) \
+    case PF_TYPE_##u:            \
+        return u##_MAX;
+
+    switch (type | 1) {
+        PF_TYPEID(PF__X, PF__X, PF__XIGNORE, PF__XIGNORE, PF__XIGNORE)
+    default:
+        pf__unreachable();
+        return 0;
+    }
+
+    #undef PF__X
+}
+
+PF_API intmax_t pf_type_int_min(int type) {
+    if (pf_type_is_unsigned(type))
+        return 0;
+
+    #define PF__XS(u, l, t, f, i) \
+    case PF_TYPE_##u:             \
+        return u##_MIN;
+
+    switch (type | 1) {
+        PF_TYPEID(PF__XS, PF__XIGNORE, PF__XIGNORE, PF__XIGNORE, PF__XIGNORE)
+    default:
+        pf__unreachable();
+        return 0;
+    }
+
+    #undef PF__XS
+}
+
+PF_API int pf_type_int_load(int type, const void *item, uintmax_t *out) {
+    if (!pf_type_is_integer(type))
+        return PF_TYPE_ERROR;
+
+    #ifndef PF_TYPE_WEIRD_INT
+
+    size_t size = pf_type_int_size(type);
+    switch (size) {
+        /* clang-format off */
+    case 1: *out = *(uint8_t *)item; break;
+    case 2: *out = *(uint16_t *)item; break;
+    case 4: *out = *(uint32_t *)item; break;
+    case 8: *out = *(uint64_t *)item; break;
+    default: return PF_TYPE_ERROR;
+        /* clang-format on */
+    }
+
+    #else
+
+        #define PF__XU(u, l, t, f, i) \
+        case PF_TYPE_##u:             \
+            *out = *(t *)item;        \
+            break;
+
+        #define PF__XS(u, l, t, f, i)      \
+        case PF_TYPE_##u:                  \
+            *out = (intmax_t) * (t *)item; \
+            break;
+
+    switch (type) {
+        PF_TYPEID(PF__XS, PF__XU, PF__XIGNORE, PF__XIGNORE, PF__XIGNORE)
+    default:
+        pf__unreachable();
+        return PF_TYPE_ERROR;
+    }
+
+    #endif
+
+    #undef PF__XS
+    #undef PF__XU
+
+    return 0;
+}
+
+PF_API int pf_type_int_store(int type, const uintmax_t *item, void *out) {
+    if (!pf_type_is_integer(type))
+        return PF_TYPE_ERROR;
+
+    #ifndef PF_TYPE_WEIRD_INT
+
+    size_t size = pf_type_int_size(type);
+    switch (size) {
+        /* clang-format off */
+    case 1: *(uint8_t *)out = *item; break;
+    case 2: *(uint16_t *)out = *item; break;
+    case 4: *(uint32_t *)out = *item; break;
+    case 8: *(uint64_t *)out = *item; break;
+    default: return PF_TYPE_ERROR;
+        /* clang-format on */
+    }
+
+    #else
+
+        #define PF__XU(u, l, t, f, i) \
+        case PF_TYPE_##u:             \
+            *(t *)out = *item;        \
+            break;
+
+        #define PF__XS(u, l, t, f, i)      \
+        case PF_TYPE_##u:                  \
+            *(t *)out = (intmax_t) * item; \
+            break;
+
+    switch (type) {
+        PF_TYPEID(PF__XS, PF__XU, PF__XIGNORE, PF__XIGNORE, PF__XIGNORE)
+    default:
+        pf__unreachable();
+        return PF_TYPE_ERROR;
+    }
+
+    #endif
+
+    #undef PF__XS
+    #undef PF__XU
+
+    return 0;
+}
+
+PF_API int pf_type_int_as_base(int type) {
+    if (!pf_type_is_integer(type))
+        return PF_TYPE_ERROR;
+
+    uintmax_t max = pf_type_int_max(type);
+    int sign = type & 1;
+
+    if (sign)
+        max = max * 2 + 1;
+
+    if (max == UCHAR_MAX)
+        return PF_TYPE_CHAR | sign;
+    if (max == USHRT_MAX)
+        return PF_TYPE_SHRT | sign;
+    if (max == UINT_MAX)
+        return PF_TYPE_INT | sign;
+    if (max == ULONG_MAX)
+        return PF_TYPE_LONG | sign;
+    if (max == ULLONG_MAX)
+        return PF_TYPE_LLONG | sign;
+    return PF_TYPE_ERROR;
+}
+
+PF_API int pf_type_int_as_fixed(int type) {
+    if (!pf_type_is_integer(type))
+        return PF_TYPE_ERROR;
+
+    size_t size = pf_type_int_size(type);
+    int out, sign = type & 1;
+
+    switch (size) {
+        /* clang-format off */
+    case 1: out = PF_TYPE_INT8; break;
+    case 2: out = PF_TYPE_INT16; break;
+    case 4: out = PF_TYPE_INT32; break;
+    case 8: out = PF_TYPE_INT64; break;
+    default: return PF_TYPE_ERROR;
+        /* clang-format on */
+    }
+
+    return out | sign;
+}
+
+#endif
 
 #undef PF__XIGNORE
 #undef PF__X
