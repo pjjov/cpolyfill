@@ -99,7 +99,9 @@
 #endif
 
 #ifdef __BIGGEST_ALIGNMENT__
-typedef char pf_max_align_t alignas(__BIGGEST_ALIGNMENT__);
+typedef struct {
+    alignas(__BIGGEST_ALIGNMENT__) char _pf_;
+} pf_max_align_t;
 #else
 typedef long double pf_max_align_t;
 #endif
