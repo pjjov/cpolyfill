@@ -82,4 +82,29 @@
     ((sizeof(array) / sizeof(0 [array]))                 \
      / ((size_t)(!(sizeof(array) % sizeof(0 [array])))))
 
+#if pf_has_builtin(__builtin_expect)
+    #define PF_EXPECT(expr, expect) (__builtin_expect((expr) != 0, (expect)))
+#else
+    #define PF_EXPECT(expr, expect)
+#endif
+
+#if pf_has_builtin(__builtin_expect_with_probability)
+    #define PF_EXPECT_P(expr, expect, prob)                                \
+        (__builtin_expect_with_probability((expr) != 0, (expect), (prob)))
+#else
+    #define PF_EXPECT_P(expr, expect, prob)
+#endif
+
+#if pf_has_builtin(__builtin_unreachable)
+    #define PF_UNREACHABLE __builtin_unreachable()
+#else
+    #define PF_UNREACHABLE
+#endif
+
+#if pf_has_builtin(__builtin_assume_aligned)
+    #define PF_ASSUME_ALIGNED __builtin_assume_aligned
+#else
+    #define PF_ASSUME_ALIGNED(expr, align, ...) (expr)
+#endif
+
 #endif
