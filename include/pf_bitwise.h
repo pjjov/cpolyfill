@@ -33,6 +33,9 @@
         uint32_t           => pf_ctz32
         uint64_t           => pf_ctz64
 
+    You can also define functions for new types using PF_IMPL_BITWISE macro.
+    Define PF_BITWISE_SKIP_DEFAULT to omit generating predefined functions.
+
     SPDX-FileCopyrightText: 2025 Predrag Jovanović
     SPDX-License-Identifier: Apache-2.0
 
@@ -231,7 +234,7 @@ extern "C" {
         pf__rotr(x, i);
 #endif
 
-#define PF__IMPL_BITWISE(m_post, m_type, m_max)           \
+#define PF_IMPL_BITWISE(m_post, m_type, m_max)            \
     PF_API m_type pf_pow2ceil##m_post(m_type x) {         \
         pf__pow2ceil(x);                                  \
         return x;                                         \
@@ -305,18 +308,22 @@ extern "C" {
         return x;                                         \
     }
 
+#ifndef PF_BITWISE_SKIP_DEFAULT
+
 /* clang-format off */
-PF__IMPL_BITWISE(,     unsigned int,       UINT_MAX);
-PF__IMPL_BITWISE(l,    unsigned long,      ULONG_MAX);
-PF__IMPL_BITWISE(ll,   unsigned long long, ULLONG_MAX);
-PF__IMPL_BITWISE(size, size_t,             SIZE_MAX);
-PF__IMPL_BITWISE(ptr,  uintptr_t,          UINTPTR_MAX);
-PF__IMPL_BITWISE(max,  uintmax_t,          UINTMAX_MAX);
-PF__IMPL_BITWISE(8,    uint8_t,            UINT8_MAX);
-PF__IMPL_BITWISE(16,   uint16_t,           UINT16_MAX);
-PF__IMPL_BITWISE(32,   uint32_t,           UINT32_MAX);
-PF__IMPL_BITWISE(64,   uint64_t,           UINT64_MAX);
-/* clang-format on */
+PF_IMPL_BITWISE(,     unsigned int,       UINT_MAX);
+PF_IMPL_BITWISE(l,    unsigned long,      ULONG_MAX);
+PF_IMPL_BITWISE(ll,   unsigned long long, ULLONG_MAX);
+PF_IMPL_BITWISE(size, size_t,             SIZE_MAX);
+PF_IMPL_BITWISE(ptr,  uintptr_t,          UINTPTR_MAX);
+PF_IMPL_BITWISE(max,  uintmax_t,          UINTMAX_MAX);
+PF_IMPL_BITWISE(8,    uint8_t,            UINT8_MAX);
+PF_IMPL_BITWISE(16,   uint16_t,           UINT16_MAX);
+PF_IMPL_BITWISE(32,   uint32_t,           UINT32_MAX);
+PF_IMPL_BITWISE(64,   uint64_t,           UINT64_MAX);
+    /* clang-format on */
+
+#endif
 
 #if defined(__cplusplus)
 }
