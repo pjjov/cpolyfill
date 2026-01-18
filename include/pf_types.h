@@ -223,8 +223,12 @@ typedef pf_max_align_t max_align_t;
 
 #define pf_check_const(expr) pf_check_type(typeof_unqual(expr), expr)
 
-#define PF_ALIGN_PAD(x, a) ((~(x) + 1) & ((a) - 1))
-#define PF_ALIGN_DOWN(x, a) ((x) & ~((typeof(x))(a) - 1))
-#define PF_ALIGN_UP(x, a) (((x) + ((typeof(x))(a) - 1)) & ~((typeof(x))(a) - 1))
+#ifndef PF__ALIGN
+    #define PF__ALIGN
+    #define PF_ALIGN_PAD(x, a) ((~(x) + 1) & ((a) - 1))
+    #define PF_ALIGN_DOWN(x, a) ((x) & ~((typeof(x))(a) - 1))
+    #define PF_ALIGN_UP(x, a)                                  \
+        (((x) + ((typeof(x))(a) - 1)) & ~((typeof(x))(a) - 1))
+#endif
 
 #endif

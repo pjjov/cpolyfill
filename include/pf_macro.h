@@ -72,10 +72,28 @@
             typeof(x) _x = (x); \
             _x > 0 ? _x : -_x;  \
         })
+
+    #define PF_DIFF(x, y)                \
+        ({                               \
+            typeof(x) _x = (x);          \
+            typeof(y) _y = (y);          \
+            _x > _y ? _x - _y : _y - _x; \
+        })
 #else
     #define PF_MAX(x, y) ((x) > (y) ? (x) : (y))
     #define PF_MIN(x, y) ((x) < (y) ? (x) : (y))
     #define PF_ABS(x) ((x) > (0) ? (x) : -(x))
+    #define PF_DIFF(x, y) ((x) > (y) ? (x) - (y) : (y) - (x))
+#endif
+
+#define PF_OFFSET(ptr, offset) ((void *)(&((char *)(ptr))[offset]))
+
+#ifndef PF__ALIGN
+    #define PF__ALIGN
+    #define PF_ALIGN_PAD(x, a) ((~(x) + 1) & ((a) - 1))
+    #define PF_ALIGN_DOWN(x, a) ((x) & ~((typeof(x))(a) - 1))
+    #define PF_ALIGN_UP(x, a)                                  \
+        (((x) + ((typeof(x))(a) - 1)) & ~((typeof(x))(a) - 1))
 #endif
 
 #define PF_COUNTOF(array)                                \
