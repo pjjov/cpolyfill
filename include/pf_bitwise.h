@@ -81,16 +81,9 @@ extern "C" {
     #include <stdbit.h>
     #define pf__clz(x, out) out = (stdc_leading_zeros(x));
     #define pf__ctz(x, out) out = (stdc_trailing_zeros(x));
-    #define pf__clo(x, out) out = (stdc_leading_ones(x));
-    #define pf__cto(x, out) out = (stdc_trailing_ones(x));
-    #define pf__flz(x, out) out = (stdc_first_leading_zero(x));
-    #define pf__ftz(x, out) out = (stdc_first_trailing_zero(x));
-    #define pf__flo(x, out) out = (stdc_first_leading_one(x));
-    #define pf__fto(x, out) out = (stdc_first_trailing_one(x));
     #define pf__pow2ceil(x) x = stdc_bit_floor(x) != x ? stdc_bit_ceil(x) : x;
     #define pf__pow2floor(x) x = (stdc_bit_floor(x));
     #define pf__popcount(x, out) out = (stdc_count_ones(x));
-    #define pf__zerocount(x, out) out = (stdc_count_zeros(x));
     #define pf__parity(x, out) out = (stdc_count_ones(x) & 1);
     #define pf__ispow2(x, out) out = (stdc_has_single_bit(x));
 #else
@@ -150,44 +143,6 @@ extern "C" {
             }
     #endif
 
-    #if pf_has_builtin(__builtin_stdc_first_leading_zero)
-        #define pf__flz(x, out) out = (__builtin_stdc_first_leading_zero(x));
-    #else
-        #define pf__flz(x, out)            \
-            x = ~x;                        \
-            pf__clz(x, out);               \
-            if (out != 0)                  \
-                out = sizeof(x) * 8 - out;
-    #endif
-
-    #if pf_has_builtin(__builtin_stdc_first_trailing_zero)
-        #define pf__ftz(x, out) out = (__builtin_stdc_first_trailing_zero(x));
-    #else
-        #define pf__ftz(x, out)         \
-            x = ~x;                     \
-            pf__ctz(x, out);            \
-            if (out++ == sizeof(x) * 8) \
-                out = 0;
-    #endif
-
-    #if pf_has_builtin(__builtin_stdc_first_leading_one)
-        #define pf__flo(x, out) out = (__builtin_stdc_first_leading_one(x))
-    #else
-        #define pf__flo(x, out)    \
-            pf__clz(x, out);       \
-            out = sizeof(x) - out;
-    #endif
-
-    #if pf_has_builtin(__builtin_stdc_first_trailing_one)
-        #define pf__fto(x, out) out = (__builtin_stdc_first_trailing_one(x));
-    #else
-        #define pf__fto(x, out)         \
-            x = ~x;                     \
-            pf__ctz(x, out);            \
-            if (out++ == sizeof(x) * 8) \
-                out = 0;
-    #endif
-
     #if pf_has_builtin(__builtin_popcountg)
         #define pf__popcount(x, out) out = (__builtin_popcountg(x));
     #else
@@ -195,16 +150,6 @@ extern "C" {
             for (out = 0; x; out++)  \
                 x &= x - 1;          \
             return out;
-    #endif
-
-    #if pf_has_builtin(__builtin_popcountg)
-        #define pf__zerocount(x, out)                       \
-            out = (sizeof(x) * 8 - __builtin_popcountg(x));
-    #else
-        #define pf__zerocount(x, out)  \
-            for (out = 0; x; out++)    \
-                x &= x - 1;            \
-            out = sizeof(x) * 8 - out;
     #endif
 
     #if pf_has_builtin(__builtin_parityg)
@@ -236,90 +181,62 @@ extern "C" {
         pf__rotr(x, i);
 #endif
 
-#define PF_IMPL_BITWISE(m_post, m_type, m_max)            \
-    PF_API m_type pf_pow2ceil##m_post(m_type x) {         \
-        pf__pow2ceil(x);                                  \
-        return x;                                         \
-    }                                                     \
-    PF_API m_type pf_pow2floor##m_post(m_type x) {        \
-        pf__pow2floor(x);                                 \
-        return x;                                         \
-    }                                                     \
-    PF_API int pf_ispow2##m_post(m_type x) {              \
-        int out;                                          \
-        pf__ispow2(x, out);                               \
-        return out;                                       \
-    }                                                     \
-    PF_API int pf_clz##m_post(m_type x) {                 \
-        int out;                                          \
-        pf__clz(x, out);                                  \
-        return out;                                       \
-    }                                                     \
-    PF_API int pf_ctz##m_post(m_type x) {                 \
-        int out;                                          \
-        pf__ctz(x, out);                                  \
-        return out;                                       \
-    }                                                     \
-    PF_API int pf_clo##m_post(m_type x) {                 \
-        int out;                                          \
-        x = ~x;                                           \
-        pf__clz(x, out);                                  \
-        return out;                                       \
-    }                                                     \
-    PF_API int pf_cto##m_post(m_type x) {                 \
-        int out;                                          \
-        x = ~x;                                           \
-        pf__ctz(x, out);                                  \
-        return out;                                       \
-    }                                                     \
-    PF_API int pf_flz##m_post(m_type x) {                 \
-        int out;                                          \
-        pf__flz(x, out);                                  \
-        return out;                                       \
-    }                                                     \
-    PF_API int pf_ftz##m_post(m_type x) {                 \
-        int out;                                          \
-        pf__ftz(x, out);                                  \
-        return out;                                       \
-    }                                                     \
-    PF_API int pf_flo##m_post(m_type x) {                 \
-        int out;                                          \
-        pf__flo(x, out);                                  \
-        return out;                                       \
-    }                                                     \
-    PF_API int pf_fto##m_post(m_type x) {                 \
-        int out;                                          \
-        pf__fto(x, out);                                  \
-        return out;                                       \
-    }                                                     \
-    PF_API int pf_popcount##m_post(m_type x) {            \
-        int out;                                          \
-        pf__popcount(x, out);                             \
-        return out;                                       \
-    }                                                     \
-    PF_API int pf_zerocount##m_post(m_type x) {           \
-        int out;                                          \
-        pf__zerocount(x, out);                            \
-        return out;                                       \
-    }                                                     \
-    PF_API int pf_parity##m_post(m_type x) {              \
-        int out;                                          \
-        pf__parity(x, out);                               \
-        return out;                                       \
-    }                                                     \
-    PF_API m_type pf_rotl##m_post(m_type x, unsigned i) { \
-        m_type lo, hi;                                    \
-        (void)hi;                                         \
-        (void)lo;                                         \
-        pf__rotl(x, i);                                   \
-        return x;                                         \
-    }                                                     \
-    PF_API m_type pf_rotr##m_post(m_type x, unsigned i) { \
-        m_type lo, hi;                                    \
-        (void)hi;                                         \
-        (void)lo;                                         \
-        pf__rotr(x, i);                                   \
-        return x;                                         \
+#define PF_IMPL_BITWISE(m_post, m_type, m_max)                             \
+    PF_API m_type pf_pow2ceil##m_post(m_type x) {                          \
+        pf__pow2ceil(x);                                                   \
+        return x;                                                          \
+    }                                                                      \
+    PF_API m_type pf_pow2floor##m_post(m_type x) {                         \
+        pf__pow2floor(x);                                                  \
+        return x;                                                          \
+    }                                                                      \
+    PF_API int pf_ispow2##m_post(m_type x) {                               \
+        int out;                                                           \
+        pf__ispow2(x, out);                                                \
+        return out;                                                        \
+    }                                                                      \
+    PF_API int pf_clz##m_post(m_type x) {                                  \
+        int out;                                                           \
+        pf__clz(x, out);                                                   \
+        return out;                                                        \
+    }                                                                      \
+    PF_API int pf_ctz##m_post(m_type x) {                                  \
+        int out;                                                           \
+        pf__ctz(x, out);                                                   \
+        return out;                                                        \
+    }                                                                      \
+    PF_API int pf_clo##m_post(m_type x) { return pf_clz##m_post(~x); }     \
+    PF_API int pf_cto##m_post(m_type x) { return pf_ctz##m_post(~x); }     \
+    PF_API int pf_flz##m_post(m_type x) { return pf_clz##m_post(~x) + 1; } \
+    PF_API int pf_flo##m_post(m_type x) { return pf_clz##m_post(x) + 1; }  \
+    PF_API int pf_ftz##m_post(m_type x) { return pf_ctz##m_post(~x) + 1; } \
+    PF_API int pf_fto##m_post(m_type x) { return pf_ctz##m_post(~x) + 1; } \
+    PF_API int pf_popcount##m_post(m_type x) {                             \
+        int out;                                                           \
+        pf__popcount(x, out);                                              \
+        return out;                                                        \
+    }                                                                      \
+    PF_API int pf_zerocount##m_post(m_type x) {                            \
+        return pf_popcount##m_post(~x);                                    \
+    }                                                                      \
+    PF_API int pf_parity##m_post(m_type x) {                               \
+        int out;                                                           \
+        pf__parity(x, out);                                                \
+        return out;                                                        \
+    }                                                                      \
+    PF_API m_type pf_rotl##m_post(m_type x, unsigned i) {                  \
+        m_type lo, hi;                                                     \
+        (void)hi;                                                          \
+        (void)lo;                                                          \
+        pf__rotl(x, i);                                                    \
+        return x;                                                          \
+    }                                                                      \
+    PF_API m_type pf_rotr##m_post(m_type x, unsigned i) {                  \
+        m_type lo, hi;                                                     \
+        (void)hi;                                                          \
+        (void)lo;                                                          \
+        pf__rotr(x, i);                                                    \
+        return x;                                                          \
     }
 
 #ifndef PF_BITWISE_SKIP_DEFAULT
