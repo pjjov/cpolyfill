@@ -81,6 +81,8 @@ extern "C" {
     #include <stdbit.h>
     #define pf__clz(x, out) out = (stdc_leading_zeros(x));
     #define pf__ctz(x, out) out = (stdc_trailing_zeros(x));
+    #define pf__clo(x, out) out = (stdc_leading_ones(x));
+    #define pf__cto(x, out) out = (stdc_trailing_ones(x));
     #define pf__flz(x, out) out = (stdc_first_leading_zero(x));
     #define pf__ftz(x, out) out = (stdc_first_trailing_zero(x));
     #define pf__flo(x, out) out = (stdc_first_leading_one(x));
@@ -255,6 +257,18 @@ extern "C" {
     }                                                     \
     PF_API int pf_ctz##m_post(m_type x) {                 \
         int out;                                          \
+        pf__ctz(x, out);                                  \
+        return out;                                       \
+    }                                                     \
+    PF_API int pf_clo##m_post(m_type x) {                 \
+        int out;                                          \
+        x = ~x;                                           \
+        pf__clz(x, out);                                  \
+        return out;                                       \
+    }                                                     \
+    PF_API int pf_cto##m_post(m_type x) {                 \
+        int out;                                          \
+        x = ~x;                                           \
         pf__ctz(x, out);                                  \
         return out;                                       \
     }                                                     \
