@@ -10,6 +10,22 @@ cpolyfill_dep = declare_dependency(
 
 meson.override_dependency('cpolyfill', cpolyfill_dep)
 
+install_headers(
+    'include/pf_argparse.h',
+    'include/pf_assert.h',
+    'include/pf_bitwise.h',
+    'include/pf_cpuinfo.h',
+    'include/pf_ctype.h',
+    'include/pf_endian.h',
+    'include/pf_errno.h',
+    'include/pf_macro.h',
+    'include/pf_overflow.h',
+    'include/pf_socket.h',
+    'include/pf_test.h',
+    'include/pf_typeid.h',
+    'include/pf_types.h',
+)
+
 tests = executable(
     'cpolyfill-test',
     dependencies: [cpolyfill_dep],
