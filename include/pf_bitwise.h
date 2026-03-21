@@ -177,7 +177,7 @@ extern "C" {
 #endif
 
 #if pf_has_builtin(__builtin_stdc_rotate_left)
-    #define PF__ROTL x = (__builtin_stdc_rotate_left(x, i));
+    #define PF__ROTL return (__builtin_stdc_rotate_left(x, i));
 #else
     #define PF__ROTL           \
         i = sizeof(x) * 8 - i; \

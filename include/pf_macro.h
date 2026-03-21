@@ -86,7 +86,17 @@
     #define PF_DIFF(x, y) ((x) > (y) ? (x) - (y) : (y) - (x))
 #endif
 
+#define PF_CLAMP(x, min, max) PF_MAX(PF_MIN(x, max), min)
+
+#define PF_SWAP(x, y)         \
+    ({                        \
+        typeof(x) _tmp = (x); \
+        x = (y);              \
+        y = _tmp;             \
+    })
+
 #define PF_OFFSET(ptr, offset) ((void *)(&((char *)(ptr))[offset]))
+#define PF_PTRDIFF(x, y) (((char *)(x)) - ((char *)(y)))
 
 #ifndef PF__ALIGN
     #define PF__ALIGN

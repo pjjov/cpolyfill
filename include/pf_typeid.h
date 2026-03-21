@@ -44,6 +44,19 @@
     #define pf__unreachable()
 #endif
 
+#ifndef PF_BOOL
+    #define PF_BOOL
+    #if defined(bool)
+typedef bool pf_bool;
+    #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+typedef bool pf_bool;
+    #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+typedef _Bool pf_bool;
+    #else
+typedef int pf_bool;
+    #endif
+#endif
+
 /* clang-format off */
 
 /*
