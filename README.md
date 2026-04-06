@@ -45,20 +45,21 @@ included alongside it.
 
 | Header | Description |
 | ------ | ----------- |
+| [pf_argparse.h](./include/pf_argparse.h) | Minimal argument parsing alternative to `getopt`. |
 | [pf_assert.h](./include/pf_assert.h)     | Provides the `assert` macro and much more for better debugging and testing. |
+| [pf_atomic.h](./include/pf_atomic.h)     | C11's atomic instructions for existing compiler builtins. |
 | [pf_bitwise.h](./include/pf_bitwise.h)   | Provides cross platform implementations of `clz`, `popcnt`, `round_pow2` and others. |
 | [pf_cpuinfo.h](./include/pf_cpuinfo.h)   | Gives runtime information on CPU features like the number of cores, SIMD capabilities and more. |
+| [pf_ctype.h](./include/pf_ctype.h)       | Unlocalized variants of `<ctype.h>` functions and other utilities. |
+| [pf_dirent.h](./include/pf_dirent.h)     | Directory traversal using the POSIX `<dirent.h>` interface. |
+| [pf_dlsym.h](./include/pf_dlsym.h)       | Shared library loading using the POSIX `<dlsym.h>` interface. |
 | [pf_endian.h](./include/pf_endian.h)     | Endianness detection and reordering of bytes. |
+| [pf_errno.h](./include/pf_errno.h)       | Compilation of common standard library error codes. |
 | [pf_macro.h](./include/pf_macro.h)       | Contains ubiquitous macro functions and compiler builtins. |
 | [pf_overflow.h](./include/pf_overflow.h) | Overflow checks and saturated arithmetic. |
+| [pf_pipe.h](./include/pf_pipe.h)         | Cross-platform named pipe interface. |
+| [pf_socket.h](./include/pf_socket.h)     | Cross-platform named socket interface. |
 | [pf_test.h](./include/pf_test.h)         | Minimal unit testing framework which can be extended with other polyfills. |
+| [pf_threads.h](./include/pf_threads.h)   | C11's threading interface for existing libraries. |
 | [pf_typeid.h](./include/pf_typeid.h)     | Runtime type information and conversion. |
 | [pf_types.h](./include/pf_types.h)       | Alignment and type safety macros. (`typeof`, `container_of`, `ALIGN_UP`). |
-
-<!--
-| [pf_atomic.h](./include/pf_atomic.h)     | Cross platform implementation of `<stdatomic.h>` |
-| [pf_thread.h](./include/pf_thread.h)     | C11 and pthreads interface implementations. |
-| [pf_dirent.h](./include/pf_dirent.h)     | Implements `<dirent.h>` on Windows platforms for searching directories. |
-| [pf_errno.h](./include/pf_errno.h)       | Error codes from Unix and Windows. |
-| [pf_utf8.h](./include/pf_utf8.h)         | UTF8 validating and other utilities. |
--->
