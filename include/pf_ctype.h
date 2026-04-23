@@ -33,6 +33,28 @@
     #define PF_API static inline
 #endif
 
+#define PF_CTYPE_DIGIT "0123456789"
+#define PF_CTYPE_LOWER "abcdefghijklmnopqrstuvwxyz"
+#define PF_CTYPE_UPPER "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+#define PF_CTYPE_ALPHA "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+#define PF_CTYPE_XDIGIT "0123456789ABCDEFabcdef"
+#define PF_CTYPE_SPACE " \t\n\r\f\v"
+#define PF_CTYPE_BLANK " \t"
+#define PF_CTYPE_PUNCT "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+#define PF_CTYPE_ALNUM                                               \
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+#define PF_CTYPE_GRAPH                                   \
+    "!\"#$%&'()*+,-./"                                   \
+    "0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`" \
+    "abcdefghijklmnopqrstuvwxyz{|}~"
+#define PF_CTYPE_PRINT                                   \
+    " !\"#$%&'()*+,-./"                                  \
+    "0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`" \
+    "abcdefghijklmnopqrstuvwxyz{|}~"
+#define PF_CTYPE_CNTRL                                                         \
+    "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12" \
+    "\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x7f\x00"
+
 enum pf_ascii_control {
     PF_ASCII_NUL = 0,
     PF_ASCII_SOH,
