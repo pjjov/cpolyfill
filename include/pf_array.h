@@ -13,6 +13,8 @@
     - PF_ARRAY_PUSH(array, item, count)
     - PF_ARRAY_INCR(array, count)
     - PF_ARRAY_POP(array, out, count)
+    - PF_ARRAY_UNSHIFT(array, item, count)
+    - PF_ARRAY_SHIFT(array, out, count)
     - PF_ARRAY_RESERVE(array, count)
     - PF_ARRAY_RESIZE(array, capacity)
     - PF_ARRAY_SETLEN(array, length)
@@ -92,6 +94,16 @@ struct pf_array {
 
 #define PF_ARRAY_POP(array, out, count)                               \
     pf__array_push(                                                   \
+        PF__ARRAY_BASE(array), (out), (count) * PF__ARRAY_SIZE(array) \
+    )
+
+#define PF_ARRAY_UNSHIFT(array, item, count)                           \
+    pf__array_unshift(                                                 \
+        PF__ARRAY_BASE(array), (item), (count) * PF__ARRAY_SIZE(array) \
+    )
+
+#define PF_ARRAY_SHIFT(array, out, count)                             \
+    pf__array_shift(                                                  \
         PF__ARRAY_BASE(array), (out), (count) * PF__ARRAY_SIZE(array) \
     )
 
@@ -231,6 +243,32 @@ static inline int pf__array_pop(struct pf_array *a, void *out, size_t size) {
 
     if (out)
         memcpy(out, PF_OFFSET(a->items, a->length), size);
+    return PF_ARRAY_OK;
+}
+
+static inline int pf__array_unpshift(
+    struct pf_array *a, void *item, size_t size
+) {
+    if (!a || size == 0)
+        return PF_ARRAY_EINVAL;
+    if (pf__array_reserve(a, size))
+        return PF_ARRAY_ENOMEM;
+
+    memmove(PF_OFFSET(a->items, size), a->items, a->length);
+    memcpy(a->items, item, size);
+    a->length += size;
+    return PF_ARRAY_OK;
+}
+
+static inline int pf__array_shift(struct pf_array *a, void *out, size_t size) {
+    if (!a || size == 0 || a->length < size)
+        return PF_ARRAY_EINVAL;
+
+    a->length -= size;
+
+    if (out)
+        memcpy(out, a->items, size);
+    memmove(a->items, PF_OFFSET(a->items, size), a->length);
     return PF_ARRAY_OK;
 }
 
