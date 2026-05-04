@@ -140,7 +140,7 @@ typedef pf_max_align_t max_align_t;
     #define offsetof(TYPE, MEMBER) ((size_t)&((TYPE *)0)->MEMBER)
 #endif
 
-#if !defined(container_of) && !defined(PF_NO_CONTAINEROF)
+#if !defined(pf_container_of) && !defined(PF_NO_CONTAINEROF)
     #ifdef PF_HAS_STMT_EXPR
         #define pf_container_of(ptr, type, member)                 \
             ({                                                     \

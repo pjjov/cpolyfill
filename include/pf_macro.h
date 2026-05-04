@@ -106,6 +106,16 @@
         (((x) + ((typeof(x))(a) - 1)) & ~((typeof(x))(a) - 1))
 #endif
 
+#define PF_FLAG_SET(x, flag) ((x) | (flag))
+#define PF_FLAG_CLEAR(x, flag) ((x) & ~((typeof(x))flag))
+#define PF_FLAG_TEST(x, flag) ((x) & (flag))
+
+#ifndef pf_container_of
+    #define pf_container_of(ptr, type, member)               \
+        ((type *)((char *)(1 ? (ptr) : &((type *)0)->member) \
+                  - offsetof(type, member)))
+#endif
+
 #define PF_COUNTOF(array)                                \
     ((sizeof(array) / sizeof(0 [array]))                 \
      / ((size_t)(!(sizeof(array) % sizeof(0 [array])))))
