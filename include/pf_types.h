@@ -229,6 +229,9 @@ typedef pf_max_align_t max_align_t;
     #define PF_ALIGN_DOWN(x, a) ((x) & ~((typeof(x))(a) - 1))
     #define PF_ALIGN_UP(x, a)                                  \
         (((x) + ((typeof(x))(a) - 1)) & ~((typeof(x))(a) - 1))
+
+    #define PF_ALIGN_CEIL PF_ALIGN_UP
+    #define PF_ALIGN_FLOOR PF_ALIGN_DOWN
 #endif
 
 #endif

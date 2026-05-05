@@ -5,12 +5,45 @@
 
         PF_ABS(x)
             Returns the absolute value of parameter `x`.
+        PF_DIFF(x, y)
+            Returns the absolute difference of parameters `x` and `y`.
         PF_MAX(x, y)
             Returns the argument with the largest value.
         PF_MIN(x, y)
             Returns the argument with the smallest value.
+        PF_CLAMP(x, min, max)
+            Returns the clamped value of x between min and max.
+        PF_SWAP(x, y)
+            Swaps the values of given variables `x` and `y`.
+        PF_OFFSET(ptr, offset)
+            Returns a new pointer with a given byte offset.
+        PF_PTRDIFF(x, y)
+            Returns the difference between two pointers in bytes.
+        PF_ALIGN_PAD(x, align)
+            Returns the padding required to align `x` to `PF_ALIGN_CEIL(x, align)`.
+        PF_ALIGN_CEIL(x, align) and PF_ALIGN_UP(x, align)
+            Return the value equal or larger to `x` with given alignment.
+        PF_ALIGN_FLOOR(x, align) and PF_ALIGN_DOWN(x, align)
+            Return the value equal or smaller to `x` with given alignment.
+        PF_FLAG_SET(x, flag)
+            Returns a copy of `x` with `flag` turned on.
+        PF_FLAG_CLEAR(x, flag)
+            Returns a copy of `x` with `flag` turned off.
+        PF_FLAG_TEST(x, flag)
+            Checks if `flag` is turned on in `x`.
         PF_COUNTOF(array)
             Returns the number of elements inside `array`.
+        PF_EXPECT(expr, expect)
+            Annotate that the value of `expr` is expected to be `expect`.
+        PF_EXPECT_P(expr, expect, prop)
+            Annotate that the value of `expr` is expected to be `expect`
+            with given probability `p`, between 0.0 and 1.0.
+        PF_UNREACHABLE
+            Annotate that following piece of code cannot be reached.
+        PF_ASSUME_ALIGNED(expr, align, ...)
+            Annotate that the value of `expr` should have the given alignment.
+        pf_container_of(ptr, type, member)
+            Returns a pointer of `type` using the offset of it's member `ptr`.
         PF_HAS_STMT_EXPR
             This macro is defined if the compiler supports GCC's extension
             for statement expressions. Used for ensuring type safety.
@@ -104,6 +137,9 @@
     #define PF_ALIGN_DOWN(x, a) ((x) & ~((typeof(x))(a) - 1))
     #define PF_ALIGN_UP(x, a)                                  \
         (((x) + ((typeof(x))(a) - 1)) & ~((typeof(x))(a) - 1))
+
+    #define PF_ALIGN_CEIL PF_ALIGN_UP
+    #define PF_ALIGN_FLOOR PF_ALIGN_DOWN
 #endif
 
 #define PF_FLAG_SET(x, flag) ((x) | (flag))
