@@ -131,17 +131,15 @@ PF_API pf_exception_t *pf_try_catch(
         PF_ON_MAX_EXCEPTIONS;
 
     jmp_buf jump;
-    int index;
 
-    if (0 == (index = setjmp(jump))) {
-        index = stack->length++;
+    if (0 == setjmp(jump)) {
+        int index = stack->length++;
         stack->buffer[index].jump = &jump;
         stack->buffer[index].module = module;
         stack->buffer[index].code = code;
-        return 0;
+        return NULL;
     }
 
-    stack->length = index;
     return &stack->current;
 }
 
@@ -155,7 +153,9 @@ PF_API int pf_rethrow(pf_exception_stack_t *stack, pf_exception_t *e) {
             continue;
         if (handler->code != 0 && handler->code != e->code)
             continue;
-        longjmp(*handler->jump, i);
+
+        stack->length = i;
+        longjmp(*handler->jump, 1);
     }
 
     return e->code;
