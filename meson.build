@@ -20,6 +20,7 @@ install_headers(
     'include/pf_dlsym.h',
     'include/pf_endian.h',
     'include/pf_errno.h',
+    'include/pf_exception.h',
     'include/pf_macro.h',
     'include/pf_overflow.h',
     'include/pf_pipe.h',

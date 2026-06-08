@@ -46,8 +46,10 @@ included alongside it.
 | Header | Description |
 | ------ | ----------- |
 | [pf_argparse.h](./include/pf_argparse.h) | Minimal argument parsing alternative to `getopt`. |
+| [pf_array.h](./include/pf_array.h)       | Simple implementation of generic growable arrays. |
 | [pf_assert.h](./include/pf_assert.h)     | Provides the `assert` macro and much more for better debugging and testing. |
 | [pf_atomic.h](./include/pf_atomic.h)     | C11's atomic instructions for existing compiler builtins. |
+| [pf_attribute.h](./include/pf_attribute.h) | Macros for annotating functions, variables and types using compiler and C23 attributes. |
 | [pf_bitwise.h](./include/pf_bitwise.h)   | Provides cross platform implementations of `clz`, `popcnt`, `round_pow2` and others. |
 | [pf_cpuinfo.h](./include/pf_cpuinfo.h)   | Gives runtime information on CPU features like the number of cores, SIMD capabilities and more. |
 | [pf_ctype.h](./include/pf_ctype.h)       | Unlocalized variants of `<ctype.h>` functions and other utilities. |
@@ -55,6 +57,7 @@ included alongside it.
 | [pf_dlsym.h](./include/pf_dlsym.h)       | Shared library loading using the POSIX `<dlsym.h>` interface. |
 | [pf_endian.h](./include/pf_endian.h)     | Endianness detection and reordering of bytes. |
 | [pf_errno.h](./include/pf_errno.h)       | Compilation of common standard library error codes. |
+| [pf_exception.h](./include/pf_exception.h) | Exception handling mechanism for C. |
 | [pf_macro.h](./include/pf_macro.h)       | Contains ubiquitous macro functions and compiler builtins. |
 | [pf_overflow.h](./include/pf_overflow.h) | Overflow checks and saturated arithmetic. |
 | [pf_pipe.h](./include/pf_pipe.h)         | Cross-platform named pipe interface. |
