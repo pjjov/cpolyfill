@@ -29,8 +29,22 @@
             Returns a copy of `x` with `flag` turned on.
         PF_FLAG_CLEAR(x, flag)
             Returns a copy of `x` with `flag` turned off.
+        PF_FLAG_TOGGLE(x, flag)
+            Returns a copy of `x` with `flag` toggled.
         PF_FLAG_TEST(x, flag)
             Checks if `flag` is turned on in `x`.
+        PF_MASK(type, bit)
+            Returns a constant of `type` with bits under `bit` set to 1.
+        PF_BIT(type, bit)
+            Returns a constant of `type` with `bit` set to 1.
+        PF_BIT_SET(x, bit)
+            Returns a copy of `x` with `bit` turned on.
+        PF_BIT_CLEAR(x, bit)
+            Returns a copy of `x` with `bit` turned off.
+        PF_BIT_TOGGLE(x, bit)
+            Returns a copy of `x` with `bit` toggled.
+        PF_BIT_TEST(x, bit)
+            Checks if `bit` is turned on in `x`.
         PF_COUNTOF(array)
             Returns the number of elements inside `array`.
         PF_EXPECT(expr, expect)
@@ -144,7 +158,15 @@
 
 #define PF_FLAG_SET(x, flag) ((x) | (flag))
 #define PF_FLAG_CLEAR(x, flag) ((x) & ~((typeof(x))flag))
+#define PF_FLAG_TOGGLE(x, flag) ((x) ^ ((typeof(x))flag))
 #define PF_FLAG_TEST(x, flag) ((x) & (flag))
+
+#define PF_MASK(type, bit) (((type)1 << (bit)) - 1)
+#define PF_BIT(type, bit) ((type)1 << (bit))
+#define PF_BIT_SET(x, bit) ((x) | ((typeof(x))1 << (bit)))
+#define PF_BIT_CLEAR(x, bit) ((x) & ~((typeof(x))1 << (bit)))
+#define PF_BIT_TOGGLE(x, bit) ((x) ^ ((typeof(x))1 << (bit)))
+#define PF_BIT_TEST(x, bit) ((x) & ((typeof(x))1 << (bit)))
 
 #ifndef pf_container_of
     #define pf_container_of(ptr, type, member)               \
