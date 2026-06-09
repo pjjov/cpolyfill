@@ -55,13 +55,16 @@
     #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
         #define PF_FUNC_NAME __func__
     #else
-        #define PF_FUNC_NAME ((const char *) 0)
+        #define PF_FUNC_NAME ((const char *)0)
     #endif
 #endif
 
 #ifndef PF_BOOL
     #define PF_BOOL
-    #if defined(bool) || defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+    #define PF_TRUE 1
+    #define PF_FALSE 0
+    #if defined(bool)                                               \
+        || defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
 typedef bool pf_bool;
     #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
 typedef _Bool pf_bool;
@@ -86,48 +89,38 @@ typedef int pf_bool;
         #define PF_ASSERT_STDERR stderr
     #endif
 
-    static void pf_assert_fail(
-        const char *msg,
-        const char *file,
-        int line,
-        const char *fn
-    ) {
-        if (fn) {
-            PF_ASSERT_FPRINTF(
-                PF_ASSERT_STDERR,
-                "%s:%d: %s: %s\n",
-                file, line, fn, msg
-            );
-        } else {
-            PF_ASSERT_FPRINTF(
-                PF_ASSERT_STDERR,
-                "%s:%d: %s\n",
-                file, line, msg
-            );
-        }
-        PF_ASSERT_ABORT();
+static void pf_assert_fail(
+    const char *msg, const char *file, int line, const char *fn
+) {
+    if (fn) {
+        PF_ASSERT_FPRINTF(
+            PF_ASSERT_STDERR, "%s:%d: %s: %s\n", file, line, fn, msg
+        );
+    } else {
+        PF_ASSERT_FPRINTF(PF_ASSERT_STDERR, "%s:%d: %s\n", file, line, msg);
     }
+    PF_ASSERT_ABORT();
+}
 
     #define PF_ASSERT_FAIL pf_assert_fail
 
 #endif
 
 static inline pf_bool pf_check_fail(
-    const char *msg,
-    const char *file,
-    int line,
-    const char *fn
+    const char *msg, const char *file, int line, const char *fn
 ) {
     PF_ASSERT_FAIL(msg, file, line, fn);
     return 0;
 }
 
 /** `pf_assert_always` asserts even if NDEBUG is defined. */
-#define pf_assert_always(msg, ...) ((__VA_ARGS__) ? (void)0 \
-    : PF_ASSERT_FAIL((msg), __FILE__, __LINE__, PF_FUNC_NAME))
+#define pf_assert_always(msg, ...)                                            \
+    ((__VA_ARGS__) ? (void)0                                                  \
+                   : PF_ASSERT_FAIL((msg), __FILE__, __LINE__, PF_FUNC_NAME))
 
-#define pf_check_always(msg, ...)  ((__VA_ARGS__) ? (pf_bool)1 \
-    : pf_check_fail((msg), __FILE__, __LINE__, PF_FUNC_NAME))
+#define pf_check_always(msg, ...)                                            \
+    ((__VA_ARGS__) ? (pf_bool)1                                              \
+                   : pf_check_fail((msg), __FILE__, __LINE__, PF_FUNC_NAME))
 
 /*
     When NDEBUG is defined, `pf_assert_or_check` turns into a condition,
@@ -142,39 +135,69 @@ static inline pf_bool pf_check_fail(
     #define pf_check(...) ((__VA_ARGS__) ? 1 : 0)
 #endif
 
-#define pf_assert(...)          pf_assert_print("Assertion `"  #__VA_ARGS__  "` failed!", __VA_ARGS__)
-#define pf_assert_false(...)    pf_assert_print("`"  #__VA_ARGS__  "` is not false!", !(__VA_ARGS__))
-#define pf_assert_true(...)     pf_assert_print("`"  #__VA_ARGS__  "` is not true!", __VA_ARGS__)
-#define pf_assert_ok(...)       pf_assert_print("`"  #__VA_ARGS__  "` failed!", !(__VA_ARGS__))
-#define pf_assert_error(...)    pf_assert_print("`"  #__VA_ARGS__  "` should've failed!", __VA_ARGS__)
-#define pf_assert_null(...)     pf_assert_print("`" #__VA_ARGS__ "` is not null!", (__VA_ARGS__) == NULL)
-#define pf_assert_not_null(...) pf_assert_print("`" #__VA_ARGS__ "` is null!", (__VA_ARGS__) != NULL)
-#define pf_check(...)           pf_check_print("Check `"  #__VA_ARGS__  "` failed!", __VA_ARGS__)
-#define pf_check_false(...)     pf_check_print("`"  #__VA_ARGS__  "` is not false!", !(__VA_ARGS__))
-#define pf_check_true(...)      pf_check_print("`"  #__VA_ARGS__  "` is not true!", __VA_ARGS__)
-#define pf_check_ok(...)        pf_check_print("`"  #__VA_ARGS__  "` failed!", !(__VA_ARGS__))
-#define pf_check_error(...)     pf_check_print("`"  #__VA_ARGS__  "` should've failed!", __VA_ARGS__)
-#define pf_check_null(...)      pf_check_print("`" #__VA_ARGS__ "` is not null!", (__VA_ARGS__) == NULL)
-#define pf_check_not_null(...)  pf_check_print("`" #__VA_ARGS__ "` is null!", (__VA_ARGS__) != NULL)
+#define pf_assert(...)                                                   \
+    pf_assert_print("Assertion `" #__VA_ARGS__ "` failed!", __VA_ARGS__)
+#define pf_assert_false(...)                                            \
+    pf_assert_print("`" #__VA_ARGS__ "` is not false!", !(__VA_ARGS__))
+#define pf_assert_true(...)                                         \
+    pf_assert_print("`" #__VA_ARGS__ "` is not true!", __VA_ARGS__)
+#define pf_assert_ok(...)                                         \
+    pf_assert_print("`" #__VA_ARGS__ "` failed!", !(__VA_ARGS__))
+#define pf_assert_error(...)                                             \
+    pf_assert_print("`" #__VA_ARGS__ "` should've failed!", __VA_ARGS__)
+#define pf_assert_null(...)                                                   \
+    pf_assert_print("`" #__VA_ARGS__ "` is not null!", (__VA_ARGS__) == NULL)
+#define pf_assert_not_null(...)                                           \
+    pf_assert_print("`" #__VA_ARGS__ "` is null!", (__VA_ARGS__) != NULL)
+#define pf_check(...)                                               \
+    pf_check_print("Check `" #__VA_ARGS__ "` failed!", __VA_ARGS__)
+#define pf_check_false(...)                                            \
+    pf_check_print("`" #__VA_ARGS__ "` is not false!", !(__VA_ARGS__))
+#define pf_check_true(...)                                         \
+    pf_check_print("`" #__VA_ARGS__ "` is not true!", __VA_ARGS__)
+#define pf_check_ok(...)                                         \
+    pf_check_print("`" #__VA_ARGS__ "` failed!", !(__VA_ARGS__))
+#define pf_check_error(...)                                             \
+    pf_check_print("`" #__VA_ARGS__ "` should've failed!", __VA_ARGS__)
+#define pf_check_null(...)                                                   \
+    pf_check_print("`" #__VA_ARGS__ "` is not null!", (__VA_ARGS__) == NULL)
+#define pf_check_not_null(...)                                           \
+    pf_check_print("`" #__VA_ARGS__ "` is null!", (__VA_ARGS__) != NULL)
 
 #ifndef PF_ASSERT_NO_STRING
-#include <string.h>
-#define pf_assert_memcmp(x, y, size) \
-    pf_assert_print("`" #x "` is not equal to `" #y "`!", 0 == memcmp((x), (y), (size)));
-#define pf_assert_not_memcmp(x, y, size) \
-    pf_assert_print("`" #x "` is equal to `" #y "`!", 0 != memcmp((x), (y), (size)));
-#define pf_assert_strcmp(x, y) \
-    pf_assert_print("`" #x "` is not equal to `" #y "`!", 0 == strcmp((x), (y)));
-#define pf_assert_not_strcmp(x, y) \
-    pf_assert_print("`" #x "` is equal to `" #y "`!", 0 != strcmp((x), (y)));
-#define pf_check_memcmp(x, y, size) \
-    pf_check_print("`" #x "` is not equal to `" #y "`!", 0 == memcmp((x), (y), (size)));
-#define pf_check_not_memcmp(x, y, size) \
-    pf_check_print("`" #x "` is equal to `" #y "`!", 0 != memcmp((x), (y), (size)));
-#define pf_check_strcmp(x, y) \
-    pf_check_print("`" #x "` is not equal to `" #y "`!", 0 == strcmp((x), (y)));
-#define pf_check_not_strcmp(x, y) \
-    pf_check_print("`" #x "` is equal to `" #y "`!", 0 != strcmp((x), (y)));
+    #include <string.h>
+    #define pf_assert_memcmp(x, y, size)          \
+        pf_assert_print(                          \
+            "`" #x "` is not equal to `" #y "`!", \
+            0 == memcmp((x), (y), (size))         \
+        );
+    #define pf_assert_not_memcmp(x, y, size)                                \
+        pf_assert_print(                                                    \
+            "`" #x "` is equal to `" #y "`!", 0 != memcmp((x), (y), (size)) \
+        );
+    #define pf_assert_strcmp(x, y)                                      \
+        pf_assert_print(                                                \
+            "`" #x "` is not equal to `" #y "`!", 0 == strcmp((x), (y)) \
+        );
+    #define pf_assert_not_strcmp(x, y)                              \
+        pf_assert_print(                                            \
+            "`" #x "` is equal to `" #y "`!", 0 != strcmp((x), (y)) \
+        );
+    #define pf_check_memcmp(x, y, size)           \
+        pf_check_print(                           \
+            "`" #x "` is not equal to `" #y "`!", \
+            0 == memcmp((x), (y), (size))         \
+        );
+    #define pf_check_not_memcmp(x, y, size)                                 \
+        pf_check_print(                                                     \
+            "`" #x "` is equal to `" #y "`!", 0 != memcmp((x), (y), (size)) \
+        );
+    #define pf_check_strcmp(x, y)                                       \
+        pf_check_print(                                                 \
+            "`" #x "` is not equal to `" #y "`!", 0 == strcmp((x), (y)) \
+        );
+    #define pf_check_not_strcmp(x, y) \
+        pf_check_print("`" #x "` is equal to `" #y "`!", 0 != strcmp((x), (y)));
 #endif
 
 #ifndef assert

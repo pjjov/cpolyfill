@@ -81,6 +81,8 @@
 
 #ifndef PF_BOOL
     #define PF_BOOL
+    #define PF_TRUE 1
+    #define PF_FALSE 0
     #if defined(bool)
 typedef bool pf_bool;
     #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
