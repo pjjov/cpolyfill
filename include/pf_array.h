@@ -40,6 +40,10 @@
 #ifndef POLYFILL_ARRAY
 #define POLYFILL_ARRAY
 
+#ifndef PF_API
+    #define PF_API static inline
+#endif
+
 #include <stddef.h>
 #include <string.h>
 
@@ -150,7 +154,7 @@ struct pf_array {
 #define PF__ARRAY_TYPE(array) typeof((array).type)
 #define PF__ARRAY_BASE(array) (&(array).base)
 
-static inline int pf__array_init(struct pf_array *a, size_t capacity) {
+PF_API int pf__array_init(struct pf_array *a, size_t capacity) {
     if (!a || capacity == 0)
         return PF_ARRAY_EINVAL;
 
@@ -170,26 +174,26 @@ static inline int pf__array_init(struct pf_array *a, size_t capacity) {
     return PF_ARRAY_OK;
 }
 
-static inline void pf__array_free(struct pf_array *a) {
+PF_API void pf__array_free(struct pf_array *a) {
     if (a)
         PF_ARRAY_DEALLOC(a, a->items);
 }
 
-static inline void *pf__array_get(struct pf_array *a, size_t index) {
+PF_API void *pf__array_get(struct pf_array *a, size_t index) {
     if (!a || index >= a->length)
         return NULL;
 
     return PF_OFFSET(a->items, index);
 }
 
-static inline void *pf__array_slot(struct pf_array *a, size_t index) {
+PF_API void *pf__array_slot(struct pf_array *a, size_t index) {
     if (!a || index >= a->capacity)
         return NULL;
 
     return PF_OFFSET(a->items, index);
 }
 
-static inline int pf__array_setlen(struct pf_array *a, size_t length) {
+PF_API int pf__array_setlen(struct pf_array *a, size_t length) {
     if (!a || length > a->capacity)
         return PF_ARRAY_EINVAL;
 
@@ -197,7 +201,7 @@ static inline int pf__array_setlen(struct pf_array *a, size_t length) {
     return PF_ARRAY_OK;
 }
 
-static inline int pf__array_resize(struct pf_array *a, size_t capacity) {
+PF_API int pf__array_resize(struct pf_array *a, size_t capacity) {
     if (!a || capacity == 0)
         return PF_ARRAY_EINVAL;
 
@@ -213,7 +217,7 @@ static inline int pf__array_resize(struct pf_array *a, size_t capacity) {
     return PF_ARRAY_OK;
 }
 
-static inline int pf__array_reserve(struct pf_array *a, size_t size) {
+PF_API int pf__array_reserve(struct pf_array *a, size_t size) {
     if (!a || size == 0)
         return PF_ARRAY_EINVAL;
 
@@ -224,7 +228,7 @@ static inline int pf__array_reserve(struct pf_array *a, size_t size) {
     return pf__array_resize(a, capacity);
 }
 
-static inline int pf__array_push(struct pf_array *a, void *item, size_t size) {
+PF_API int pf__array_push(struct pf_array *a, void *item, size_t size) {
     if (!a || size == 0)
         return PF_ARRAY_EINVAL;
     if (pf__array_reserve(a, size))
@@ -235,7 +239,7 @@ static inline int pf__array_push(struct pf_array *a, void *item, size_t size) {
     return PF_ARRAY_OK;
 }
 
-static inline int pf__array_pop(struct pf_array *a, void *out, size_t size) {
+PF_API int pf__array_pop(struct pf_array *a, void *out, size_t size) {
     if (!a || size == 0 || a->length < size)
         return PF_ARRAY_EINVAL;
 
@@ -246,9 +250,7 @@ static inline int pf__array_pop(struct pf_array *a, void *out, size_t size) {
     return PF_ARRAY_OK;
 }
 
-static inline int pf__array_unpshift(
-    struct pf_array *a, void *item, size_t size
-) {
+PF_API int pf__array_unpshift(struct pf_array *a, void *item, size_t size) {
     if (!a || size == 0)
         return PF_ARRAY_EINVAL;
     if (pf__array_reserve(a, size))
@@ -260,7 +262,7 @@ static inline int pf__array_unpshift(
     return PF_ARRAY_OK;
 }
 
-static inline int pf__array_shift(struct pf_array *a, void *out, size_t size) {
+PF_API int pf__array_shift(struct pf_array *a, void *out, size_t size) {
     if (!a || size == 0 || a->length < size)
         return PF_ARRAY_EINVAL;
 
@@ -272,7 +274,7 @@ static inline int pf__array_shift(struct pf_array *a, void *out, size_t size) {
     return PF_ARRAY_OK;
 }
 
-static inline void *pf__array_incr(struct pf_array *a, size_t size) {
+PF_API void *pf__array_incr(struct pf_array *a, size_t size) {
     if (!a || size == 0)
         return NULL;
     if (pf__array_reserve(a, size))
