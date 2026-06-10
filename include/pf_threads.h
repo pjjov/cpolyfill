@@ -306,9 +306,9 @@ PF_API int pf_barrier_wait(pf_barrier_t *b) {
         return thrd_error;
     int rc = pthread_barrier_wait(b);
     if (rc == PTHREAD_BARRIER_SERIAL_THREAD)
-        return 1;
+        return thrd_success;
     if (rc == 0)
-        return 0;
+        return thrd_busy;
     return thrd_error;
 }
 
@@ -338,6 +338,215 @@ PF_API int pf_spin_unlock(pf_spinlock_t *spin) { return PF__PT2(spin_unlock, spi
 PF_API void pf_spin_free(pf_spinlock_t *spin) { if (spin) pthread_spin_destroy(spin); }
 
     /* clang-format on */
+
+#elif defined(PF_THREADS_WIN32)
+    #ifdef PF_THREADS_STD
+        #ifndef WIN32_LEAN_AND_MEAN
+            #define WIN32_LEAN_AND_MEAN
+        #endif
+        #include <windows.h>
+    #endif
+
+typedef SRWLOCK pf_rwlock_t;
+
+typedef struct {
+    volatile LONG locked; /* 0 = free, 1 = held */
+} pf_spinlock_t;
+
+PF_API int pf_rwlock_init(pf_rwlock_t *lock) {
+    if (!lock)
+        return thrd_error;
+    InitializeSRWLock(lock);
+    return thrd_success;
+}
+
+PF_API void pf_rwlock_free(pf_rwlock_t *lock) {
+    (void)lock; /* SRWLOCK has no destroy function. */
+}
+
+PF_API int pf_rwlock_try_rd(pf_rwlock_t *lock) {
+    if (!lock)
+        return thrd_error;
+    if (!TryAcquireSRWLockShared(lock))
+        return thrd_busy;
+    return thrd_success;
+}
+
+PF_API int pf_rwlock_try_wr(pf_rwlock_t *lock) {
+    if (!lock)
+        return thrd_error;
+    if (!TryAcquireSRWLockExclusive(lock))
+        return thrd_error;
+    return thrd_success;
+}
+
+PF_API int pf_rwlock_wait_rd(pf_rwlock_t *lock, const struct timespec *ts) {
+    if (!lock)
+        return thrd_error;
+    if (ts)
+        return thrd_error;
+    AcquireSRWLockShared(lock);
+    return thrd_success;
+}
+
+PF_API int pf_rwlock_wait_wr(pf_rwlock_t *lock, const struct timespec *ts) {
+    if (!lock)
+        return thrd_error;
+    if (ts)
+        return thrd_error;
+    AcquireSRWLockExclusive(lock);
+    return thrd_success;
+}
+
+PF_API int pf_rwlock_exit_rd(pf_rwlock_t *lock) {
+    if (!lock)
+        return thrd_error;
+    ReleaseSRWLockShared(lock);
+    return thrd_success;
+}
+
+PF_API int pf_rwlock_exit_wr(pf_rwlock_t *lock) {
+    if (!lock)
+        return thrd_error;
+    ReleaseSRWLockExclusive(lock);
+    return thrd_success;
+}
+
+PF_API int pf_spin_init(pf_spinlock_t *spin) {
+    if (!spin)
+        return thrd_error;
+    spin->locked = 0;
+    return thrd_success;
+}
+
+PF_API int pf_spin_lock(pf_spinlock_t *spin) {
+    if (!spin)
+        return thrd_error;
+    while (InterlockedExchange(&spin->locked, 1L) != 0) {
+    #if defined(_M_IX86) || defined(_M_X64)
+        _mm_pause(); /* Emit a PAUSE hint to reduce bus traffic on x86/x64. */
+    #else
+        YieldProcessor(); /* Falls back to a no-op compiler barrier on ARM. */
+    #endif
+    }
+    return thrd_success;
+}
+
+PF_API int pf_spin_trylock(pf_spinlock_t *spin) {
+    if (!spin)
+        return thrd_error;
+    int r = InterlockedExchange(&spin->locked, 1L);
+    return r == 0 ? thrd_success : thrd_busy;
+}
+
+PF_API int pf_spin_unlock(pf_spinlock_t *spin) {
+    if (!spin)
+        return thrd_error;
+    InterlockedExchange(&spin->locked, 0L);
+    return thrd_success;
+}
+
+PF_API void pf_spin_free(pf_spinlock_t *spin) {
+    (void)spin; /* nothing to release */
+}
+
+    #if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0602
+
+typedef SYNCHRONIZATION_BARRIER pf_barrier_t;
+
+PF_API int pf_barrier_init(pf_barrier_t *b, int count) {
+    if (!b || count <= 0)
+        return thrd_error;
+    int ret = InitializeSynchronizationBarrier(b, count, -1);
+    return ret ? thrd_success : thrd_error;
+}
+
+PF_API int pf_barrier_wait(pf_barrier_t *b) {
+    if (!b)
+        return thrd_error;
+    int ret = EnterSynchronizationBarrier(
+        b, SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY
+    );
+    return ret ? thrd_success : thrd_busy;
+}
+
+PF_API void pf_barrier_free(pf_barrier_t *b) {
+    if (b)
+        DeleteSynchronizationBarrier(b);
+}
+
+    #else
+
+typedef struct {
+    CRITICAL_SECTION cs;
+    HANDLE event; /* manual-reset, initially non-signalled */
+    int total; /* thread count supplied at init          */
+    volatile int waiting; /* threads currently waiting              */
+    volatile LONG generation; /* flipped each cycle to avoid ABA        */
+} pf_barrier_t;
+
+PF_API int pf_barrier_init(pf_barrier_t *b, int count) {
+    if (!b || count <= 0)
+        return thrd_error;
+
+    b->total = count;
+    b->waiting = 0;
+    b->generation = 0;
+
+    InitializeCriticalSectionAndSpinCount(&b->cs, 1500);
+    b->event = CreateEventW(NULL, TRUE, FALSE, NULL); /* manual-reset */
+    return (b->event != NULL) ? 0 : thrd_error;
+}
+
+/*
+ * The manual-reset event lets all waiting threads wake together.
+ * The generation counter ensures a late thread from the previous cycle
+ * does not see the reset event of the current cycle.
+ */
+PF_API int pf_barrier_wait(pf_barrier_t *b) {
+    if (!b)
+        return thrd_error;
+
+    EnterCriticalSection(&b->cs);
+
+    LONG my_gen = b->generation;
+    b->waiting++;
+
+    if (b->waiting == b->total) {
+        b->waiting = 0;
+        InterlockedIncrement(&b->generation);
+        SetEvent(b->event); /* wake all waiting threads  */
+        LeaveCriticalSection(&b->cs);
+        ResetEvent(b->event);
+        return thrd_success;
+    } else {
+        LeaveCriticalSection(&b->cs);
+        /* Spin-wait on the event; re-check generation to guard against
+         * spurious wakes or a fast reuse of the barrier. */
+        while (b->generation == my_gen) {
+            DWORD rc = WaitForSingleObject(b->event, INFINITE);
+            if (rc != WAIT_OBJECT_0)
+                return thrd_error;
+        }
+
+        return thrd_busy;
+    }
+}
+
+PF_API void pf_barrier_free(pf_barrier_t *b) {
+    if (!b)
+        return;
+
+    if (b->event) {
+        CloseHandle(b->event);
+        b->event = NULL;
+    }
+
+    DeleteCriticalSection(&b->cs);
+}
+
+    #endif
+
 #endif
 
 #endif
