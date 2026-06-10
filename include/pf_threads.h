@@ -3,6 +3,9 @@
     This file provides a C11 <threads.h> wrapper for Windows and POSIX
     threads. Additionaly, it can be compiled on systems without threads.
 
+    Alongside C11 objects, this file also provides cross-platform
+    reader-writer locks, spin locks and barrier primitives.
+
     SPDX-FileCopyrightText: 2025 Predrag Jovanović
     SPDX-License-Identifier: Apache-2.0
 
@@ -30,7 +33,9 @@
 
 #if __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_THREADS__)
     #define PF_THREADS_STD
-#elif defined(_WIN32)
+#endif
+
+#if defined(_WIN32)
     #define PF_THREADS_WIN32
 #elif !defined(PF_NO_PTHREAD)
     #define PF_THREADS_POSIX
@@ -62,6 +67,17 @@ typedef int (*thrd_start_t)(void *);
 
 #endif
 
+#ifdef PF_THREADS_POSIX
+
+    #define PF__PT(name, ...)                                          \
+        (pthread_##name(__VA_ARGS__)) != 0 ? thrd_error : thrd_success
+
+    #define PF__PT2(name, obj, ...)                                    \
+        (obj) != NULL ? (PF__PT(name, obj __VA_OPT__(, ) __VA_ARGS__)) \
+                      : thrd_error
+
+#endif
+
 #ifdef PF_THREADS_STD
     #include <threads.h>
 #elif defined(PF_THREADS_POSIX)
@@ -75,9 +91,6 @@ typedef pthread_cond_t cnd_t;
 typedef pthread_t thrd_t;
 typedef pthread_key_t tss_t;
 typedef pthread_once_t once_flag;
-
-    #define PF__PT(name, ...)                                          \
-        (pthread_##name(__VA_ARGS__)) != 0 ? thrd_error : thrd_success
 
 PF_API int mtx_init(mtx_t *mtx, int type) {
     pthread_mutexattr_t attr;
@@ -231,6 +244,100 @@ PF_API int tss_set(tss_t key, void* val) { return thrd_error; }
 
     /* clang-format on */
 
+#endif
+
+#if defined(PF_THREADS_NONE) || defined(PF_NO_THREADS_EXTENSIONS)
+
+typedef char pf_barrier_t;
+typedef char pf_rwlock_t;
+typedef char pf_spinlock_t;
+
+/* clang-format off */
+
+PF_API int pf_rwlock_init(pf_rwlock_t *lock) { return thrd_error; }
+PF_API void pf_rwlock_free(pf_rwlock_t *lock) { }
+PF_API int pf_rwlock_try_rd(pf_rwlock_t *lock) { return thrd_error; }
+PF_API int pf_rwlock_try_wr(pf_rwlock_t *lock) { return thrd_error; }
+PF_API int pf_rwlock_exit_rd(pf_rwlock_t *lock) { return thrd_error; }
+PF_API int pf_rwlock_exit_wr(pf_rwlock_t *lock) { return thrd_error; }
+PF_API int pf_rwlock_wait_rd(pf_rwlock_t *lock, const struct timespec *ts) { return thrd_error; }
+PF_API int pf_rwlock_wait_wr(pf_rwlock_t *lock, const struct timespec *ts) { return thrd_error; }
+PF_API int pf_barrier_init(pf_barrier_t *b, int count) { return thrd_error; }
+PF_API int pf_barrier_wait(pf_barrier_t *b) { return thrd_error; }
+PF_API void pf_barrier_free(pf_barrier_t *b) { }
+PF_API int pf_spin_init(pf_spinlock_t *spin) { return thrd_error; }
+PF_API int pf_spin_lock(pf_spinlock_t *spin) { return thrd_error; }
+PF_API int pf_spin_trylock(pf_spinlock_t *spin) { return thrd_error; }
+PF_API int pf_spin_unlock(pf_spinlock_t *spin) { return thrd_error; }
+PF_API void pf_spin_free(pf_spinlock_t *spin) { }
+
+    /* clang-format on */
+
+#elif defined(PF_THREADS_POSIX)
+    #include <errno.h>
+
+    #ifdef PF_THREADS_STD
+        #include <pthread.h>
+    #endif
+
+typedef pthread_barrier_t pf_barrier_t;
+typedef pthread_rwlock_t pf_rwlock_t;
+typedef pthread_spinlock_t pf_spinlock_t;
+
+PF_API int pf_rwlock_wait_rd(pf_rwlock_t *lock, const struct timespec *ts) {
+    return ts ? pthread_rwlock_timedrdlock(lock, ts)
+              : pthread_rwlock_rdlock(lock);
+}
+
+PF_API int pf_rwlock_wait_wr(pf_rwlock_t *lock, const struct timespec *ts) {
+    return ts ? pthread_rwlock_timedwrlock(lock, ts)
+              : pthread_rwlock_wrlock(lock);
+}
+
+PF_API int pf_barrier_init(pf_barrier_t *b, int count) {
+    if (!b || count <= 0)
+        return thrd_error;
+    int rc = pthread_barrier_init(b, NULL, (unsigned)count);
+    return (rc == 0) ? thrd_success : thrd_error;
+}
+
+PF_API int pf_barrier_wait(pf_barrier_t *b) {
+    if (!b)
+        return thrd_error;
+    int rc = pthread_barrier_wait(b);
+    if (rc == PTHREAD_BARRIER_SERIAL_THREAD)
+        return 1;
+    if (rc == 0)
+        return 0;
+    return thrd_error;
+}
+
+PF_API int pf_spin_trylock(pf_spinlock_t *spin) {
+    if (!spin)
+        return thrd_error;
+    int rc = pthread_spin_trylock(spin);
+    if (rc == 0)
+        return 0;
+    if (rc == EBUSY)
+        return 1;
+    return thrd_error;
+}
+
+/* clang-format off */
+
+PF_API int pf_rwlock_init(pf_rwlock_t *lock) { return PF__PT2(rwlock_init, lock, NULL); }
+PF_API void pf_rwlock_free(pf_rwlock_t *lock) { if (lock) pthread_rwlock_destroy(lock); }
+PF_API int pf_rwlock_try_rd(pf_rwlock_t *lock) { return PF__PT2(rwlock_tryrdlock, lock); }
+PF_API int pf_rwlock_try_wr(pf_rwlock_t *lock) { return PF__PT2(rwlock_trywrlock, lock); }
+PF_API int pf_rwlock_exit_rd(pf_rwlock_t *lock) { return PF__PT2(rwlock_unlock, lock); }
+PF_API int pf_rwlock_exit_wr(pf_rwlock_t *lock) { return PF__PT2(rwlock_unlock, lock); }
+PF_API void pf_barrier_free(pf_barrier_t *b) { if (b) pthread_barrier_destroy(b); }
+PF_API int pf_spin_init(pf_spinlock_t *spin) { return PF__PT2(spin_init, spin, PTHREAD_PROCESS_PRIVATE); }
+PF_API int pf_spin_lock(pf_spinlock_t *spin) { return PF__PT2(spin_lock, spin); }
+PF_API int pf_spin_unlock(pf_spinlock_t *spin) { return PF__PT2(spin_unlock, spin); }
+PF_API void pf_spin_free(pf_spinlock_t *spin) { if (spin) pthread_spin_destroy(spin); }
+
+    /* clang-format on */
 #endif
 
 #endif
