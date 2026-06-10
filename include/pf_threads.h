@@ -6,6 +6,15 @@
     Alongside C11 objects, this file also provides cross-platform
     reader-writer locks, spin locks and barrier primitives.
 
+    Notable issues that occur on some platforms are:
+    - `cnd_t` objects cannot use mutexes created with `mtx_timed` on Windows.
+    - `pf_rwlock_t` does not currently support timed waiting on Windows.
+    - To support `tss_t` destructors on Windows, the static global variable
+      `pf_tss_global` must be set/allocated. (no initialization required).
+      `tss_t` objects without destructors are not affected by this problem.
+    - On Windows, if the main thread uses `tss_t` objects with destructors,
+      `pf_tss_cleanup` should be called before exiting.
+
     SPDX-FileCopyrightText: 2025 Predrag Jovanović
     SPDX-License-Identifier: Apache-2.0
 
@@ -31,6 +40,10 @@
     #define PF_API static inline
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_THREADS__)
     #define PF_THREADS_STD
 #endif
@@ -44,6 +57,20 @@
 #endif
 
 #ifndef PF_THREADS_STD
+    #ifndef _Thread_local
+        #if defined(_MSC_VER)
+            #define _Thread_local __declspec(thread)
+        #elif defined(__GNUC__) || defined(__clang__)
+            #define _Thread_local __thread
+        #else
+            #define PF_NO_THREAD_LOCAL
+        #endif
+    #endif
+
+    #ifndef thread_local
+        #define thread_local _Thread_local
+    #endif
+
     #define ONCE_FLAG_INIT ((once_flag) { 0 })
     #define TSS_DTOR_ITERATIONS 4
     #define PF__NO_RETURN
@@ -198,6 +225,491 @@ PF_API void tss_delete(tss_t key) { pthread_key_delete(key); }
 PF_API void *tss_get(tss_t key) { return pthread_getspecific(key); }
 
     /* clang-format on */
+
+#elif defined(PF_THREADS_WIN32)
+
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+
+    #include <errno.h>
+    #include <process.h> /* _beginthreadex / _endthreadex */
+    #include <stdlib.h> /* malloc / free */
+    #include <time.h> /* struct timespec, time_t */
+    #include <windows.h>
+
+    #define ONCE_FLAG_INIT INIT_ONCE_STATIC_INIT
+    #define TSS_T_MAX (MAXDWORD) /* maximum value of tss_t */
+
+typedef HANDLE thrd_t;
+typedef CONDITION_VARIABLE cnd_t; /* Windows Vista and newer */
+typedef DWORD tss_t;
+typedef INIT_ONCE once_flag;
+
+/* CRITICAL_SECTION is fast but not waitable with a timeout. */
+typedef struct {
+    int type; /* mtx_plain | mtx_recursive | mtx_timed */
+    int count; /* recursion depth (recursive timed) */
+    HANDLE mutex; /* Win32 Mutex (timed path) */
+    CRITICAL_SECTION cs; /* CRITICAL_SECTION (plain/recursive) */
+    DWORD owner; /* owning thread id (recursive timed) */
+} mtx_t;
+
+typedef struct pf_tss_t {
+    tss_t key;
+    tss_dtor_t dtor;
+    struct pf_tss_t *next;
+} pf_tss_t;
+
+typedef struct pf_tss_global_t {
+    CRITICAL_SECTION cs;
+    INIT_ONCE once;
+
+    DWORD count;
+    pf_tss_t *head;
+} pf_tss_global_t;
+
+static pf_tss_global_t *pf_tss_global = NULL;
+PF_API void pf_tss_cleanup(void);
+
+typedef struct _thrd_start_wrapper {
+    thrd_start_t func;
+    void *arg;
+} pf_thrd_start_wrapper;
+
+/* Win32 thread proc: adapts unsigned __stdcall to int(void*). */
+PF_API unsigned __stdcall pf_thrd_trampoline(void *raw) {
+    pf_thrd_start_wrapper wrapper = *(pf_thrd_start_wrapper *)raw;
+    free(raw);
+
+    unsigned ret = wrapper.func(wrapper.arg);
+
+    pf_tss_cleanup();
+
+    _endthreadex(ret);
+    return 0; /* unreachable */
+}
+
+PF_API DWORD pf_thrd_timeout_ms(const struct timespec *abs) {
+    struct timespec now;
+    LONGLONG diff_ms;
+    FILETIME ft;
+    ULARGE_INTEGER ui;
+
+    timespec_get(&now, TIME_UTC);
+
+    diff_ms = (LONGLONG)(abs->tv_sec - now.tv_sec) * 1000;
+    diff_ms += (LONGLONG)(abs->tv_nsec - now.tv_nsec) / 1000000;
+
+    if (diff_ms <= 0)
+        return 0;
+    if (diff_ms > (LONGLONG)0xFFFFFFFEUL)
+        return 0xFFFFFFFEUL; /* cap below INFINITE */
+    (void)ft;
+    (void)ui;
+    return (DWORD)diff_ms;
+}
+
+PF_API int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
+    pf_thrd_start_wrapper *wrapper;
+    HANDLE h;
+
+    if (!thr || !func)
+        return thrd_error;
+
+    if (!(wrapper = malloc(sizeof(pf_thrd_start_wrapper))))
+        return thrd_nomem;
+
+    wrapper->func = func;
+    wrapper->arg = arg;
+
+    h = (HANDLE)_beginthreadex(NULL, 0, pf_thrd_trampoline, wrapper, 0, NULL);
+    if (h == NULL || h == (HANDLE)(uintptr_t)-1L) {
+        free(wrapper);
+        return (errno == ENOMEM) ? thrd_nomem : thrd_error;
+    }
+
+    *thr = h;
+    return thrd_success;
+}
+
+PF_API int thrd_equal(thrd_t a, thrd_t b) {
+    return (GetThreadId(a) == GetThreadId(b)) ? 1 : 0;
+}
+
+PF_API thrd_t thrd_current(void) {
+    return OpenThread(
+        SYNCHRONIZE | THREAD_QUERY_INFORMATION
+            | THREAD_QUERY_LIMITED_INFORMATION,
+        FALSE,
+        GetCurrentThreadId()
+    );
+}
+
+PF_API int thrd_sleep(
+    const struct timespec *duration, struct timespec *remaining
+) {
+    DWORD ms;
+    if (!duration)
+        return -2;
+
+    ms = (DWORD)(duration->tv_sec * 1000 + duration->tv_nsec / 1000000);
+    Sleep(ms);
+
+    if (remaining) {
+        remaining->tv_sec = 0;
+        remaining->tv_nsec = 0;
+    }
+    return 0;
+}
+
+PF_API void thrd_yield(void) { SwitchToThread(); }
+PF_API void thrd_exit(int res) { _endthreadex((unsigned)res); }
+
+PF_API int thrd_detach(thrd_t thr) {
+    return CloseHandle(thr) ? thrd_success : thrd_error;
+}
+
+PF_API int thrd_join(thrd_t thr, int *res) {
+    DWORD exit_code;
+
+    if (WaitForSingleObject(thr, INFINITE) != WAIT_OBJECT_0)
+        return thrd_error;
+
+    if (res) {
+        if (!GetExitCodeThread(thr, &exit_code))
+            return thrd_error;
+        *res = (int)exit_code;
+    }
+
+    CloseHandle(thr);
+    return thrd_success;
+}
+
+PF_API int mtx_init(mtx_t *mtx, int type) {
+    if (!mtx)
+        return thrd_error;
+
+    mtx->type = type;
+    mtx->owner = 0;
+    mtx->count = 0;
+
+    if (type & mtx_timed) {
+        /* Timed mutexes use a Win32 Mutex object. */
+        mtx->mutex = CreateMutexA(NULL, FALSE, NULL);
+        if (!mtx->mutex)
+            return thrd_error;
+
+        /* Zero-init the CRITICAL_SECTION so mtx_destroy is safe. */
+        memset(&mtx->cs, 0, sizeof(CRITICAL_SECTION));
+    } else {
+        /* Plain / recursive: use a CRITICAL_SECTION (faster). */
+        InitializeCriticalSection(&mtx->cs);
+        mtx->mutex = NULL;
+    }
+
+    return thrd_success;
+}
+
+PF_API int mtx_lock(mtx_t *mtx) {
+    if (!mtx)
+        return thrd_error;
+
+    if (mtx->type & mtx_timed) {
+        /* Recursive timed mutex: track ownership manually. */
+        if ((mtx->type & mtx_recursive) && mtx->owner == GetCurrentThreadId()) {
+            mtx->count++;
+            return thrd_success;
+        }
+
+        if (WaitForSingleObject(mtx->mutex, INFINITE) != WAIT_OBJECT_0)
+            return thrd_error;
+
+        mtx->owner = GetCurrentThreadId();
+        mtx->count = 1;
+    } else {
+        EnterCriticalSection(&mtx->cs);
+    }
+
+    return thrd_success;
+}
+
+PF_API int mtx_trylock(mtx_t *mtx) {
+    if (!mtx)
+        return thrd_error;
+
+    if (mtx->type & mtx_timed) {
+        if ((mtx->type & mtx_recursive) && mtx->owner == GetCurrentThreadId()) {
+            mtx->count++;
+            return thrd_success;
+        }
+
+        switch (WaitForSingleObject(mtx->mutex, 0)) {
+        case WAIT_OBJECT_0:
+        case WAIT_ABANDONED:
+            mtx->owner = GetCurrentThreadId();
+            mtx->count = 1;
+            return thrd_success;
+        case WAIT_TIMEOUT:
+            return thrd_busy;
+        default:
+            return thrd_error;
+        }
+    } else {
+        return TryEnterCriticalSection(&mtx->cs) ? thrd_success : thrd_busy;
+    }
+}
+
+PF_API int mtx_timedlock(mtx_t *mtx, const struct timespec *abs_time) {
+    DWORD ms, rc;
+
+    if (!mtx || !(mtx->type & mtx_timed))
+        return thrd_error;
+
+    if ((mtx->type & mtx_recursive) && mtx->owner == GetCurrentThreadId()) {
+        mtx->count++;
+        return thrd_success;
+    }
+
+    ms = pf_thrd_timeout_ms(abs_time);
+    rc = WaitForSingleObject(mtx->mutex, ms);
+
+    switch (rc) {
+    case WAIT_OBJECT_0:
+    case WAIT_ABANDONED:
+        mtx->owner = GetCurrentThreadId();
+        mtx->count = 1;
+        return thrd_success;
+    case WAIT_TIMEOUT:
+        return thrd_timedout;
+    default:
+        return thrd_error;
+    }
+}
+
+PF_API int mtx_unlock(mtx_t *mtx) {
+    if (!mtx)
+        return thrd_error;
+
+    if (mtx->type & mtx_timed) {
+        if (mtx->type & mtx_recursive) {
+            if (mtx->owner != GetCurrentThreadId())
+                return thrd_error;
+            if (--mtx->count > 0)
+                return thrd_success;
+            mtx->owner = 0;
+        }
+
+        return ReleaseMutex(mtx->mutex) ? thrd_success : thrd_error;
+    } else {
+        LeaveCriticalSection(&mtx->cs);
+        return thrd_success;
+    }
+}
+
+PF_API void mtx_destroy(mtx_t *mtx) {
+    if (!mtx)
+        return;
+
+    if (mtx->type & mtx_timed) {
+        if (mtx->mutex)
+            CloseHandle(mtx->mutex);
+    } else {
+        DeleteCriticalSection(&mtx->cs);
+    }
+
+    memset(mtx, 0, sizeof(*mtx));
+}
+
+PF_API int cnd_init(cnd_t *cond) {
+    if (!cond)
+        return thrd_error;
+    InitializeConditionVariable(cond);
+    return thrd_success;
+}
+
+PF_API int cnd_signal(cnd_t *cond) {
+    if (!cond)
+        return thrd_error;
+    WakeConditionVariable(cond);
+    return thrd_success;
+}
+
+PF_API int cnd_broadcast(cnd_t *cond) {
+    if (!cond)
+        return thrd_error;
+    WakeAllConditionVariable(cond);
+    return thrd_success;
+}
+
+PF_API int cnd_wait(cnd_t *cond, mtx_t *mtx) {
+    if (!cond || !mtx)
+        return thrd_error;
+    /* cnd_wait is only meaningful with CRITICAL_SECTION-backed mutexes. */
+    if (mtx->type & mtx_timed)
+        return thrd_error;
+
+    BOOL result = SleepConditionVariableCS(cond, &mtx->cs, INFINITE);
+    return result ? thrd_success : thrd_error;
+}
+
+PF_API int cnd_timedwait(
+    cnd_t *cond, mtx_t *mtx, const struct timespec *abs_time
+) {
+    DWORD ms;
+    if (!cond || !mtx || !abs_time)
+        return thrd_error;
+    if (mtx->type & mtx_timed)
+        return thrd_error;
+
+    ms = pf_thrd_timeout_ms(abs_time);
+
+    if (SleepConditionVariableCS(cond, &mtx->cs, ms))
+        return thrd_success;
+
+    return (GetLastError() == ERROR_TIMEOUT) ? thrd_timedout : thrd_error;
+}
+
+PF_API void cnd_destroy(cnd_t *cond) {
+    if (cond)
+        memset(cond, 0, sizeof(*cond));
+}
+
+typedef struct {
+    void (*fn)(void);
+} pf_once_wrapper;
+
+PF_API BOOL CALLBACK
+pf_once_trampoline(PINIT_ONCE io, PVOID param, PVOID *ctx) {
+    (void)io;
+    (void)ctx;
+    ((pf_once_wrapper *)param)->fn();
+    return TRUE;
+}
+
+PF_API void call_once(once_flag *flag, void (*func)(void)) {
+    pf_once_wrapper wrapper;
+    wrapper.fn = func;
+    InitOnceExecuteOnce(flag, pf_once_trampoline, &wrapper, NULL);
+}
+
+PF_API BOOL CALLBACK pf__tss_global_init(PINIT_ONCE io, PVOID p, PVOID *ctx) {
+    (void)io;
+    (void)p;
+    (void)ctx;
+    pf_tss_global->count = 0;
+    pf_tss_global->head = NULL;
+    InitializeCriticalSection(&pf_tss_global->cs);
+    return TRUE;
+}
+
+PF_API void pf_tss_global_init(void) {
+    if (!pf_tss_global)
+        return;
+    InitOnceExecuteOnce(&pf_tss_global->once, pf__tss_global_init, NULL, NULL);
+}
+
+PF_API int pf__tss_register(DWORD key, tss_dtor_t dtor) {
+    pf_tss_global_init();
+    pf_tss_t *tss;
+
+    EnterCriticalSection(&pf_tss_global->cs);
+
+    if (pf_tss_global->count == TSS_T_MAX)
+        return thrd_enomem;
+
+    if ((tss = malloc(sizeof(*tss))) {
+        pf_tss_global->count++;
+        tss->key = key;
+        tss->dtor = dtor;
+        tss->next = pf_tss_global->head;
+        pf_tss_global->head = tss;
+    }
+
+    LeaveCriticalSection(&pf_tss_global->cs);
+    return tss ? thrd_success : thrd_enomem;
+}
+
+PF_API int tss_create(tss_t *key, tss_dtor_t dtor) {
+    if (!key || (dtor && !pf_tss_global))
+        return thrd_error;
+
+    DWORD slot;
+
+    if ((slot = TlsAlloc()) == TLS_OUT_OF_INDEXES)
+        return thrd_enomem;
+
+    if (dtor && pf__tss_register(slot, dtor) != thrd_success) {
+        TlsFree(slot);
+        return thrd_error;
+    }
+
+    *key = slot;
+    return thrd_success;
+}
+
+PF_API void *tss_get(tss_t key) { return TlsGetValue(key); }
+
+PF_API int tss_set(tss_t key, void *val) {
+    return TlsSetValue(key, val) ? thrd_success : thrd_error;
+}
+
+PF_API void tss_delete(tss_t key) {
+    if (!pf_tss_global) {
+        TlsFree(found->key);
+        return;
+    }
+
+    pf_tss_global_init();
+
+    EnterCriticalSection(&pf_tss_global->cs);
+    pf_tss_t **node = &pf_tss_global->head;
+    pf_tss_t *found = NULL;
+
+    for (; *node != NULL; node = &(*node)->next) {
+        if ((*node)->key == key) {
+            found = *node;
+            *node = (*node)->next;
+            break;
+        }
+    }
+
+    LeaveCriticalSection(&pf_tss_global->cs);
+
+    if (found)
+        free(found);
+    TlsFree(key);
+}
+
+PF_API void pf_tss_cleanup(void) {
+    if (!pf_tss_global)
+        return;
+
+    pf_tss_global_init();
+    void *value;
+    int pass, any;
+
+    for (pass = 0; pass < TSS_DTOR_ITERATIONS; pass++) {
+        EnterCriticalSection(&pf_tss_global->cs);
+
+        pf_tss_t *node = pf_tss_global->head;
+        for (; node; node = node->next) {
+            if (!(value = TlsGetValue(node->key)))
+                continue;
+
+            TlsSetValue(node->key, NULL);
+            LeaveCriticalSection(&pf_tss_global->cs);
+            node->dtor(value);
+            any = 1;
+            EnterCriticalSection(&pf_tss_global->cs);
+        }
+
+        LeaveCriticalSection(&pf_tss_global->cs);
+
+        if (!any)
+            break;
+    }
+}
 
 #else
 
@@ -480,9 +992,9 @@ PF_API void pf_barrier_free(pf_barrier_t *b) {
 typedef struct {
     CRITICAL_SECTION cs;
     HANDLE event; /* manual-reset, initially non-signalled */
-    int total; /* thread count supplied at init          */
-    volatile int waiting; /* threads currently waiting              */
-    volatile LONG generation; /* flipped each cycle to avoid ABA        */
+    int total; /* thread count supplied at init */
+    volatile int waiting; /* threads currently waiting  */
+    volatile LONG generation; /* flipped each cycle to avoid ABA */
 } pf_barrier_t;
 
 PF_API int pf_barrier_init(pf_barrier_t *b, int count) {
@@ -547,6 +1059,10 @@ PF_API void pf_barrier_free(pf_barrier_t *b) {
 
     #endif
 
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif
 
 #endif
