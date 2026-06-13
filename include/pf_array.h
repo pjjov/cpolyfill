@@ -7,6 +7,9 @@
     Macro function reference:
     - PF_ARRAY(TYPE)
     - PF_ARRAY_INIT(array, capacity)
+    - PF_ARRAY_MAKE(array, items, length, capacity)
+    - PF_ARRAY_LEN(array)
+    - PF_ARRAY_CAP(array)
     - PF_ARRAY_FREE(array)
     - PF_ARRAY_GET(array, index)
     - PF_ARRAY_SLOT(array, index)
@@ -74,7 +77,21 @@ struct pf_array {
 #define PF_ARRAY_INIT(array, capacity)                                        \
     pf__array_init(PF__ARRAY_BASE(array), (capacity) * PF__ARRAY_SIZE(array))
 
+#define PF_ARRAY_MAKE(array, items, length, capacity) \
+    pf__array_make(                                   \
+        PF__ARRAY_BASE(array),                        \
+        (items),                                      \
+        (length) * PF__ARRAY_SIZE(array),             \
+        (capacity) * PF__ARRAY_SIZE(array)            \
+    )
+
 #define PF_ARRAY_FREE(array) pf__array_free(PF__ARRAY_BASE(array))
+
+#define PF_ARRAY_LEN(array)                                        \
+    (pf__array_len(PF__ARRAY_BASE(array)) / PF__ARRAY_SIZE(array))
+
+#define PF_ARRAY_CAP(array)                                        \
+    (pf__array_cap(PF__ARRAY_BASE(array)) / PF__ARRAY_SIZE(array))
 
 #define PF_ARRAY_GET(array, index)                             \
     ((PF__ARRAY_TYPE(array))pf__array_get(                     \
@@ -150,9 +167,9 @@ struct pf_array {
     #define PF_ARRAY_GROW(old, req) (((old) + (req)) * 2)
 #endif
 
-#define PF__ARRAY_SIZE(array) sizeof(*(array).type)
-#define PF__ARRAY_TYPE(array) typeof((array).type)
-#define PF__ARRAY_BASE(array) (&(array).base)
+#define PF__ARRAY_SIZE(array) sizeof(*(array)->type)
+#define PF__ARRAY_TYPE(array) typeof((array)->type)
+#define PF__ARRAY_BASE(array) (&(array)->base)
 
 PF_API int pf__array_init(struct pf_array *a, size_t capacity) {
     if (!a || capacity == 0)
@@ -174,10 +191,31 @@ PF_API int pf__array_init(struct pf_array *a, size_t capacity) {
     return PF_ARRAY_OK;
 }
 
+PF_API int pf__array_make(
+    struct pf_array *a, void *items, size_t length, size_t capacity
+) {
+    if (!a)
+        return PF_ARRAY_EINVAL;
+
+    a->items = items;
+    a->length = length;
+    a->capacity = capacity;
+
+#ifdef PF_ARRAY_USE_ALLOCATOR_T
+    a->alloc = PF_ARRAY_DEFAULT_ALLOCATOR;
+#endif
+
+    return PF_ARRAY_OK;
+}
+
 PF_API void pf__array_free(struct pf_array *a) {
     if (a)
         PF_ARRAY_DEALLOC(a, a->items);
 }
+
+PF_API size_t pf__array_len(struct pf_array *a) { return a ? a->length : 0; }
+
+PF_API size_t pf__array_cap(struct pf_array *a) { return a ? a->capacity : 0; }
 
 PF_API void *pf__array_get(struct pf_array *a, size_t index) {
     if (!a || index >= a->length)
