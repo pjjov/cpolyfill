@@ -99,9 +99,11 @@ typedef int (*thrd_start_t)(void *);
     #define PF__PT(name, ...)                                          \
         (pthread_##name(__VA_ARGS__)) != 0 ? thrd_error : thrd_success
 
-    #define PF__PT2(name, obj, ...)                                    \
-        (obj) != NULL ? (PF__PT(name, obj __VA_OPT__(, ) __VA_ARGS__)) \
-                      : thrd_error
+    #define PF__PT2(name, obj, ...)                                   \
+        (obj) != NULL ? (PF__PT(name, obj, __VA_ARGS__)) : thrd_error
+
+    #define PF__PT2_(name, obj, ...)                     \
+        (obj) != NULL ? (PF__PT(name, obj)) : thrd_error
 
 #endif
 
@@ -839,14 +841,14 @@ PF_API int pf_spin_trylock(pf_spinlock_t *spin) {
 
 PF_API int pf_rwlock_init(pf_rwlock_t *lock) { return PF__PT2(rwlock_init, lock, NULL); }
 PF_API void pf_rwlock_free(pf_rwlock_t *lock) { if (lock) pthread_rwlock_destroy(lock); }
-PF_API int pf_rwlock_try_rd(pf_rwlock_t *lock) { return PF__PT2(rwlock_tryrdlock, lock); }
-PF_API int pf_rwlock_try_wr(pf_rwlock_t *lock) { return PF__PT2(rwlock_trywrlock, lock); }
-PF_API int pf_rwlock_exit_rd(pf_rwlock_t *lock) { return PF__PT2(rwlock_unlock, lock); }
-PF_API int pf_rwlock_exit_wr(pf_rwlock_t *lock) { return PF__PT2(rwlock_unlock, lock); }
+PF_API int pf_rwlock_try_rd(pf_rwlock_t *lock) { return PF__PT2_(rwlock_tryrdlock, lock); }
+PF_API int pf_rwlock_try_wr(pf_rwlock_t *lock) { return PF__PT2_(rwlock_trywrlock, lock); }
+PF_API int pf_rwlock_exit_rd(pf_rwlock_t *lock) { return PF__PT2_(rwlock_unlock, lock); }
+PF_API int pf_rwlock_exit_wr(pf_rwlock_t *lock) { return PF__PT2_(rwlock_unlock, lock); }
 PF_API void pf_barrier_free(pf_barrier_t *b) { if (b) pthread_barrier_destroy(b); }
 PF_API int pf_spin_init(pf_spinlock_t *spin) { return PF__PT2(spin_init, spin, PTHREAD_PROCESS_PRIVATE); }
-PF_API int pf_spin_lock(pf_spinlock_t *spin) { return PF__PT2(spin_lock, spin); }
-PF_API int pf_spin_unlock(pf_spinlock_t *spin) { return PF__PT2(spin_unlock, spin); }
+PF_API int pf_spin_lock(pf_spinlock_t *spin) { return PF__PT2_(spin_lock, spin); }
+PF_API int pf_spin_unlock(pf_spinlock_t *spin) { return PF__PT2_(spin_unlock, spin); }
 PF_API void pf_spin_free(pf_spinlock_t *spin) { if (spin) pthread_spin_destroy(spin); }
 
     /* clang-format on */
