@@ -58,6 +58,7 @@ enum pf_argparse_error {
 struct pf_argparser {
     FILE *out;
     FILE *err;
+    const char *errPrefix;
 
     int paramc;
     char **paramv;
@@ -121,16 +122,33 @@ PF_API void pf_argparser_free(struct pf_argparser *p) {
     }
 }
 
-PF_API int pf_is_param(struct pf_argparser *p) {
+PF_API pf_bool pf_is_param(struct pf_argparser *p, int index) {
+    if (index >= 0 && p->paramc != index + 1)
+        return PF_FALSE;
     return p && p->item.type == PF__ARG_PARAM;
 }
 
-PF_API int pf_cmp_param(struct pf_argparser *p, const char *other) {
+PF_API pf_bool pf_cmp_param(struct pf_argparser *p, const char *other) {
     if (!p || !other)
         return PF_FALSE;
     if (p->item.type != PF__ARG_PARAM)
         return PF_FALSE;
     return strcmp(p->item.param, other) == 0;
+}
+
+PF_API pf_bool
+pf_match_param(struct pf_argparser *p, const char **values, char **out) {
+    if (!p || !values || !out || p->item.type != PF__ARG_PARAM)
+        return PF_FALSE;
+
+    for (int i = 0; values[i]; i++) {
+        if (strcmp(p->item.param, values[i]) == 0) {
+            *out = (char *)p->item.param;
+            return PF_TRUE;
+        }
+    }
+
+    return PF_FALSE;
 }
 
 PF_API void pf_argparser_error(struct pf_argparser *p, const char *fmt, ...) {
@@ -139,15 +157,19 @@ PF_API void pf_argparser_error(struct pf_argparser *p, const char *fmt, ...) {
 
     p->failed = PF_TRUE;
 
+    if (p->errPrefix)
+        fputs(p->errPrefix, p->err);
+
     va_list args;
     va_start(args, fmt);
     vfprintf(p->err, fmt, args);
     va_end(args);
+
+    fputc('\n', p->err);
 }
 
-PF_API int pf__ap_match_option(
-    struct pf_argparser *p, const char *name, char shorthand
-) {
+PF_API pf_bool
+pf__ap_match_option(struct pf_argparser *p, const char *name, char shorthand) {
     if (!p || !name)
         return PF_FALSE;
 
@@ -171,16 +193,14 @@ PF_API const char *pf__ap_match_value(
         return NULL;
 
     if (!p->item.hasValue) {
-        pf_argparser_error(
-            p, "option '%s' requires a value\n", name ? name : ""
-        );
+        pf_argparser_error(p, "option '%s' requires a value", name ? name : "");
         return NULL;
     }
 
     return p->item.value;
 }
 
-PF_API int pf__ap_match_long(
+PF_API pf_bool pf__ap_match_long(
     struct pf_argparser *p, const char *name, char shorthand, long *out
 ) {
     const char *s;
@@ -193,7 +213,7 @@ PF_API int pf__ap_match_long(
     long v = strtol(s, &end, 0);
 
     if (errno || *end) {
-        pf_argparser_error(p, "invalid integer '%s'\n", p->item.value);
+        pf_argparser_error(p, "invalid integer '%s'", p->item.value);
         return PF_FALSE;
     }
 
@@ -201,7 +221,7 @@ PF_API int pf__ap_match_long(
     return PF_TRUE;
 }
 
-PF_API int pf__ap_match_double(
+PF_API pf_bool pf__ap_match_double(
     struct pf_argparser *p, const char *name, char shorthand, double *out
 ) {
     const char *s;
@@ -214,7 +234,7 @@ PF_API int pf__ap_match_double(
     double v = strtod(s, &end);
 
     if (errno || *end) {
-        pf_argparser_error(p, "invalid number '%s'\n", p->item.value);
+        pf_argparser_error(p, "invalid number '%s'", p->item.value);
         return PF_FALSE;
     }
 
@@ -222,7 +242,7 @@ PF_API int pf__ap_match_double(
     return PF_TRUE;
 }
 
-PF_API int pf_option_string(
+PF_API pf_bool pf_option_string(
     struct pf_argparser *p, const char *name, char shorthand, char **out
 ) {
     const char *val;
@@ -234,13 +254,13 @@ PF_API int pf_option_string(
     return PF_TRUE;
 }
 
-PF_API int pf_option_long(
+PF_API pf_bool pf_option_long(
     struct pf_argparser *p, const char *name, char shorthand, long *out
 ) {
     return out && pf__ap_match_long(p, name, shorthand, out);
 }
 
-PF_API int pf_option_int(
+PF_API pf_bool pf_option_int(
     struct pf_argparser *p, const char *name, char shorthand, int *out
 ) {
     long val;
@@ -251,13 +271,13 @@ PF_API int pf_option_int(
     return PF_TRUE;
 }
 
-PF_API int pf_option_double(
+PF_API pf_bool pf_option_double(
     struct pf_argparser *p, const char *name, char shorthand, double *out
 ) {
     return out && pf__ap_match_double(p, name, shorthand, out);
 }
 
-PF_API int pf_option_float(
+PF_API pf_bool pf_option_float(
     struct pf_argparser *p, const char *name, char shorthand, double *out
 ) {
     double val;
@@ -268,7 +288,7 @@ PF_API int pf_option_float(
     return PF_TRUE;
 }
 
-PF_API int pf_option_bool(
+PF_API pf_bool pf_option_bool(
     struct pf_argparser *p, const char *name, char shorthand, pf_bool *out
 ) {
     if (!out || !pf__ap_match_option(p, name, shorthand))
@@ -289,11 +309,11 @@ PF_API int pf_option_bool(
         return PF_TRUE;
     }
 
-    pf_argparser_error(p, "invalid boolean '%s'\n", p->item.value);
+    pf_argparser_error(p, "invalid boolean '%s'", p->item.value);
     return PF_FALSE;
 }
 
-PF_API int pf_option_toggle(
+PF_API pf_bool pf_option_toggle(
     struct pf_argparser *p, const char *name, char shorthand, pf_bool *out
 ) {
     if (p->item.type == PF__ARG_LONG) {
@@ -322,7 +342,22 @@ PF_API int pf_option_toggle(
     return PF_FALSE;
 }
 
-PF_API int pf__ap_match_enum(
+PF_API pf_bool
+pf_match_enum(const char *name, pf_option_enum_t *values, int *out) {
+    if (!name || !values || !out)
+        return PF_FALSE;
+
+    for (int i = 0; values[i].name; i++) {
+        if (0 == strcmp(name, values[i].name)) {
+            *out = values[i].value;
+            return PF_TRUE;
+        }
+    }
+
+    return PF_FALSE;
+}
+
+PF_API pf_bool pf__ap_match_enum(
     struct pf_argparser *p,
     pf_option_enum_t *e,
     const char *arg,
@@ -336,11 +371,11 @@ PF_API int pf__ap_match_enum(
         }
     }
 
-    pf_argparser_error(p, "unknown enum constant '%.*s'\n", len, arg);
+    pf_argparser_error(p, "unknown enum constant '%.*s'", len, arg);
     return PF_FALSE;
 }
 
-PF_API int pf_option_enum(
+PF_API pf_bool pf_option_enum(
     struct pf_argparser *p,
     const char *name,
     char shorthand,
@@ -355,7 +390,7 @@ PF_API int pf_option_enum(
     return pf__ap_match_enum(p, values, arg, strlen(arg), out);
 }
 
-PF_API int pf_option_flags(
+PF_API pf_bool pf_option_flags(
     struct pf_argparser *p,
     const char *name,
     char shorthand,
@@ -409,8 +444,9 @@ PF_API int pf__ap_emit_long(
     return cb(p, user);
 }
 
-PF_API int pf__ap_isalpha(char chr) {
-    return (chr >= 'a' && chr <= 'z') || (chr >= 'A' && chr <= 'Z');
+PF_API pf_bool pf__ap_isvalue(char chr) {
+    pf_bool alpha = (chr >= 'a' && chr <= 'z') || (chr >= 'A' && chr <= 'Z');
+    return !alpha && chr != '?' && chr != '\0';
 }
 
 PF_API int pf__ap_emit_short_cluster(
@@ -425,16 +461,10 @@ PF_API int pf__ap_emit_short_cluster(
         p->item.hasValue = PF_FALSE;
         p->item.value = NULL;
 
-        if (*arg) {
-            if (*arg == '=') {
-                p->item.value = arg + 1;
-                p->item.hasValue = PF_TRUE;
-                arg += strlen(arg);
-            } else if (!pf__ap_isalpha((unsigned char)*arg)) {
-                p->item.value = arg;
-                p->item.hasValue = PF_TRUE;
-                arg += strlen(arg);
-            }
+        if (pf__ap_isvalue(*arg)) {
+            p->item.value = *arg == '=' ? arg + 1 : arg;
+            p->item.hasValue = PF_TRUE;
+            arg += strlen(arg);
         }
 
         rc = cb(p, user);
