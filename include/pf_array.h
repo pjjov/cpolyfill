@@ -15,6 +15,7 @@
     - PF_ARRAY_SLOT(array, index)
     - PF_ARRAY_PUSH(array, item, count)
     - PF_ARRAY_INCR(array, count)
+    - PF_ARRAY_DECR(array, count)
     - PF_ARRAY_POP(array, out, count)
     - PF_ARRAY_UNSHIFT(array, item, count)
     - PF_ARRAY_SHIFT(array, out, count)
@@ -110,6 +111,11 @@ struct pf_array {
 
 #define PF_ARRAY_INCR(array, count)                            \
     ((PF__ARRAY_TYPE(array))pf__array_incr(                    \
+        PF__ARRAY_BASE(array), (count) * PF__ARRAY_SIZE(array) \
+    ))
+
+#define PF_ARRAY_DECR(array, count)                            \
+    ((PF__ARRAY_TYPE(array))pf__array_decr(                    \
         PF__ARRAY_BASE(array), (count) * PF__ARRAY_SIZE(array) \
     ))
 
@@ -321,6 +327,17 @@ PF_API void *pf__array_incr(struct pf_array *a, size_t size) {
     void *out = PF_OFFSET(a->items, a->length);
     a->length += size;
     return out;
+}
+
+PF_API void *pf__array_decr(struct pf_array *a, size_t size) {
+    if (!a || size == 0)
+        return NULL;
+
+    if (size > a->length)
+        return NULL;
+
+    a->length -= size;
+    return PF_OFFSET(a->items, a->length);
 }
 
 #endif
