@@ -7,6 +7,7 @@
     Macro function reference:
     - PF_ARRAY(TYPE)
     - PF_ARRAY_INIT(array, capacity)
+    - PF_ARRAY_WITH_ALLOCATOR(array, allocator)
     - PF_ARRAY_MAKE(array, items, length, capacity)
     - PF_ARRAY_LEN(array)
     - PF_ARRAY_CAP(array)
@@ -77,6 +78,13 @@ struct pf_array {
 
 #define PF_ARRAY_INIT(array, capacity)                                        \
     pf__array_init(PF__ARRAY_BASE(array), (capacity) * PF__ARRAY_SIZE(array))
+
+#ifdef PF_ARRAY_USE_ALLOCATOR_T
+
+    #define PF_ARRAY_WITH_ALLOCATOR(array, allocator)                \
+        pf__array_with_allocator(PF__ARRAY_BASE(array), (allocator))
+
+#endif
 
 #define PF_ARRAY_MAKE(array, items, length, capacity) \
     pf__array_make(                                   \
@@ -188,7 +196,7 @@ PF_API int pf__array_init(struct pf_array *a, size_t capacity) {
 
     a->items = buf;
     a->length = 0;
-    a->capacity = 0;
+    a->capacity = capacity;
 
 #ifdef PF_ARRAY_USE_ALLOCATOR_T
     a->alloc = PF_ARRAY_DEFAULT_ALLOCATOR;
@@ -196,6 +204,24 @@ PF_API int pf__array_init(struct pf_array *a, size_t capacity) {
 
     return PF_ARRAY_OK;
 }
+
+#ifdef PF_ARRAY_USE_ALLOCATOR_T
+
+PF_API int pf__array_with_allocator(
+    struct pf_array *a, allocator_t *allocator
+) {
+    if (!a || !allocator)
+        return PF_ARRAY_EINVAL;
+
+    a->items = NULL;
+    a->length = 0;
+    a->capacity = 0;
+    a->alloc = allocator;
+
+    return PF_ARRAY_OK;
+}
+
+#endif
 
 PF_API int pf__array_make(
     struct pf_array *a, void *items, size_t length, size_t capacity
