@@ -205,8 +205,7 @@ enum pf_typeid {
 
     PF_TYPEID(PF__X, PF__X, PF__X, PF__X, PF__X)
 
-        PF__TYPE_STANDARD
-    = 1024,
+        PF__TYPE_STANDARD = 1024,
 };
 
 #undef PF__X

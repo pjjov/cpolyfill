@@ -33,12 +33,10 @@
 
 #include <stdint.h>
 
-#if defined(__i686__) || defined(__i586__)   \
-    || defined(__i486__) || defined(__i386__)  \
-    || defined(__i386) || defined(_M_IX86)     \
-    || defined(_X86_) || defined(__THW_INTEL__) \
-    || defined(__x86_64__) || defined(_M_AMD64) \
-    || defined(_M_X64)
+#if defined(__i686__) || defined(__i586__) || defined(__i486__)        \
+    || defined(__i386__) || defined(__i386) || defined(_M_IX86)        \
+    || defined(_X86_) || defined(__THW_INTEL__) || defined(__x86_64__) \
+    || defined(_M_AMD64) || defined(_M_X64)
     #define PF_CPU_X86
 
     #ifdef _MSC_VER
@@ -56,44 +54,42 @@
 
 static void pf_cpuid(uint32_t leaf, uint32_t regs[4]) {
 #ifdef PF_CPU_X86
-#ifdef _MSC_VER
+    #ifdef _MSC_VER
     __cpuid(regs, leaf);
-#else
+    #else
     uint32_t eax, ebx, ecx, edx;
 
-    #ifdef PF_HAS_CPUID
+        #ifdef PF_HAS_CPUID
     __cpuid(leaf, eax, ebx, ecx, edx);
-    #else
-    __asm__ __volatile__ ("cpuid\n\t"
-        : "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx)
-        : "0" (leaf), "1" (0), "2" (0)
-    );
-    #endif
+        #else
+    __asm__ __volatile__("cpuid\n\t"
+                         : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
+                         : "0"(leaf), "1"(0), "2"(0));
+        #endif
 
     regs[0] = eax;
     regs[1] = ebx;
     regs[2] = ecx;
     regs[3] = edx;
-#endif
+    #endif
 #endif
 }
 
 static void pf_cpuidex(uint32_t leaf, uint32_t sub, uint32_t regs[4]) {
 #ifdef PF_CPU_X86
-#if defined(_MSC_VER) || defined(__cpuidex)
+    #if defined(_MSC_VER) || defined(__cpuidex)
     __cpuidex(regs, leaf, sub);
-#else
+    #else
     uint32_t eax, ebx, ecx, edx;
-    __asm__ __volatile__ ("cpuid\n\t"
-        : "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx)
-        : "0" (leaf), "1" (0), "2" (sub)
-    );
+    __asm__ __volatile__("cpuid\n\t"
+                         : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
+                         : "0"(leaf), "1"(0), "2"(sub));
 
     regs[0] = eax;
     regs[1] = ebx;
     regs[2] = ecx;
     regs[3] = edx;
-#endif
+    #endif
 #endif
 }
 
@@ -138,6 +134,8 @@ static inline int pf_cpuid_reg(int leaf, int sub, int reg) {
     pf_cpuidex(leaf, sub, regs);
     return regs[reg];
 }
+
+/* clang-format off */
 
 #define PF_HAS_SSE3         (pf_cpuid_reg(1, 0, 2) >> 0  & 1)
 #define PF_HAS_PCLMULQDQ    (pf_cpuid_reg(1, 0, 2) >> 1  & 1)
@@ -286,5 +284,7 @@ static inline int pf_cpuid_reg(int leaf, int sub, int reg) {
 #define PF_HAS_IA32_ARCH_CAPABILITIES (pf_cpuid_reg(7, 0, 3) >> 29 & 1)
 #define PF_HAS_IA32_CORE_CAPABILITIES (pf_cpuid_reg(7, 0, 3) >> 30 & 1)
 #define PF_HAS_SSBD                   (pf_cpuid_reg(7, 0, 3) >> 31 & 1)
+
+/* clang-format on */
 
 #endif
