@@ -61,7 +61,9 @@ included alongside it.
 | [pf_macro.h](./include/pf_macro.h)       | Contains ubiquitous macro functions and compiler builtins. |
 | [pf_overflow.h](./include/pf_overflow.h) | Overflow checks and saturated arithmetic. |
 | [pf_pipe.h](./include/pf_pipe.h)         | Cross-platform named pipe interface. |
+| [pf_semaphore.h](./include/pf_semaphore.h) | Cross-platform POSIX semaphores. |
 | [pf_socket.h](./include/pf_socket.h)     | Cross-platform named socket interface. |
+| [pf_string.h](./include/pf_string.h)     | Miscellaneous string utilities. |
 | [pf_test.h](./include/pf_test.h)         | Minimal unit testing framework which can be extended with other polyfills. |
 | [pf_threads.h](./include/pf_threads.h)   | C11's threading interface for existing libraries. |
 | [pf_typeid.h](./include/pf_typeid.h)     | Runtime type information and conversion. |

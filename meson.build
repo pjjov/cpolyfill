@@ -12,7 +12,9 @@ meson.override_dependency('cpolyfill', cpolyfill_dep)
 
 install_headers(
     'include/pf_argparse.h',
+    'include/pf_array.h',
     'include/pf_assert.h',
+    'include/pf_attribute.h',
     'include/pf_bitwise.h',
     'include/pf_cpuinfo.h',
     'include/pf_ctype.h',
@@ -24,7 +26,9 @@ install_headers(
     'include/pf_macro.h',
     'include/pf_overflow.h',
     'include/pf_pipe.h',
+    'include/pf_semaphore.h',
     'include/pf_socket.h',
+    'include/pf_string.h',
     'include/pf_test.h',
     'include/pf_threads.h',
     'include/pf_typeid.h',
