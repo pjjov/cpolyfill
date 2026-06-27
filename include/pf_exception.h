@@ -70,6 +70,10 @@
     #define PF_EXCEPTION_MODULE 0
 #endif
 
+#ifndef PF_EXCEPTION_STACK_SIZE
+    #define PF_EXCEPTION_STACK_SIZE
+#endif
+
 #ifndef PF_ON_MAX_EXCEPTIONS
     #define PF_ON_MAX_EXCEPTIONS return NULL
 #endif
@@ -103,7 +107,7 @@ typedef struct pf_exception_stack_t {
 
     int capacity;
     int length;
-    pf_exception_handler_t buffer[];
+    pf_exception_handler_t buffer[PF_EXCEPTION_STACK_SIZE];
 } pf_exception_stack_t;
 
 #define pf_throw(stack, code, msg)                 \
@@ -127,6 +131,9 @@ PF_API void pf_init_exception_stack(
 PF_API pf_exception_t *pf_try_catch(
     pf_exception_stack_t *stack, int module, int code
 ) {
+    if (!stack)
+        return NULL;
+
     if (stack->length >= stack->capacity)
         PF_ON_MAX_EXCEPTIONS;
 
@@ -144,6 +151,9 @@ PF_API pf_exception_t *pf_try_catch(
 }
 
 PF_API int pf_rethrow(pf_exception_stack_t *stack, pf_exception_t *e) {
+    if (!stack || !e)
+        return -1;
+
     if (&stack->current != e)
         stack->current = *e;
 
@@ -169,6 +179,9 @@ PF_API int pf__throw(
     const char *func,
     const char *msg
 ) {
+    if (!stack || code == 0)
+        return code;
+
     pf_exception_t *e = &stack->current;
     e->module = PF_EXCEPTION_MODULE;
     e->code = code;
@@ -181,7 +194,7 @@ PF_API int pf__throw(
 
 #ifndef PF_EXCEPTION_NO_STDIO
 
-PF_API int pf__throwf(
+PF_API int pf__vthrowf(
     pf_exception_stack_t *stack,
     int code,
     int line,
@@ -190,6 +203,9 @@ PF_API int pf__throwf(
     const char *fmt,
     va_list args
 ) {
+    if (!stack || code == 0)
+        return code;
+
     const char *msg = fmt;
 
     if (!stack->msgBuffer || stack->msgCapacity <= 0) {
@@ -201,7 +217,7 @@ PF_API int pf__throwf(
     return pf__throw(stack, code, line, file, func, msg);
 }
 
-PF_API int pf__vthrowf(
+PF_API int pf__throwf(
     pf_exception_stack_t *stack,
     int code,
     int line,
@@ -212,7 +228,7 @@ PF_API int pf__vthrowf(
 ) {
     va_list args;
     va_start(args, fmt);
-    int result = pf__throwf(stack, code, line, file, func, fmt, args);
+    int result = pf__vthrowf(stack, code, line, file, func, fmt, args);
     va_end(args);
     return result;
 }
