@@ -1,5 +1,5 @@
-# Copyright 2025 Predrag Jovanović
-# SPDX-FileCopyrightText: 2025 Predrag Jovanović
+# Copyright 2025-2026 Предраг Јовановић
+# SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
 # SPDX-License-Identifier: Apache-2.0
 
 project('cpolyfill', 'c', version: '1.2.0')

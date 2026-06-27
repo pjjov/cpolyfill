@@ -23,10 +23,10 @@
     - PF_ARRAY_RESIZE(array, capacity)
     - PF_ARRAY_SETLEN(array, length)
 
-    SPDX-FileCopyrightText: 2026 Predrag Jovanović
+    SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 
-    Copyright 2026 Predrag Jovanović
+    Copyright 2025-2026 Предраг Јовановић
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
