@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
 # SPDX-License-Identifier: Apache-2.0
 
-project('cpolyfill', 'c', version: '1.3.2')
+project('cpolyfill', 'c', version: '1.3.3')
 
 cpolyfill_dep = declare_dependency(
     include_directories: include_directories('include')
@@ -56,3 +56,13 @@ if not meson.is_subproject()
     test('cpolyfill/macro', tests, args: ['macro'], protocol: 'tap')
     test('cpolyfill/overflow', tests, args: ['overflow'], protocol: 'tap')
 endif
+
+pkg = import('pkgconfig')
+pkg.generate(
+    name: 'cpolyfill',
+    filebase: 'cpolyfill',
+    description: 'Filling the gaps between C standards and compilers',
+    version: meson.project_version(),
+    subdirs: '',
+    extra_cflags: []
+)
