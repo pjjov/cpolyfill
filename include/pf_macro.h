@@ -83,6 +83,10 @@
 #ifndef POLYFILL_MACRO
 #define POLYFILL_MACRO
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stddef.h>
 
 #ifndef pf_has_builtin
@@ -203,4 +207,8 @@
     #define PF_ASSUME_ALIGNED(expr, align, ...) (expr)
 #endif
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_MACRO */

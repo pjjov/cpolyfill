@@ -49,6 +49,10 @@
     #define PF_API static inline
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stddef.h>
 #include <string.h>
 
@@ -366,4 +370,8 @@ PF_API void *pf__array_decr(struct pf_array *a, size_t size) {
     return PF_OFFSET(a->items, a->length);
 }
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_ARRAY */

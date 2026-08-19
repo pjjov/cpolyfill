@@ -25,6 +25,10 @@
 #ifndef POLYFILL_ERRNO
 #define POLYFILL_ERRNO
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef int pf_errno_t;
 
 enum pf_errno {
@@ -162,4 +166,8 @@ enum pf_errno {
     PF_ENOTSUP = 134, /* Not supported parameter or option */
 };
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_ERRNO */

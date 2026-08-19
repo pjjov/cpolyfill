@@ -28,6 +28,10 @@
     #define PF_API static inline
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
@@ -91,4 +95,8 @@ typedef _locale_t locale_t;
     #include <strings.h>
 #endif
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_STRING */

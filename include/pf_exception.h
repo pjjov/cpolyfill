@@ -48,8 +48,8 @@
     limitations under the License.
 **/
 
-#ifndef PF_EXCEPTION
-#define PF_EXCEPTION
+#ifndef POLYFILL_EXCEPTION
+#define POLYFILL_EXCEPTION
 
 #ifndef PF_API
     #define PF_API static inline
@@ -57,6 +57,10 @@
 
 #ifndef PF_INLINE
     #define PF_INLINE static inline
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 #include <setjmp.h>
@@ -235,4 +239,8 @@ PF_API int pf__throwf(
 
 #endif
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_EXCEPTION */

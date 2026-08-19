@@ -27,6 +27,10 @@
     #define PF_API static inline
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef _WIN32
     #include <dlfcn.h>
 #else
@@ -92,4 +96,9 @@ PF_API int dlclose(void *lib) {
 }
 
 #endif
+
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_DLSYM */

@@ -27,6 +27,10 @@
     #define PF_API static inline
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef _WIN32
     #include <stdio.h>
     #include <string.h>
@@ -373,4 +377,8 @@ PF_API void pf_pipe_destroy(const char *path) {
 #endif
 }
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_PIPE */

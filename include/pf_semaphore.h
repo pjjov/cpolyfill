@@ -20,11 +20,15 @@
     limitations under the License.
 **/
 
-#ifndef PF_SEMAPHORE_H
-#define PF_SEMAPHORE_H
+#ifndef POLYFILL_SEMAPHORE
+#define POLYFILL_SEMAPHORE
 
 #ifndef PF_API
     #define PF_API static inline
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -47,10 +51,6 @@
     #include <string.h>
     #include <time.h>
     #include <windows.h>
-
-    #ifdef __cplusplus
-extern "C" {
-    #endif
 
     #ifndef O_CREAT
         #define O_CREAT 0x0200
@@ -406,15 +406,7 @@ PF_API int sem_getvalue(sem_t *sem, int *sval) {
     return PF_SEM_OK;
 }
 
-    #ifdef __cplusplus
-} /* extern "C" */
-    #endif
-
 #else
-
-    #ifdef __cplusplus
-extern "C" {
-    #endif
 
 typedef char sem_t;
 
@@ -446,10 +438,10 @@ int sem_timedwait(sem_t *restrict, const struct timespec *restrict) {
     return -1;
 }
 
-    #ifdef __cplusplus
-} /* extern "C" */
-    #endif
-
 #endif
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_SEMAPHORE */

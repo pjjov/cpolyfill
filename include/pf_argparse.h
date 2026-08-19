@@ -27,6 +27,10 @@
     #define PF_API static inline
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef PF_BOOL
     #define PF_BOOL
     #define PF_TRUE 1
@@ -502,4 +506,8 @@ PF_API int pf_argparser_run(
     return p->failed ? PF_ARGPARSE_EINVAL : PF_ARGPARSE_OK;
 }
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_ARGPARSE */

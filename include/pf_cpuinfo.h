@@ -31,6 +31,10 @@
 #ifndef POLYFILL_CPUINFO
 #define POLYFILL_CPUINFO
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 #if defined(__i686__) || defined(__i586__) || defined(__i486__)        \
@@ -287,4 +291,8 @@ static inline int pf_cpuid_reg(int leaf, int sub, int reg) {
 
 /* clang-format on */
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_CPUINFO */

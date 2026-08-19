@@ -235,4 +235,4 @@ PF_IMPL_BITWISE(64,   uint64_t,           UINT64_MAX);
 }
 #endif
 
-#endif
+#endif /* POLYFILL_BITWISE */

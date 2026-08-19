@@ -33,6 +33,10 @@
     #define PF_API static inline
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define PF_CTYPE_DIGIT "0123456789"
 #define PF_CTYPE_LOWER "abcdefghijklmnopqrstuvwxyz"
 #define PF_CTYPE_UPPER "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -143,4 +147,8 @@ PF_API int pf_toupper(int c) {
     return c + ('A' - 'a');
 }
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_CTYPE */

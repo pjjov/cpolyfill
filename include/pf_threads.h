@@ -1067,4 +1067,4 @@ PF_API void pf_barrier_free(pf_barrier_t *b) {
 } /* extern "C" */
 #endif
 
-#endif
+#endif /* POLYFILL_THREADS */

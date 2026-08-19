@@ -29,6 +29,10 @@
     #define PF_API static inline
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef _WIN32
     #include <limits.h>
     #include <winsock2.h>
@@ -478,4 +482,8 @@ PF_API int pf_inet_pton(int af, const char *src, void *dst) {
     return inet_pton(af, src, dst);
 }
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_SOCKET */

@@ -24,6 +24,10 @@
 #ifndef POLYFILL_ATTRIBUTE
 #define POLYFILL_ATTRIBUTE
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
     #define PF_STD_C23
 #endif
@@ -118,4 +122,8 @@
     #endif
 #endif
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_ATTRIBUTE */

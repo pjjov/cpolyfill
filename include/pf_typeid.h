@@ -34,6 +34,10 @@
     #define PF_API static inline
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef __has_builtin
     #if __has_builtin(__builtin_unreachable)
         #define pf__unreachable __builtin_unreachable
@@ -431,4 +435,8 @@ PF_API int pf_type_int_as_fixed(int type) {
 #undef PF__XA
 #undef PF__XO
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_TYPEID */

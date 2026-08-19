@@ -41,6 +41,10 @@
 #ifndef POLYFILL_ASSERT
 #define POLYFILL_ASSERT
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef __STDC__
     #define PF_HAS_ASSERT_H
     #include <assert.h>
@@ -208,4 +212,8 @@ static inline pf_bool pf_check_fail(
     #define static_assert(expr, msg) assert((expr) && (msg))
 #endif
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_ASSERT */

@@ -70,6 +70,10 @@
 #ifndef POLYFILL_OVERFLOW
 #define POLYFILL_OVERFLOW
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -287,4 +291,8 @@ PF_IMPL_OVERFLOW(PF_OVERFLOW_UINTPTR,   uintptr_t,          u, ptr , pf)
 
 /* clang-format on */
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_OVERFLOW */

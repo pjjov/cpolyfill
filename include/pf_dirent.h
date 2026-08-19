@@ -22,6 +22,11 @@
 
 #ifndef POLYFILL_DIRENT
 #define POLYFILL_DIRENT
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef _WIN32
     #include <dirent.h>
 #else
@@ -193,4 +198,8 @@ long int telldir(DIR *dir) { return dir->pos; }
 
 #endif
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_DIRENT */

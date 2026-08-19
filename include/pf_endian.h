@@ -24,6 +24,10 @@
 #ifndef POLYFILL_ENDIAN
 #define POLYFILL_ENDIAN
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef __has_builtin
     #define __has_builtin(...) 0
 #endif
@@ -164,4 +168,8 @@ PF__IMPL_X(lextoh, !PF_BIG_ENDIAN, be16toh, be32toh, be64toh);
 
 #undef PF__IMPL_X
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_ENDIAN */

@@ -36,6 +36,10 @@
 #ifndef POLYFILL_TYPES
 #define POLYFILL_TYPES
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef pf_has_builtin
     #ifdef __has_builtin
         #define pf_has_builtin(x) __has_builtin(x)
@@ -234,4 +238,8 @@ typedef pf_max_align_t max_align_t;
     #define PF_ALIGN_FLOOR PF_ALIGN_DOWN
 #endif
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_TYPES */

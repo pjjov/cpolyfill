@@ -58,6 +58,10 @@
 #ifndef POLYFILL_TEST
 #define POLYFILL_TEST
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -244,4 +248,8 @@ static inline void pf_suite_run_tap(const pf_test *tests, int seed, FILE *out) {
     fprintf(out, "1..%d\n", i);
 }
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* POLYFILL_TEST */
