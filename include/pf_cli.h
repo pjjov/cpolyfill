@@ -396,8 +396,8 @@ PF_API void pf__cli_wrap_at(
     while (*p) {
         const char *word;
         const char *q;
-        unsigned word_width = 0;
-        size_t word_bytes;
+        unsigned wordWidth = 0;
+        size_t wordBytes;
 
         /*
          * Skip whitespace between words.
@@ -449,29 +449,29 @@ PF_API void pf__cli_wrap_at(
                 continue;
             }
 
-            ++word_width;
+            ++wordWidth;
             ++q;
         }
 
-        word_bytes = (size_t)(q - word);
+        wordBytes = (size_t)(q - word);
 
         /*
          * Word is the first item on this line.
          */
         if (col == indent) {
-            fwrite(word, 1, word_bytes, out);
-            col += word_width;
+            fwrite(word, 1, wordBytes, out);
+            col += wordWidth;
         }
 
         /*
          * Word fits after a separating space.
          */
-        else if (col + 1 + word_width <= width) {
+        else if (col + 1 + wordWidth <= width) {
             fputc(' ', out);
             ++col;
 
-            fwrite(word, 1, word_bytes, out);
-            col += word_width;
+            fwrite(word, 1, wordBytes, out);
+            col += wordWidth;
         }
 
         /*
@@ -485,8 +485,8 @@ PF_API void pf__cli_wrap_at(
 
             pf_cli_fill(out, indent, ' ');
 
-            fwrite(word, 1, word_bytes, out);
-            col += word_width;
+            fwrite(word, 1, wordBytes, out);
+            col += wordWidth;
         }
 
         p = q;
@@ -510,8 +510,8 @@ PF_API void pf_cli_help_definition(
     FILE *out;
     unsigned columns;
     unsigned indent;
-    unsigned name_width;
-    unsigned desc_indent;
+    unsigned nameWidth;
+    unsigned descIndent;
 
     if (!c || c->silent)
         return;
@@ -530,12 +530,12 @@ PF_API void pf_cli_help_definition(
         columns = 10;
 
     indent = (unsigned)c->definitionIndent;
-    name_width = pf_cli_text_width(name);
+    nameWidth = pf_cli_text_width(name);
 
     /*
      * Long names get their own line.
      */
-    if (name_width > 30) {
+    if (nameWidth > 30) {
         pf_cli_fill(out, indent, ' ');
         fputs(name, out);
         fputc('\n', out);
@@ -552,12 +552,12 @@ PF_API void pf_cli_help_definition(
      *           --foo                  Description...
      *                                  continued...
      */
-    desc_indent = indent + 30;
+    descIndent = indent + 30;
 
     /*
      * Not enough room for the description beside the name.
      */
-    if (desc_indent >= columns || columns - desc_indent < 10) {
+    if (descIndent >= columns || columns - descIndent < 10) {
         pf_cli_fill(out, indent, ' ');
         fputs(name, out);
         fputc('\n', out);
@@ -574,14 +574,14 @@ PF_API void pf_cli_help_definition(
      */
     pf_cli_fill(out, indent, ' ');
     fputs(name, out);
-    pf_cli_fill(out, 30 - name_width, ' ');
+    pf_cli_fill(out, 30 - nameWidth, ' ');
 
     /*
-     * The cursor is now already at desc_indent.
+     * The cursor is now already at descIndent.
      *
      * Tell the wrapper not to emit firstIndent again.
      */
-    pf__cli_wrap_at(c, desc_indent, desc_indent, columns, description);
+    pf__cli_wrap_at(c, descIndent, descIndent, columns, description);
 
     fputc('\n', out);
 }
@@ -632,6 +632,108 @@ PF_API void pf_cli_path_link(pf_cli_t *c, const char *path, unsigned line) {
     fprintf(out, fmt, path, line);
 
     fprintf(out, "\033\\%s\033]8;;\033\\", path);
+}
+
+PF_API int pf_cli_readline(pf_cli_t *c, char *buffer, size_t size) {
+    if (!c || !c->in.handle || !buffer || size == 0)
+        return 0;
+
+    if (!fgets(buffer, (int)size, c->in.handle))
+        return 0;
+
+    buffer[strcspn(buffer, "\r\n")] = '\0';
+
+    return 1;
+}
+
+PF_API int pf_cli_ask(
+    pf_cli_t *c, const char *question, char *answer, size_t answerSize
+) {
+    if (!c || c->silent)
+        return 0;
+
+    FILE *out = c->out.handle;
+    fputs(question ? question : "", out);
+    fputs(": ", out);
+    fflush(out);
+
+    return pf_cli_readline(c, answer, answerSize);
+}
+
+PF_API int pf_cli_confirm(pf_cli_t *c, const char *question, int defaultValue) {
+    if (!c || c->silent)
+        return defaultValue;
+
+    char answer[32];
+    FILE *out = c->out.handle;
+
+    fputs(question ? question : "", out);
+    fputs(defaultValue ? " [Y/n]: " : " [y/N]: ", out);
+    fflush(out);
+
+    if (!pf_cli_readline(c, answer, sizeof(answer)))
+        return defaultValue;
+
+    if (!answer[0])
+        return defaultValue;
+
+    return answer[0] == 'y' || answer[0] == 'Y' || answer[0] == '1';
+}
+
+PF_API int pf_cli_select(
+    pf_cli_t *c,
+    const char *question,
+    const char **choices,
+    size_t count,
+    size_t defaultIndex
+) {
+    if (!c || c->silent || !choices || count == 0)
+        return -1;
+
+    if (defaultIndex >= count)
+        defaultIndex = 0;
+
+    char answer[64];
+    size_t i;
+    FILE *out = c->out.handle;
+
+    fputs(question ? question : "Select", out);
+    fputs(":\n", out);
+
+    for (i = 0; i < count; ++i) {
+        fprintf(out, "  %lu) %s", (unsigned long)(i + 1), choices[i]);
+
+        if (i == defaultIndex)
+            fputs(" (default)", out);
+
+        fputc('\n', out);
+    }
+
+    fprintf(out, "Choice [%lu]: ", (unsigned long)(defaultIndex + 1));
+    fflush(out);
+
+    if (!pf_cli_readline(c, answer, sizeof(answer)))
+        return -1;
+
+    if (!answer[0])
+        return (int)defaultIndex;
+
+    {
+        char *end = NULL;
+        unsigned long n = strtoul(answer, &end, 10);
+
+        if (end != answer && n >= 1 && n <= count)
+            return (int)(n - 1);
+    }
+
+    /*
+     * Also permit entering the label directly.
+     */
+    for (i = 0; i < count; ++i)
+        if (choices[i] && strcmp(answer, choices[i]) == 0)
+            return (int)i;
+
+    return -1;
 }
 
 #ifdef __cplusplus
