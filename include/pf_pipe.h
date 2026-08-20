@@ -2,6 +2,7 @@
 
     This file provides a wrapper for POSIX and Windows named pipes.
 
+    Last-updated: August 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

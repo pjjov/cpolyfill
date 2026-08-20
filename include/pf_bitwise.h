@@ -36,6 +36,7 @@
     You can also define functions for new types using PF_IMPL_BITWISE macro.
     Define PF_BITWISE_SKIP_DEFAULT to omit generating predefined functions.
 
+    Last-updated: August 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

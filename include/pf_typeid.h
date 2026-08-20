@@ -9,6 +9,7 @@
     should ideally reserve their own namespace with an offset that
     is larger than PF__TYPE_STANDARD.
 
+    Last-updated: August 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

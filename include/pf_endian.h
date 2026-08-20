@@ -3,6 +3,7 @@
     This file provides byte swapping and endianness conversion functions
     similar to those from '<byteswap.h>' and '<endian.h>' headers in Linux.
 
+    Last-updated: August 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

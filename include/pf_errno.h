@@ -4,6 +4,7 @@
     While actual numeric values aren't standardized, most systems
     define values identical to the ones below.
 
+    Last-updated: August 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

@@ -62,6 +62,7 @@
             This macro is defined if the compiler supports GCC's extension
             for statement expressions. Used for ensuring type safety.
 
+    Last-updated: August 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

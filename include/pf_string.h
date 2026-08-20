@@ -3,6 +3,7 @@
     This file provides some non-standard, but widely available string and
     string-related functions across platforms.
 
+    Last-updated: August 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

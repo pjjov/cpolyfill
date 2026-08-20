@@ -8,6 +8,7 @@
     - enumerations for ASCII control characters.
     - unicode characters from the special block
 
+    Last-updated: August 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

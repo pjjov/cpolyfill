@@ -2,6 +2,7 @@
 
     This file provides a simple CLI argument parsing.
 
+    Last-updated: August 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

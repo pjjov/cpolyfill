@@ -3,6 +3,7 @@
     This file provides portable macros for annotating functions,
     variables and types using compiler and C23 attributes.
 
+    Last-updated: August 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

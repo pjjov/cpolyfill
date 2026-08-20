@@ -4,6 +4,7 @@
     While the two libraries are quite compatible with each other, this
     wrapper fixes some inconsistencies and minor differences between them.
 
+    Last-updated: August 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

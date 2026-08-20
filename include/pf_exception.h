@@ -30,6 +30,7 @@
     - pf_vthrowf(stack, code, fmt, args)
     - pf_rethrow(stack, e);
 
+    Last-updated: August 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

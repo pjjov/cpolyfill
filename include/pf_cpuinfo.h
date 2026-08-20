@@ -10,6 +10,7 @@
     - void pf_cpu_brand(char brand[48]);
     - int pf_cpu_logical_cores();
 
+    Last-updated: August 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

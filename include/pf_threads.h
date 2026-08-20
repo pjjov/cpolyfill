@@ -15,6 +15,7 @@
     - On Windows, if the main thread uses `tss_t` objects with destructors,
       `pf_tss_cleanup` should be called before exiting.
 
+    Last-updated: August 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 
