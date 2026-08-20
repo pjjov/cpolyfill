@@ -143,6 +143,9 @@ typedef struct pf_cli_stream_t {
     FILE *handle;
     pf_bool colorEnabled;
     pf_bool isTerminal;
+    pf_bool supportsAnsi;
+    pf_bool supportsCursor;
+    pf_bool supportsHyperlinks;
     int columns;
 } pf_cli_stream_t;
 
@@ -235,6 +238,10 @@ PF_API void pf__cli_init_stream(
     stream->colorEnabled = pf__cli_color_enabled(c, handle);
     stream->isTerminal = pf__cli_is_terminal(handle);
     stream->columns = pf__cli_columns(c, handle);
+    stream->supportsAnsi = stream->colorEnabled;
+    stream->supportsCursor = stream->supportsAnsi;
+    stream->supportsHyperlinks = stream->supportsAnsi
+        && !getenv("NO_HYPERLINKS");
 }
 
 PF_API struct pf_cli_opt *pf__cli_apply_defaults(struct pf_cli_opt *o) {
@@ -591,6 +598,40 @@ PF_API void pf_cli_help_section(pf_cli_t *c, const char *title) {
     pf_cli_color(c, PF_CLI_RESET);
 
     fputc('\n', out);
+}
+
+PF_API void pf_cli_link(pf_cli_t *c, const char *url, const char *text) {
+    if (!c || c->silent || !url || !text)
+        return;
+
+    FILE *out = c->out.handle;
+
+    if (!c->out.supportsHyperlinks) {
+        fputs(text, out);
+        return;
+    }
+
+    const char *fmt = "\033]8;;%s\033\\%s\033]8;;\033\\";
+    fprintf(out, fmt, url, text);
+}
+
+PF_API void pf_cli_path_link(pf_cli_t *c, const char *path, unsigned line) {
+    if (!c || c->silent || !path)
+        return;
+
+    FILE *out = c->out.handle;
+
+    if (!c->out.supportsHyperlinks) {
+        fputs(path, out);
+        return;
+    }
+
+    fputs("\033]8;;", out);
+
+    const char *fmt = line > 0 ? "file://%s#L%u" : "file://%s";
+    fprintf(out, fmt, path, line);
+
+    fprintf(out, "\033\\%s\033]8;;\033\\", path);
 }
 
 #ifdef __cplusplus
