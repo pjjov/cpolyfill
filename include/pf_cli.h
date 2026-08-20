@@ -62,72 +62,39 @@ typedef int pf_bool;
 #endif
 
 enum pf_cli_color {
-    PF_CLI_RESET,
-    PF_CLI_BOLD,
-    PF_CLI_DIM,
-    PF_FG_BLACK,
-    PF_FG_RED,
-    PF_FG_GREEN,
-    PF_FG_YELLOW,
-    PF_FG_BLUE,
-    PF_FG_MAGENTA,
-    PF_FG_CYAN,
-    PF_FG_WHITE,
-    PF_FG_BOLD_BLACK,
-    PF_FG_BOLD_RED,
-    PF_FG_BOLD_GREEN,
-    PF_FG_BOLD_YELLOW,
-    PF_FG_BOLD_BLUE,
-    PF_FG_BOLD_MAGENTA,
-    PF_FG_BOLD_CYAN,
-    PF_FG_BOLD_WHITE,
-    PF_BG_BLACK,
-    PF_BG_RED,
-    PF_BG_GREEN,
-    PF_BG_YELLOW,
-    PF_BG_BLUE,
-    PF_BG_MAGENTA,
-    PF_BG_CYAN,
-    PF_BG_WHITE,
+    PF_CLI_RESET = 0x2000,
+    PF_CLI_DIM = 0x4000,
+    PF_CLI_BOLD = 0x8000,
+    PF_FG_BLACK = 30,
+    PF_FG_RED = 31,
+    PF_FG_GREEN = 32,
+    PF_FG_YELLOW = 33,
+    PF_FG_BLUE = 34,
+    PF_FG_MAGENTA = 35,
+    PF_FG_CYAN = 36,
+    PF_FG_WHITE = 37,
+    PF_BG_BLACK = 40,
+    PF_BG_RED = 41,
+    PF_BG_GREEN = 42,
+    PF_BG_YELLOW = 43,
+    PF_BG_BLUE = 44,
+    PF_BG_MAGENTA = 45,
+    PF_BG_CYAN = 46,
+    PF_BG_WHITE = 47,
 
-    PF__CLI_COLOR_START = PF_CLI_RESET,
-    PF__CLI_COLOR_END = PF_BG_WHITE,
-};
-
-static const char *pf_ansi_color[] = {
-    [PF_CLI_RESET] = "\033[0m",
-    [PF_CLI_BOLD] = "\033[1m",
-    [PF_CLI_DIM] = "\033[2m",
-    [PF_FG_BLACK] = "\033[30m",
-    [PF_FG_RED] = "\033[31m",
-    [PF_FG_GREEN] = "\033[32m",
-    [PF_FG_YELLOW] = "\033[33m",
-    [PF_FG_BLUE] = "\033[34m",
-    [PF_FG_MAGENTA] = "\033[35m",
-    [PF_FG_CYAN] = "\033[36m",
-    [PF_FG_WHITE] = "\033[37m",
-    [PF_FG_BOLD_BLACK] = "\033[1;30m",
-    [PF_FG_BOLD_RED] = "\033[1;31m",
-    [PF_FG_BOLD_GREEN] = "\033[1;32m",
-    [PF_FG_BOLD_YELLOW] = "\033[1;33m",
-    [PF_FG_BOLD_BLUE] = "\033[1;34m",
-    [PF_FG_BOLD_MAGENTA] = "\033[1;35m",
-    [PF_FG_BOLD_CYAN] = "\033[1;36m",
-    [PF_FG_BOLD_WHITE] = "\033[1;37m",
-    [PF_BG_BLACK] = "\033[40m",
-    [PF_BG_RED] = "\033[41m",
-    [PF_BG_GREEN] = "\033[42m",
-    [PF_BG_YELLOW] = "\033[43m",
-    [PF_BG_BLUE] = "\033[44m",
-    [PF_BG_MAGENTA] = "\033[45m",
-    [PF_BG_CYAN] = "\033[46m",
-    [PF_BG_WHITE] = "\033[47m",
+    PF__CLI_COLOR_MASK = 0xFF,
 };
 
 enum pf_color_mode_t {
     PF_COLOR_AUTO,
     PF_COLOR_ALWAYS,
     PF_COLOR_NEVER,
+};
+
+enum pf_clear_mode {
+    PF_CLEAR_END,
+    PF_CLEAR_START,
+    PF_CLEAR_ALL,
 };
 
 struct pf_cli_opt {
@@ -276,11 +243,65 @@ PF_API void pf_cli_color(pf_cli_t *c, int color) {
     if (!c || c->silent)
         return;
 
-    if (color < PF__CLI_COLOR_START || color > PF__CLI_COLOR_END)
+    if (!c->out.colorEnabled)
         return;
 
-    if (c->out.colorEnabled)
-        fputs(pf_ansi_color[color], c->out.handle);
+    const char *fmt = "\033[%dm";
+    FILE *out = c->out.handle;
+
+    if (color & PF_CLI_RESET)
+        fprintf(out, fmt, 0);
+    if (color & PF_CLI_BOLD)
+        fprintf(out, fmt, 1);
+    if (color & PF_CLI_DIM)
+        fprintf(out, fmt, 2);
+    if (color & PF__CLI_COLOR_MASK)
+        fprintf(out, fmt, color & PF__CLI_COLOR_MASK);
+}
+
+PF_API void pf_cli_clearline(pf_cli_t *c, enum pf_clear_mode mode) {
+    if (!c || c->silent || !c->out.supportsAnsi)
+        return;
+    if (mode < 0 || mode > 2)
+        return;
+
+    char seq[] = { '\r', '\033', '[', mode, 'K', '\0' };
+    fputs(seq, c->out.handle);
+}
+
+PF_API void pf_cli_clear(pf_cli_t *c, enum pf_clear_mode mode) {
+    if (!c || c->silent || !c->out.supportsAnsi)
+        return;
+    if (mode < 0 || mode > 3)
+        return;
+
+    char seq[] = { '\r', '\033', '[', mode, 'J', '\0' };
+    fputs(seq, c->out.handle);
+}
+
+PF_API void pf__cli_move(pf_cli_t *c, int n, char pos, char neg) {
+    fprintf(c->out.handle, "\033[%d%c", n > 0 ? n : -n, n > 0 ? pos : neg);
+}
+
+PF_API void pf_cli_move(pf_cli_t *c, int x, int y) {
+    if (!c || c->silent || !c->out.supportsAnsi)
+        return;
+
+    if (x != 0)
+        pf__cli_move(c, x, 'C', 'D');
+
+    if (y != 0)
+        pf__cli_move(c, y, 'A', 'B');
+}
+
+PF_API void pf_cli_position(pf_cli_t *c, int x, int y) {
+    if (!c || c->silent || !c->out.supportsAnsi)
+        return;
+
+    if (x < 0 || y < 0)
+        return;
+
+    fprintf(c->out.handle, "\033[%d;%dH", x + 1, y + 1);
 }
 
 PF_API void pf_cli_vfprintf(
