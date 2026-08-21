@@ -46,6 +46,7 @@ extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #ifndef PF_BOOL
     #define PF_BOOL
@@ -92,6 +93,12 @@ enum pf_color_mode_t {
     PF_COLOR_NEVER,
 };
 
+enum pf_interactive_mode_t {
+    PF_INTERACTIVE_AUTO,
+    PF_INTERACTIVE_ALWAYS,
+    PF_INTERACTIVE_NEVER,
+};
+
 enum pf_clear_mode {
     PF_CLEAR_END,
     PF_CLEAR_START,
@@ -103,8 +110,10 @@ struct pf_cli_opt {
     FILE *err;
     FILE *in;
 
+    enum pf_interactive_mode_t interactiveMode;
     enum pf_color_mode_t colorMode;
     int definitionIndent;
+    pf_bool allowNullStreams;
 };
 
 typedef struct pf_cli_stream_t {
@@ -124,9 +133,64 @@ typedef struct pf_cli_t {
 
     int definitionIndent;
     enum pf_color_mode_t colorMode;
+    enum pf_interactive_mode_t interactiveMode;
 
+    pf_bool isInteractive;
     pf_bool silent;
 } pf_cli_t;
+
+typedef struct pf_cli_spinner_t {
+    pf_cli_t *cli;
+
+    const char *title;
+    const char *frames;
+
+    size_t frame;
+    double startedAt;
+
+    int active;
+    int frameCount;
+} pf_cli_spinner_t;
+
+struct pf_cli_progress_opt {
+    unsigned width;
+
+    pf_bool showPercentage;
+    pf_bool showValue;
+    pf_bool showRate;
+    pf_bool showEta;
+    pf_bool showElapsed;
+    pf_bool dynamic;
+
+    char fill;
+    char empty;
+    enum pf_cli_color color;
+};
+
+typedef struct pf_cli_progress_t {
+    pf_cli_t *cli;
+
+    double value;
+    double maximum;
+
+    const char *title;
+
+    double startedAt;
+    double lastRender;
+
+    struct pf_cli_progress_opt options;
+
+    int active;
+} pf_cli_progress_t;
+
+PF_API double pf_cli_now(void) {
+    struct timespec ts;
+
+    if (timespec_get(&ts, TIME_UTC) != TIME_UTC)
+        return 0.0;
+
+    return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
+}
 
 PF_API int pf__cli_is_terminal(FILE *handle) {
     if (!handle)
@@ -202,6 +266,11 @@ PF_API unsigned pf__cli_columns(const pf_cli_t *c, FILE *handle) {
 PF_API void pf__cli_init_stream(
     pf_cli_t *c, pf_cli_stream_t *stream, FILE *handle
 ) {
+    if (!handle) {
+        memset(stream, 0, sizeof(*stream));
+        return;
+    }
+
     stream->handle = handle;
     stream->colorEnabled = pf__cli_color_enabled(c, handle);
     stream->isTerminal = pf__cli_is_terminal(handle);
@@ -212,12 +281,25 @@ PF_API void pf__cli_init_stream(
         && !getenv("NO_HYPERLINKS");
 }
 
+PF_API int pf__cli_is_interactive(const pf_cli_t *c) {
+    if (!c)
+        return 0;
+
+    if (c->interactiveMode == PF_INTERACTIVE_ALWAYS)
+        return 1;
+
+    if (c->interactiveMode == PF_INTERACTIVE_NEVER)
+        return 0;
+
+    return c->out.isTerminal && c->in.isTerminal;
+}
+
 PF_API struct pf_cli_opt *pf__cli_apply_defaults(struct pf_cli_opt *o) {
-    if (!o->out)
+    if (!o->out && !o->allowNullStreams)
         o->out = stdout;
-    if (!o->in)
+    if (!o->in && !o->allowNullStreams)
         o->in = stdin;
-    if (!o->err)
+    if (!o->err && !o->allowNullStreams)
         o->err = stderr;
     if (o->definitionIndent <= 0 || o->definitionIndent > 80)
         o->definitionIndent = 10;
@@ -238,6 +320,9 @@ PF_API void pf_cli_init(pf_cli_t *c, struct pf_cli_opt *o) {
     pf__cli_init_stream(c, &c->out, o->out);
     pf__cli_init_stream(c, &c->err, o->err);
     pf__cli_init_stream(c, &c->in, o->in);
+
+    if (!c->out.handle)
+        c->silent = PF_TRUE;
 }
 
 PF_API void pf_cli_color(pf_cli_t *c, int color) {
@@ -756,6 +841,197 @@ PF_API int pf_cli_select(
             return (int)i;
 
     return -1;
+}
+
+PF_API void pf_cli_spinner_start(
+    pf_cli_spinner_t *s, pf_cli_t *c, const char *title, const char *frames
+) {
+    memset(s, 0, sizeof(*s));
+
+    s->cli = c;
+    s->title = title;
+    s->frames = frames ? frames : "|/-\\";
+    s->startedAt = pf_cli_now();
+    s->active = 1;
+    s->frameCount = strlen(s->frames);
+}
+
+PF_API void pf_cli_spinner_tick(pf_cli_spinner_t *s) {
+    if (!s || !s->active || !s->cli)
+        return;
+
+    pf_cli_t *c = s->cli;
+
+    /*
+     * Don't animate redirected output.
+     */
+    if (!c->isInteractive)
+        return;
+
+    pf_cli_clearline(c, PF_CLEAR_ALL);
+
+    fputc(s->frames[s->frame], c->out.handle);
+
+    if (s->title)
+        fprintf(c->out.handle, " %s", s->title);
+
+    fflush(c->out.handle);
+
+    s->frame = (s->frame + 1) % s->frameCount;
+}
+
+PF_API void pf_cli_spinner_end(pf_cli_spinner_t *s, const char *message) {
+    if (!s || !s->cli)
+        return;
+
+    if (s->cli->isInteractive)
+        pf_cli_clearline(s->cli, PF_CLEAR_ALL);
+    s->active = 0;
+}
+
+PF_API struct pf_cli_progress_opt *pf__cli_progress_apply_defaults(
+    pf_cli_t *c, struct pf_cli_progress_opt *o
+) {
+    if (o->width == 0)
+        o->width = c->out.columns / 4;
+    if (o->empty == '\0')
+        o->empty = '-';
+    if (o->fill == '\0')
+        o->fill = '#';
+    if (o->color == 0)
+        o->color = PF_FG_GREEN;
+    return o;
+}
+
+PF_API void pf_cli_progress_start(
+    pf_cli_progress_t *p,
+    pf_cli_t *c,
+    double maximum,
+    struct pf_cli_progress_opt *options
+) {
+    struct pf_cli_progress_opt fallback = { 0 };
+    options = pf__cli_progress_apply_defaults(c, options ? options : &fallback);
+
+    memset(p, 0, sizeof(*p));
+
+    p->cli = c;
+    p->maximum = maximum > 0.0 ? maximum : 1.0;
+    p->options = *options;
+
+    p->startedAt = pf_cli_now();
+    p->lastRender = p->startedAt;
+
+    p->active = 1;
+}
+
+PF_API void pf_cli_progress_render(pf_cli_progress_t *p) {
+    pf_cli_t *c;
+    FILE *out;
+    unsigned width;
+    unsigned filled;
+    double ratio;
+    double elapsed;
+    double rate;
+    double eta;
+
+    if (!p || !p->active || !p->cli)
+        return;
+
+    c = p->cli;
+    out = c->out.handle;
+
+    if (c->silent || !c->isInteractive || !out)
+        return;
+
+    width = p->options.width;
+
+    ratio = p->value / p->maximum;
+
+    if (ratio < 0.0)
+        ratio = 0.0;
+
+    if (ratio > 1.0)
+        ratio = 1.0;
+
+    filled = (unsigned)(ratio * width);
+
+    elapsed = pf_cli_now() - p->startedAt;
+
+    if (elapsed < 0.001)
+        elapsed = 0.001;
+
+    rate = p->value / elapsed;
+
+    eta = rate > 0.0 ? (p->maximum - p->value) / rate : 0.0;
+
+    pf_cli_clear(c, PF_CLEAR_ALL);
+
+    if (p->title)
+        fprintf(out, "%s ", p->title);
+
+    fputc('[', out);
+
+    pf_cli_color(c, p->options.color);
+
+    for (unsigned i = 0; i < width; ++i) {
+        fputc(i < filled ? p->options.fill : p->options.empty, out);
+    }
+
+    pf_cli_color(c, PF_CLI_RESET);
+    fputc(']', out);
+
+    if (p->options.showPercentage)
+        fprintf(out, " %3u%%", (unsigned)(ratio * 100.0 + 0.5));
+
+    if (p->options.showValue)
+        fprintf(out, " %.0f/%.0f", p->value, p->maximum);
+
+    if (p->options.showRate)
+        fprintf(out, " %.1f/s", rate);
+
+    if (p->options.showEta && p->value < p->maximum) {
+        fprintf(
+            out, " ETA %02u:%02u", (unsigned)(eta / 60.0), (unsigned)eta % 60
+        );
+    }
+
+    if (p->options.showElapsed) {
+        fprintf(
+            out,
+            " %02u:%02u",
+            (unsigned)(elapsed / 60.0),
+            (unsigned)elapsed % 60
+        );
+    }
+
+    fflush(out);
+}
+
+PF_API void pf_cli_progress_update(pf_cli_progress_t *p, double value) {
+    if (!p)
+        return;
+
+    if (value < 0.0)
+        value = 0.0;
+
+    if (value > p->maximum)
+        value = p->maximum;
+
+    p->value = value;
+    pf_cli_progress_render(p);
+}
+
+PF_API void pf_cli_progress_end(pf_cli_progress_t *p) {
+    if (!p)
+        return;
+
+    p->value = p->maximum;
+    pf_cli_progress_render(p);
+
+    if (p->cli && !p->cli->silent && p->cli->isInteractive)
+        fputc('\n', p->cli->out.handle);
+
+    p->active = 0;
 }
 
 #ifdef __cplusplus
