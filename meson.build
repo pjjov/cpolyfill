@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
 # SPDX-License-Identifier: Apache-2.0
 
-project('cpolyfill', 'c', version: '1.3.3')
+project('cpolyfill', 'c', version: '1.4')
 
 cpolyfill_dep = declare_dependency(
     include_directories: include_directories('include')
