@@ -51,8 +51,10 @@ included alongside it.
 | [pf_atomic.h](./include/pf_atomic.h)     | C11's atomic instructions for existing compiler builtins. |
 | [pf_attribute.h](./include/pf_attribute.h) | Macros for annotating functions, variables and types using compiler and C23 attributes. |
 | [pf_bitwise.h](./include/pf_bitwise.h)   | Provides cross platform implementations of `clz`, `popcnt`, `round_pow2` and others. |
+| [pf_cli.h](./include/pf_cli.h)           | Functions for building command line interfaces. |
 | [pf_cpuinfo.h](./include/pf_cpuinfo.h)   | Gives runtime information on CPU features like the number of cores, SIMD capabilities and more. |
 | [pf_ctype.h](./include/pf_ctype.h)       | Unlocalized variants of `<ctype.h>` functions and other utilities. |
+| [pf_daemon.h](./include/pf_daemon.h)     | Cross-platform daemon/background-process helper functions. |
 | [pf_dirent.h](./include/pf_dirent.h)     | Directory traversal using the POSIX `<dirent.h>` interface. |
 | [pf_dlsym.h](./include/pf_dlsym.h)       | Shared library loading using the POSIX `<dlsym.h>` interface. |
 | [pf_endian.h](./include/pf_endian.h)     | Endianness detection and reordering of bytes. |
