@@ -348,6 +348,115 @@ PF_API int pf_homedir(const char *username, char *buf, size_t size) {
 #endif
 }
 
+#ifdef PF_DIR_POSIX
+
+/* env var with fallback of "$HOME/<default_leaf>" */
+PF_API int pf_xdg_base(
+    char *buf, size_t size, const char *env_name, const char *default_leaf
+) {
+    const char *env = getenv(env_name);
+    if (env && *env == '/')
+        return pf__fs_copy(buf, size, env);
+
+    char home[4096];
+    int hr = pf_homedir_unix(NULL, home, sizeof(home));
+    if (hr < 0)
+        return hr;
+
+    return pf__fs_copy_join(buf, size, home, default_leaf);
+}
+
+#endif
+
+#ifdef PF_DIR_WIN32
+
+PF_API int pf_known_folder(char *buf, size_t size, REFKNOWNFOLDERID id) {
+    PWSTR wpath = NULL;
+    HRESULT hr = SHGetKnownFolderPath(id, 0, NULL, &wpath);
+    if (FAILED(hr) || !wpath)
+        return -PF_FS_ENOENT;
+
+    char narrow[MAX_PATH * 2];
+    int n = WideCharToMultiByte(
+        CP_UTF8, 0, wpath, -1, narrow, sizeof(narrow), NULL, NULL
+    );
+    CoTaskMemFree(wpath);
+    if (n <= 0)
+        return -PF_FS_ENOENT;
+
+    return pf__fs_copy(buf, size, narrow);
+}
+
+#endif
+
+int pf_datadir(char *buf, size_t size) {
+#ifdef PF_DIR_POSIX
+    return pf_xdg_base(buf, size, "XDG_DATA_HOME", ".local/share");
+#else
+    return pf_known_folder(buf, size, &FOLDERID_LocalAppData);
+#endif
+}
+
+int pf_confdir(char *buf, size_t size) {
+#ifdef PF_DIR_POSIX
+    return pf_xdg_base(buf, size, "XDG_CONFIG_HOME", ".config");
+#else
+    return pf_known_folder(buf, size, &FOLDERID_RoamingAppData);
+#endif
+}
+
+int pf_statedir(char *buf, size_t size) {
+#ifdef PF_DIR_POSIX
+    return pf_xdg_base(buf, size, "XDG_STATE_HOME", ".local/state");
+#else
+    /* No direct Windows analogue; local app data is the closest fit
+   * for "persists across reboots but is machine/user local". */
+    return pf_known_folder(buf, size, &FOLDERID_LocalAppData);
+#endif
+}
+
+int pf_cachedir(char *buf, size_t size) {
+#ifdef PF_DIR_POSIX
+    return pf_xdg_base(buf, size, "XDG_CACHE_HOME", ".cache");
+#else
+    /* Prefer LocalLow-style temp/cache location: LocalAppData\...\Temp
+   * has no single KNOWNFOLDERID; use the standard temp path. */
+    char tmp[MAX_PATH];
+    DWORD n = GetTempPathA(sizeof(tmp), tmp);
+    if (n == 0 || n >= sizeof(tmp))
+        return -PF_FS_ENOENT;
+    /* strip trailing backslash for consistency with other dirs */
+    if (n > 0 && tmp[n - 1] == '\\')
+        tmp[n - 1] = '\0';
+    return pf__fs_copy(buf, size, tmp);
+#endif
+}
+
+int pf_runtimedir(char *buf, size_t size) {
+#ifdef PF_DIR_POSIX
+    const char *env = getenv("XDG_RUNTIME_DIR");
+    if (env && *env == '/')
+        return pf__fs_copy(buf, size, env);
+
+    /* No spec-mandated fallback; use the conventional per-uid dir
+   * under /run/user if it exists, else /tmp. */
+    char guess[128];
+    snprintf(guess, sizeof(guess), "/run/user/%ld", (long)getuid());
+    if (access(guess, F_OK) == 0)
+        return pf__fs_copy(buf, size, guess);
+
+    return pf__fs_copy(buf, size, "/tmp");
+#else
+    char tmp[MAX_PATH];
+    DWORD n = GetTempPathA(sizeof(tmp), tmp);
+    if (n == 0 || n >= sizeof(tmp))
+        return -PF_FS_ENOENT;
+    if (n > 0 && tmp[n - 1] == '\\')
+        tmp[n - 1] = '\0';
+    return pf__fs_copy(buf, size, tmp);
+#endif
+}
+
 #ifdef __cplusplus
 }
 #endif
