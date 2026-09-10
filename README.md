@@ -60,6 +60,7 @@ included alongside it.
 | [pf_endian.h](./include/pf_endian.h)     | Endianness detection and reordering of bytes. |
 | [pf_errno.h](./include/pf_errno.h)       | Compilation of common standard library error codes. |
 | [pf_exception.h](./include/pf_exception.h) | Exception handling mechanism for C. |
+| [pf_filesystem.h](./include/pf_filesystem.h) | Cross-platform directory operations. |
 | [pf_io.h](./include/pf_io.h)       | Custom byte/character stream interface and `<stdio.h>` wrapper. |
 | [pf_macro.h](./include/pf_macro.h)       | Contains ubiquitous macro functions and compiler builtins. |
 | [pf_overflow.h](./include/pf_overflow.h) | Overflow checks and saturated arithmetic. |

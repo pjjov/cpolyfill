@@ -1,0 +1,355 @@
+/** Polyfill for C - Filling the gaps between C standards and compilers
+
+    This file provides cross-platform filesystem operations.
+    For Windows, `mkdir`, `rmdir`, `chdir` and `getcwd` are implemented.
+
+    Function reference:
+    - pf_homedir
+
+    Last-updated: August 2026
+    SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
+    SPDX-License-Identifier: Apache-2.0
+
+    Copyright 2025-2026 Предраг Јовановић
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+**/
+
+#ifndef POLYFILL_FILESYSTEM
+#define POLYFILL_FILESYSTEM
+
+#ifndef PF_API
+    #define PF_API static inline
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef _WIN32
+    #define PF_DIR_WIN32
+#else
+    #define PF_DIR_POSIX
+#endif
+
+#ifdef PF_DIR_POSIX
+    #include <pwd.h>
+    #include <sys/types.h>
+    #include <unistd.h>
+#elif defined(PF_DIR_WIN32)
+    #include <knownfolders.h>
+    #include <lm.h>
+    #include <shlobj.h>
+    #include <windows.h>
+#endif
+
+#ifndef PF_MALLOC
+    #define PF_MALLOC malloc
+    #define PF_REALLOC realloc
+    #define PF_FREE free
+#endif
+
+enum pf_filesystem_error {
+    PF_FS_ENOENT = -2,
+    PF_FS_EIO = -5,
+    PF_FS_ENOMEM = -12,
+    PF_FS_EEXIST = -17,
+    PF_FS_EINVAL = -22,
+    PF_FS_ERANGE = -34,
+    PF_FS_ENOTEMPTY = -39,
+};
+
+PF_API int pf__fs_copy(char *buf, size_t size, const char *src) {
+    size_t len;
+
+    if (!src)
+        return -PF_FS_EINVAL;
+
+    len = strlen(src);
+
+    if (len + 1 > size)
+        return -PF_FS_ERANGE;
+
+    if (!buf)
+        return -PF_FS_EINVAL;
+
+    memcpy(buf, src, len + 1);
+    return (int)len;
+}
+
+PF_API int pf__fs_copy_join(
+    char *buf, size_t size, const char *dir, const char *leaf
+) {
+    size_t dlen = strlen(dir);
+    size_t llen = strlen(leaf);
+    int need_sep = (dlen > 0 && dir[dlen - 1] != '/'
+#ifdef PF_DIR_WIN32
+                  && dir[dlen - 1] != '\\'
+#endif
+  );
+    size_t total = dlen + (need_sep ? 1 : 0) + llen;
+
+    if (total + 1 > size)
+        return -PF_FS_ERANGE;
+    if (!buf)
+        return -PF_FS_EINVAL;
+
+    memcpy(buf, dir, dlen);
+    if (need_sep) {
+#ifdef PF_DIR_WIN32
+        buf[dlen] = '\\';
+#else
+        buf[dlen] = '/';
+#endif
+        dlen++;
+    }
+    memcpy(buf + dlen, leaf, llen + 1);
+    return (int)total;
+}
+
+#ifdef PF_DIR_WIN32
+
+PF_API int mkdir(const char *path, int mode) {
+    (void)mode;
+    errno = 0;
+    if (!path) {
+        errno = PF_FS_ENOENT;
+        return -1;
+    }
+
+    if (!CreateDirectoryA(path, NULL)) {
+        DWORD err = GetLastError();
+        switch (err) {
+        case ERROR_ALREADY_EXISTS:
+            errno = PF_FS_EEXIST;
+            break;
+        case ERROR_PATH_NOT_FOUND:
+            errno = PF_FS_ENOENT;
+            break;
+        default:
+            errno = PF_FS_EIO;
+            break;
+        }
+        return -1;
+    }
+
+    return 0;
+}
+
+PF_API int rmdir(const char *path) {
+    errno = 0;
+    if (!path) {
+        errno = PF_FS_ENOENT;
+        return -1;
+    }
+
+    if (!RemoveDirectoryA(path)) {
+        DWORD err = GetLastError();
+        switch (err) {
+        case ERROR_DIR_NOT_EMPTY:
+            errno = PF_FS_ENOTEMPTY;
+            break;
+        case ERROR_FILE_NOT_FOUND:
+        case ERROR_PATH_NOT_FOUND:
+            errno = PF_FS_ENOENT;
+            break;
+        default:
+            errno = PF_FS_EIO;
+            break;
+        }
+        return -1;
+    }
+
+    return 0;
+}
+
+PF_API int chdir(const char *path) {
+    errno = 0;
+    if (!path) {
+        errno = PF_FS_ENOENT;
+        return -1;
+    }
+
+    if (!SetCurrentDirectoryA(path)) {
+        DWORD err = GetLastError();
+        errno = (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND)
+            ? PF_FS_ENOENT
+            : PF_FS_EIO;
+        return -1;
+    }
+
+    return 0;
+}
+
+PF_API char *getcwd(char *buf, size_t size) {
+    errno = 0;
+
+    DWORD needed = GetCurrentDirectoryA(0, NULL);
+    if (needed == 0) {
+        errno = PF_FS_EIO;
+        return NULL;
+    }
+
+    int allocated = 0;
+    if (!buf) {
+        /* Allocate a buffer big enough when buf is NULL. */
+        size = size ? size : (size_t)needed;
+        buf = PF_MALLOC(size);
+        if (!buf) {
+            errno = PF_FS_ENOMEM;
+            return NULL;
+        }
+        allocated = 1;
+    } else if (size < (size_t)needed) {
+        errno = PF_FS_ERANGE;
+        return NULL;
+    }
+
+    DWORD written = GetCurrentDirectoryA((DWORD)size, buf);
+    if (written == 0 || written > size) {
+        if (allocated)
+            PF_FREE(buf);
+        errno = PF_FS_EIO;
+        return NULL;
+    }
+
+    return buf;
+}
+
+#endif
+
+#ifdef PF_DIR_POSIX
+PF_API int pf_homedir_unix(const char *username, char *buf, size_t size) {
+    if (!username || !*username) {
+        const char *home = getenv("HOME");
+        if (home && *home)
+            return pf__fs_copy(buf, size, home);
+
+        /* HOME not set: fall back to passwd db for the real uid */
+        struct passwd pwbuf;
+        struct passwd *pw = NULL;
+        char stackbuf[4096];
+        int rc = getpwuid_r(getuid(), &pwbuf, stackbuf, sizeof(stackbuf), &pw);
+        if (rc != 0 || !pw)
+            return -PF_FS_ENOENT;
+        return pf__fs_copy(buf, size, pw->pw_dir);
+    }
+
+    struct passwd pwbuf;
+    struct passwd *pw = NULL;
+    char stackbuf[4096];
+    int rc = getpwnam_r(username, &pwbuf, stackbuf, sizeof(stackbuf), &pw);
+    if (rc != 0 || !pw)
+        return -PF_FS_ENOENT;
+    return pf__fs_copy(buf, size, pw->pw_dir);
+}
+#endif
+
+#ifdef PF_DIR_WIN32
+PF_API int pf_homedir_windows(const char *username, char *buf, size_t size) {
+    if (!username || !*username) {
+        /* Active user's profile directory */
+        wchar_t wpath[MAX_PATH];
+        DWORD wsize = MAX_PATH;
+
+        HANDLE tok = NULL;
+        if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &tok)) {
+            /* Fall back to %USERPROFILE% */
+            char envbuf[MAX_PATH];
+            DWORD n = GetEnvironmentVariableA(
+                "USERPROFILE", envbuf, sizeof(envbuf)
+            );
+            if (n == 0 || n >= sizeof(envbuf))
+                return -PF_FS_ENOENT;
+            return pf__fs_copy(buf, size, envbuf);
+        }
+
+        BOOL ok = GetUserProfileDirectoryW(tok, wpath, &wsize);
+        CloseHandle(tok);
+        if (!ok)
+            return -PF_FS_ENOENT;
+
+        char narrow[MAX_PATH * 2];
+        int n = WideCharToMultiByte(
+            CP_UTF8, 0, wpath, -1, narrow, sizeof(narrow), NULL, NULL
+        );
+        if (n <= 0)
+            return -PF_FS_ENOENT;
+        return pf__fs_copy(buf, size, narrow);
+    }
+
+    /*
+   * Windows has no cheap per-user API keyed by name that doesn't
+   * require elevated/network lookups. Try NetUserGetInfo (level 3,
+   * usri3_home_dir) first; fall back to the conventional
+   * %SystemDrive%\Users\<username> layout if that's empty/unset,
+   * which matches how a shell would expand ~username on a typical
+   * local machine.
+   */
+    wchar_t wuser[256];
+    if (MultiByteToWideChar(CP_UTF8, 0, username, -1, wuser, 256) <= 0)
+        return -PF_FS_EINVAL;
+
+    USER_INFO_3 *info = NULL;
+    NET_API_STATUS st = NetUserGetInfo(NULL, wuser, 3, (LPBYTE *)&info);
+    if (st == NERR_Success && info) {
+        if (info->usri3_home_dir && info->usri3_home_dir[0]) {
+            char narrow[MAX_PATH * 2];
+            int n = WideCharToMultiByte(
+                CP_UTF8,
+                0,
+                info->usri3_home_dir,
+                -1,
+                narrow,
+                sizeof(narrow),
+                NULL,
+                NULL
+            );
+            NetApiBufferFree(info);
+            if (n <= 0)
+                return -PF_FS_ENOENT;
+            return pf__fs_copy(buf, size, narrow);
+        }
+        NetApiBufferFree(info);
+    }
+
+    char sysdrive[16];
+    DWORD n = GetEnvironmentVariableA(
+        "SystemDrive", sysdrive, sizeof(sysdrive)
+    );
+    if (n == 0 || n >= sizeof(sysdrive))
+        strcpy(sysdrive, "C:");
+
+    char guess[MAX_PATH];
+    snprintf(guess, sizeof(guess), "%s\\Users\\%s", sysdrive, username);
+    return pf__fs_copy(buf, size, guess);
+}
+#endif
+
+PF_API int pf_homedir(const char *username, char *buf, size_t size) {
+#ifdef PF_DIR_POSIX
+    return pf_homedir_unix(username, buf, size);
+#else
+    return pf_homedir_windows(username, buf, size);
+#endif
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* POLYFILL_FILESYSTEM */

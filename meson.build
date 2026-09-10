@@ -26,6 +26,7 @@ install_headers(
     'include/pf_endian.h',
     'include/pf_errno.h',
     'include/pf_exception.h',
+    'include/pf_filesystem.h',
     'include/pf_io.h',
     'include/pf_macro.h',
     'include/pf_overflow.h',
