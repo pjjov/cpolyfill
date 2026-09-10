@@ -5,8 +5,14 @@
 
     Function reference:
     - pf_homedir
+    - pf_datadir
+    - pf_confdir
+    - pf_statedir
+    - pf_cachedir
+    - pf_runtimedir
+    - pf_userdir
 
-    Last-updated: August 2026
+    Last-updated: September 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 
@@ -63,6 +69,16 @@ extern "C" {
     #define PF_FREE free
 #endif
 
+#ifndef pf_static_assert
+    #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) \
+        || defined(static_assert)
+        #include <assert.h>
+        #define pf_static_assert static_assert
+    #else
+        #define pf_static_assert(expr, msg)
+    #endif
+#endif
+
 enum pf_filesystem_error {
     PF_FS_ENOENT = -2,
     PF_FS_EIO = -5,
@@ -71,6 +87,19 @@ enum pf_filesystem_error {
     PF_FS_EINVAL = -22,
     PF_FS_ERANGE = -34,
     PF_FS_ENOTEMPTY = -39,
+};
+
+enum pf_userdir_kind {
+    PF_USERDIR_DESKTOP,
+    PF_USERDIR_DOCUMENTS,
+    PF_USERDIR_DOWNLOAD,
+    PF_USERDIR_MUSIC,
+    PF_USERDIR_PICTURES,
+    PF_USERDIR_PROJECTS,
+    PF_USERDIR_PUBLICSHARE,
+    PF_USERDIR_TEMPLATES,
+    PF_USERDIR_VIDEOS,
+    PF__USERDIR_COUNT = 9,
 };
 
 PF_API int pf__fs_copy(char *buf, size_t size, const char *src) {
@@ -454,6 +483,172 @@ int pf_runtimedir(char *buf, size_t size) {
     if (n > 0 && tmp[n - 1] == '\\')
         tmp[n - 1] = '\0';
     return pf__fs_copy(buf, size, tmp);
+#endif
+}
+
+#ifdef PF_DIR_POSIX
+
+/*
+ * Parses ~/.config/user-dirs.dirs looking for `key`. Lines look like:
+ *   XDG_DESKTOP_DIR="$HOME/Desktop"
+ * Only the "$HOME/..." and absolute-path forms are handled, which
+ * covers everything xdg-user-dirs-update actually generates.
+ */
+static int pf_parse_user_dirs_dirs(const char *key, char *out, size_t outsize) {
+    char confpath[4096];
+    int cr = pf_confdir(confpath, sizeof(confpath));
+    if (cr < 0)
+        return cr;
+
+    char filepath[4200];
+    if (pf__fs_copy_join(filepath, sizeof(filepath), confpath, "user-dirs.dirs")
+        < 0)
+        return -PF_FS_ERANGE;
+
+    FILE *f = fopen(filepath, "r");
+    if (!f)
+        return -PF_FS_ENOENT;
+
+    char line[4096];
+    int found = -PF_FS_ENOENT;
+
+    while (fgets(line, sizeof(line), f)) {
+        char *p = line;
+        while (*p == ' ' || *p == '\t')
+            p++;
+        size_t klen = strlen(key);
+        if (strncmp(p, key, klen) != 0)
+            continue;
+        p += klen;
+        while (*p == ' ' || *p == '\t')
+            p++;
+        if (*p != '=')
+            continue;
+        p++;
+        while (*p == ' ' || *p == '\t')
+            p++;
+        if (*p != '"')
+            continue;
+        p++;
+
+        char value[4096];
+        size_t vlen = 0;
+        int is_home_relative = 0;
+
+        if (strncmp(p, "$HOME", 5) == 0) {
+            is_home_relative = 1;
+            p += 5;
+            if (*p == '/')
+                p++;
+        }
+
+        while (*p && *p != '"' && vlen + 1 < sizeof(value)) {
+            value[vlen++] = *p++;
+        }
+        value[vlen] = '\0';
+
+        if (is_home_relative) {
+            char home[4096];
+            int hr = pf_homedir_unix(NULL, home, sizeof(home));
+            if (hr < 0) {
+                found = hr;
+                break;
+            }
+            found = pf__fs_copy_join(out, outsize, home, value);
+        } else {
+            found = pf__fs_copy(out, outsize, value);
+        }
+        break;
+    }
+
+    fclose(f);
+    return found;
+}
+
+static int pf_userdir_unix(int kind, char *buf, size_t size) {
+    static_assert(
+        PF__USERDIR_COUNT == 9, "Update below tables if enum changed."
+    );
+
+    /* xdg-user-dirs config keys, in pf_userdir_kind order */
+    static const char *pf_xdg_user_key[] = {
+        "XDG_DESKTOP_DIR",     "XDG_DOCUMENTS_DIR",
+        "XDG_DOWNLOAD_DIR",    "XDG_MUSIC_DIR",
+        "XDG_PICTURES_DIR",    NULL, /* PROJECTS has no xdg-user-dirs entry */
+        "XDG_PUBLICSHARE_DIR", "XDG_TEMPLATES_DIR",
+        "XDG_VIDEOS_DIR",
+    };
+
+    /* Default leaf names (English, matches xdg-user-dirs-update defaults) */
+    static const char *pf_default_leaf[] = {
+        "Desktop",  "Documents", "Downloads", "Music",  "Pictures",
+        "Projects", "Public",    "Templates", "Videos",
+    };
+
+    if (kind < 0 || (size_t)kind >= PF__USERDIR_COUNT)
+        return -PF_FS_EINVAL;
+
+    const char *key = pf_xdg_user_key[kind];
+
+    if (key) {
+        int r = pf_parse_user_dirs_dirs(key, buf, size);
+        if (r >= 0 || r == -PF_FS_ERANGE)
+            return r;
+        /* -PF_FS_ENOENT (no config file / key missing): fall through to default */
+    }
+
+    char home[4096];
+    int hr = pf_homedir_unix(NULL, home, sizeof(home));
+    if (hr < 0)
+        return hr;
+
+    return pf__fs_copy_join(buf, size, home, pf_default_leaf[kind]);
+}
+
+#endif /* PF_DIR_POSIX */
+
+#ifdef PF_DIR_WIN32
+
+static int pf_userdir_windows(int kind, char *buf, size_t size) {
+    switch (kind) {
+    case PF_USERDIR_DESKTOP:
+        return pf_known_folder(buf, size, &FOLDERID_Desktop);
+    case PF_USERDIR_DOCUMENTS:
+        return pf_known_folder(buf, size, &FOLDERID_Documents);
+    case PF_USERDIR_DOWNLOAD:
+        return pf_known_folder(buf, size, &FOLDERID_Downloads);
+    case PF_USERDIR_MUSIC:
+        return pf_known_folder(buf, size, &FOLDERID_Music);
+    case PF_USERDIR_PICTURES:
+        return pf_known_folder(buf, size, &FOLDERID_Pictures);
+    case PF_USERDIR_PUBLICSHARE:
+        return pf_known_folder(buf, size, &FOLDERID_Public);
+    case PF_USERDIR_TEMPLATES:
+        return pf_known_folder(buf, size, &FOLDERID_Templates);
+    case PF_USERDIR_VIDEOS:
+        return pf_known_folder(buf, size, &FOLDERID_Videos);
+    case PF_USERDIR_PROJECTS: {
+        /* No KNOWNFOLDERID for "Projects"; conventional location is
+     * <Documents>\Projects, matching how Visual Studio et al.
+     * default their workspace root. */
+        char docs[4096];
+        int dr = pf_known_folder(docs, sizeof(docs), &FOLDERID_Documents);
+        if (dr < 0)
+            return dr;
+        return pf__fs_copy_join(buf, size, docs, "Projects");
+    }
+    default:
+        return -PF_FS_EINVAL;
+    }
+}
+
+#endif /* PF_DIR_WIN32 */
+
+int pf_userdir(int kind, char *buf, size_t size) {
+#ifdef PF_DIR_POSIX
+    return pf_userdir_unix(kind, buf, size);
+#else
+    return pf_userdir_windows(kind, buf, size);
 #endif
 }
 
