@@ -24,9 +24,24 @@
 #ifndef POLYFILL_DIRENT
 #define POLYFILL_DIRENT
 
+#ifndef PF_API
+    #define PF_API static inline
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <errno.h>
+
+enum pf_dirent_error {
+    PF_DE_ENOENT = -2,
+    PF_DE_EIO = -5,
+    PF_DE_EBADF = -9,
+    PF_DE_ENOMEM = -12,
+    PF_DE_EINVAL = -22,
+    PF_DE_ENAMETOOLONG = -36,
+};
 
 #ifndef _WIN32
     #include <dirent.h>
@@ -42,12 +57,11 @@ extern "C" {
         #define PF_FREE free
     #endif
 
-    #include <errno.h>
     #include <string.h>
 
     #define NAME_MAX MAX_PATH
 
-static void pf_dirent_swap_char(char *string, char old, char c) {
+PF_API void pf_dirent_swap_char(char *string, char old, char c) {
     while (NULL != (string = strchr(string, old))) {
         *string = c;
     }
@@ -66,22 +80,26 @@ typedef struct DIR {
     char path[];
 } DIR;
 
-static DIR *opendir(const char *path) {
+PF_API DIR *opendir(const char *path) {
     errno = 0;
     if (!path) {
-        errno = ENOENT;
+        errno = PF_DE_ENOENT;
         return NULL;
     }
 
     size_t length = strnlen(path, MAX_PATH - 1);
+    if (length == 0) {
+        errno = PF_DE_ENOENT;
+        return NULL;
+    }
     if (length == MAX_PATH - 1) {
-        errno = ENAMETOOLONG;
+        errno = PF_DE_ENAMETOOLONG;
         return NULL;
     }
 
     DIR *dir = PF_MALLOC(sizeof(DIR) + length + 3);
     if (!dir) {
-        errno = ENOMEM;
+        errno = PF_DE_ENOMEM;
         return NULL;
     }
 
@@ -96,7 +114,8 @@ static DIR *opendir(const char *path) {
 
     dir->handle = FindFirstFile(dir->path, &dir->find);
     if (dir->handle == INVALID_HANDLE_VALUE) {
-        errno = GetLastError() == ERROR_FILE_NOT_FOUND ? ENOENT : EIO;
+        errno = GetLastError() == ERROR_FILE_NOT_FOUND ? PF_DE_ENOENT
+                                                       : PF_DE_EIO;
         PF_FREE(dir);
         return NULL;
     }
@@ -106,9 +125,9 @@ static DIR *opendir(const char *path) {
     return dir;
 }
 
-static int closedir(DIR *dir) {
+PF_API int closedir(DIR *dir) {
     if (!dir) {
-        errno = EBADF;
+        errno = PF_DE_EBADF;
         return -1;
     }
 
@@ -117,7 +136,7 @@ static int closedir(DIR *dir) {
 
     if (dir->handle != INVALID_HANDLE_VALUE) {
         if (!FindClose(dir->handle)) {
-            errno = EIO;
+            errno = PF_DE_EIO;
             PF_FREE(dir);
             return -1;
         }
@@ -127,11 +146,11 @@ static int closedir(DIR *dir) {
     return 0;
 }
 
-static int readdir_r(DIR *dir, struct dirent *ent, struct dirent **result) {
+PF_API int readdir_r(DIR *dir, struct dirent *ent, struct dirent **result) {
     errno = 0;
     if (!dir || !ent || !result || dir->handle == INVALID_HANDLE_VALUE) {
         *result = NULL;
-        return !dir ? EBADF : EINVAL;
+        return !dir ? PF_DE_EBADF : PF_DE_EINVAL;
     }
 
     if (dir->pos > 0) {
@@ -141,7 +160,7 @@ static int readdir_r(DIR *dir, struct dirent *ent, struct dirent **result) {
                 return 0;
             }
 
-            return EINVAL;
+            return PF_DE_EINVAL;
         }
     }
 
@@ -157,16 +176,16 @@ static int readdir_r(DIR *dir, struct dirent *ent, struct dirent **result) {
     return 0;
 }
 
-static struct dirent *readdir(DIR *dir) {
+PF_API struct dirent *readdir(DIR *dir) {
     if (!dir) {
-        errno = EBADF;
+        errno = PF_DE_EBADF;
         return NULL;
     }
 
     if (!dir->ent) {
         dir->ent = PF_MALLOC(sizeof(struct dirent));
         if (!dir->ent) {
-            errno = ENOMEM;
+            errno = PF_DE_ENOMEM;
             return NULL;
         }
     }
@@ -176,12 +195,12 @@ static struct dirent *readdir(DIR *dir) {
     return result;
 }
 
-void seekdir(DIR *dir, long int pos) {
+PF_API void seekdir(DIR *dir, long int pos) {
     if (dir->pos > pos) {
         if (dir->handle != INVALID_HANDLE_VALUE)
             FindClose(dir->handle);
 
-        dir->handle = FindFirstFile(dir->path, &dir->path);
+        dir->handle = FindFirstFile(dir->path, &dir->find);
         dir->pos = 0;
         if (dir->handle == INVALID_HANDLE_VALUE)
             return;
@@ -194,10 +213,44 @@ void seekdir(DIR *dir, long int pos) {
     }
 }
 
-void rewinddir(DIR *dir) { return seekdir(dir, 0); }
-long int telldir(DIR *dir) { return dir->pos; }
+PF_API void rewinddir(DIR *dir) { return seekdir(dir, 0); }
+PF_API long int telldir(DIR *dir) { return dir->pos; }
 
 #endif
+
+/* Called once per directory entry. Return non-zero to stop iteration early. */
+typedef int(pf_iterdir_fn)(const struct dirent *entry, void *user_data);
+
+PF_API int pf_iterdir(const char *path, pf_iterdir_fn *callback, void *user) {
+    if (!callback) {
+        errno = PF_DE_EINVAL;
+        return -1;
+    }
+
+    DIR *dir = opendir(path);
+    if (!dir)
+        return -1;
+
+    int result = 0;
+    int had_error = 0;
+    struct dirent *entry;
+    for (;;) {
+        errno = 0;
+        entry = readdir(dir);
+        if (!entry) {
+            had_error = (errno != 0);
+            break;
+        }
+
+        result = callback(entry, user);
+        if (result != 0)
+            break;
+    }
+
+    closedir(dir);
+
+    return had_error ? -1 : result;
+}
 
 #ifdef __cplusplus
 }
