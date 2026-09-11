@@ -68,6 +68,7 @@ included alongside it.
 | [pf_semaphore.h](./include/pf_semaphore.h) | Cross-platform POSIX semaphores. |
 | [pf_socket.h](./include/pf_socket.h)     | Cross-platform named socket interface. |
 | [pf_string.h](./include/pf_string.h)     | Miscellaneous string utilities. |
+| [pf_system.h](./include/pf_system.h)     | Process and operating system utilities. |
 | [pf_test.h](./include/pf_test.h)         | Minimal unit testing framework which can be extended with other polyfills. |
 | [pf_threads.h](./include/pf_threads.h)   | C11's threading interface for existing libraries. |
 | [pf_typeid.h](./include/pf_typeid.h)     | Runtime type information and conversion. |

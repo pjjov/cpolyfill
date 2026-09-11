@@ -34,6 +34,7 @@ install_headers(
     'include/pf_semaphore.h',
     'include/pf_socket.h',
     'include/pf_string.h',
+    'include/pf_system.h',
     'include/pf_test.h',
     'include/pf_threads.h',
     'include/pf_typeid.h',
