@@ -2,7 +2,7 @@
 
     This file provides Windows implementations of functions from <dirent.h>.
 
-    Last-updated: August 2026
+    Last-updated: September 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 
