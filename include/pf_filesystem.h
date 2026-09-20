@@ -4,6 +4,12 @@
     For Windows, `mkdir`, `rmdir`, `chdir` and `getcwd` are implemented.
 
     Function reference:
+    - pf_isdir
+    - pf_isfile
+    - pf_exists
+    - pf_canread
+    - pf_canwrite
+    - pf_canexecute
     - pf_homedir
     - pf_datadir
     - pf_confdir
@@ -47,16 +53,17 @@ extern "C" {
 #include <string.h>
 
 #ifdef _WIN32
-    #define PF_DIR_WIN32
+    #define PF_FS_WIN32
 #else
-    #define PF_DIR_POSIX
+    #define PF_FS_POSIX
 #endif
 
-#ifdef PF_DIR_POSIX
+#ifdef PF_FS_POSIX
     #include <pwd.h>
+    #include <sys/stat.h>
     #include <sys/types.h>
     #include <unistd.h>
-#elif defined(PF_DIR_WIN32)
+#elif defined(PF_FS_WIN32)
     #include <knownfolders.h>
     #include <lm.h>
     #include <shlobj.h>
@@ -86,6 +93,7 @@ enum pf_filesystem_error {
     PF_FS_EEXIST = -17,
     PF_FS_EINVAL = -22,
     PF_FS_ERANGE = -34,
+    PF_FS_ENOSYS = -38,
     PF_FS_ENOTEMPTY = -39,
 };
 
@@ -126,7 +134,7 @@ PF_API int pf__fs_copy_join(
     size_t dlen = strlen(dir);
     size_t llen = strlen(leaf);
     int need_sep = (dlen > 0 && dir[dlen - 1] != '/'
-#ifdef PF_DIR_WIN32
+#ifdef PF_FS_WIN32
                   && dir[dlen - 1] != '\\'
 #endif
   );
@@ -139,7 +147,7 @@ PF_API int pf__fs_copy_join(
 
     memcpy(buf, dir, dlen);
     if (need_sep) {
-#ifdef PF_DIR_WIN32
+#ifdef PF_FS_WIN32
         buf[dlen] = '\\';
 #else
         buf[dlen] = '/';
@@ -150,7 +158,7 @@ PF_API int pf__fs_copy_join(
     return (int)total;
 }
 
-#ifdef PF_DIR_WIN32
+#ifdef PF_FS_WIN32
 
 PF_API int mkdir(const char *path, int mode) {
     (void)mode;
@@ -259,9 +267,16 @@ PF_API char *getcwd(char *buf, size_t size) {
     return buf;
 }
 
+#elif !defined(PF_FS_POSIX)
+
+PF_API int mkdir(const char *path, int mode) { return PF_FS_ENOSYS; }
+PF_API int rmdir(const char *path) { return PF_FS_ENOSYS; }
+PF_API int chdir(const char *path) { return PF_FS_ENOSYS; }
+PF_API char *getcwd(char *buf, size_t size) { return NULL; }
+
 #endif
 
-#ifdef PF_DIR_POSIX
+#ifdef PF_FS_POSIX
 PF_API int pf_homedir_unix(const char *username, char *buf, size_t size) {
     if (!username || !*username) {
         const char *home = getenv("HOME");
@@ -288,7 +303,7 @@ PF_API int pf_homedir_unix(const char *username, char *buf, size_t size) {
 }
 #endif
 
-#ifdef PF_DIR_WIN32
+#ifdef PF_FS_WIN32
 PF_API int pf_homedir_windows(const char *username, char *buf, size_t size) {
     if (!username || !*username) {
         /* Active user's profile directory */
@@ -370,14 +385,16 @@ PF_API int pf_homedir_windows(const char *username, char *buf, size_t size) {
 #endif
 
 PF_API int pf_homedir(const char *username, char *buf, size_t size) {
-#ifdef PF_DIR_POSIX
+#ifdef PF_FS_POSIX
     return pf_homedir_unix(username, buf, size);
-#else
+#elif defined(PF_FS_WIN32)
     return pf_homedir_windows(username, buf, size);
+#else
+    return PF_FS_ENOSYS;
 #endif
 }
 
-#ifdef PF_DIR_POSIX
+#ifdef PF_FS_POSIX
 
 /* env var with fallback of "$HOME/<default_leaf>" */
 PF_API int pf_xdg_base(
@@ -397,7 +414,7 @@ PF_API int pf_xdg_base(
 
 #endif
 
-#ifdef PF_DIR_WIN32
+#ifdef PF_FS_WIN32
 
 PF_API int pf_known_folder(char *buf, size_t size, REFKNOWNFOLDERID id) {
     PWSTR wpath = NULL;
@@ -418,36 +435,42 @@ PF_API int pf_known_folder(char *buf, size_t size, REFKNOWNFOLDERID id) {
 
 #endif
 
-int pf_datadir(char *buf, size_t size) {
-#ifdef PF_DIR_POSIX
+PF_API int pf_datadir(char *buf, size_t size) {
+#ifdef PF_FS_POSIX
     return pf_xdg_base(buf, size, "XDG_DATA_HOME", ".local/share");
-#else
+#elif defined(PF_FS_WIN32)
     return pf_known_folder(buf, size, &FOLDERID_LocalAppData);
+#else
+    return PF_FS_ENOSYS;
 #endif
 }
 
-int pf_confdir(char *buf, size_t size) {
-#ifdef PF_DIR_POSIX
+PF_API int pf_confdir(char *buf, size_t size) {
+#ifdef PF_FS_POSIX
     return pf_xdg_base(buf, size, "XDG_CONFIG_HOME", ".config");
-#else
+#elif defined(PF_FS_WIN32)
     return pf_known_folder(buf, size, &FOLDERID_RoamingAppData);
+#else
+    return PF_FS_ENOSYS;
 #endif
 }
 
-int pf_statedir(char *buf, size_t size) {
-#ifdef PF_DIR_POSIX
+PF_API int pf_statedir(char *buf, size_t size) {
+#ifdef PF_FS_POSIX
     return pf_xdg_base(buf, size, "XDG_STATE_HOME", ".local/state");
-#else
+#elif defined(PF_FS_WIN32)
     /* No direct Windows analogue; local app data is the closest fit
-   * for "persists across reboots but is machine/user local". */
+    * for "persists across reboots but is machine/user local". */
     return pf_known_folder(buf, size, &FOLDERID_LocalAppData);
+#else
+    return PF_FS_ENOSYS;
 #endif
 }
 
-int pf_cachedir(char *buf, size_t size) {
-#ifdef PF_DIR_POSIX
+PF_API int pf_cachedir(char *buf, size_t size) {
+#ifdef PF_FS_POSIX
     return pf_xdg_base(buf, size, "XDG_CACHE_HOME", ".cache");
-#else
+#elif defined(PF_FS_WIN32)
     /* Prefer LocalLow-style temp/cache location: LocalAppData\...\Temp
    * has no single KNOWNFOLDERID; use the standard temp path. */
     char tmp[MAX_PATH];
@@ -458,11 +481,13 @@ int pf_cachedir(char *buf, size_t size) {
     if (n > 0 && tmp[n - 1] == '\\')
         tmp[n - 1] = '\0';
     return pf__fs_copy(buf, size, tmp);
+#else
+    return PF_FS_ENOSYS;
 #endif
 }
 
-int pf_runtimedir(char *buf, size_t size) {
-#ifdef PF_DIR_POSIX
+PF_API int pf_runtimedir(char *buf, size_t size) {
+#ifdef PF_FS_POSIX
     const char *env = getenv("XDG_RUNTIME_DIR");
     if (env && *env == '/')
         return pf__fs_copy(buf, size, env);
@@ -475,7 +500,7 @@ int pf_runtimedir(char *buf, size_t size) {
         return pf__fs_copy(buf, size, guess);
 
     return pf__fs_copy(buf, size, "/tmp");
-#else
+#elif defined(PF_FS_WIN32)
     char tmp[MAX_PATH];
     DWORD n = GetTempPathA(sizeof(tmp), tmp);
     if (n == 0 || n >= sizeof(tmp))
@@ -483,10 +508,12 @@ int pf_runtimedir(char *buf, size_t size) {
     if (n > 0 && tmp[n - 1] == '\\')
         tmp[n - 1] = '\0';
     return pf__fs_copy(buf, size, tmp);
+#else
+    return PF_FS_ENOSYS;
 #endif
 }
 
-#ifdef PF_DIR_POSIX
+#ifdef PF_FS_POSIX
 
 /*
  * Parses ~/.config/user-dirs.dirs looking for `key`. Lines look like:
@@ -494,7 +521,7 @@ int pf_runtimedir(char *buf, size_t size) {
  * Only the "$HOME/..." and absolute-path forms are handled, which
  * covers everything xdg-user-dirs-update actually generates.
  */
-static int pf_parse_user_dirs_dirs(const char *key, char *out, size_t outsize) {
+PF_API int pf_parse_user_dirs_dirs(const char *key, char *out, size_t outsize) {
     char confpath[4096];
     int cr = pf_confdir(confpath, sizeof(confpath));
     if (cr < 0)
@@ -565,7 +592,7 @@ static int pf_parse_user_dirs_dirs(const char *key, char *out, size_t outsize) {
     return found;
 }
 
-static int pf_userdir_unix(int kind, char *buf, size_t size) {
+PF_API int pf_userdir_unix(int kind, char *buf, size_t size) {
     static_assert(
         PF__USERDIR_COUNT == 9, "Update below tables if enum changed."
     );
@@ -605,11 +632,11 @@ static int pf_userdir_unix(int kind, char *buf, size_t size) {
     return pf__fs_copy_join(buf, size, home, pf_default_leaf[kind]);
 }
 
-#endif /* PF_DIR_POSIX */
+#endif /* PF_FS_POSIX */
 
-#ifdef PF_DIR_WIN32
+#ifdef PF_FS_WIN32
 
-static int pf_userdir_windows(int kind, char *buf, size_t size) {
+PF_API int pf_userdir_windows(int kind, char *buf, size_t size) {
     switch (kind) {
     case PF_USERDIR_DESKTOP:
         return pf_known_folder(buf, size, &FOLDERID_Desktop);
@@ -642,13 +669,142 @@ static int pf_userdir_windows(int kind, char *buf, size_t size) {
     }
 }
 
-#endif /* PF_DIR_WIN32 */
+#endif /* PF_FS_WIN32 */
 
-int pf_userdir(int kind, char *buf, size_t size) {
-#ifdef PF_DIR_POSIX
+PF_API int pf_userdir(int kind, char *buf, size_t size) {
+#ifdef PF_FS_POSIX
     return pf_userdir_unix(kind, buf, size);
-#else
+#elif defined(PF_FS_WIN32)
     return pf_userdir_windows(kind, buf, size);
+#else
+    return PF_FS_ENOSYS;
+#endif
+}
+
+PF_API int pf_isdir(const char *path) {
+#ifdef PF_FS_POSIX
+    struct stat st;
+
+    return path && stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+#elif defined(PF_FS_WIN32)
+    DWORD attr;
+
+    if (!path)
+        return 0;
+
+    attr = GetFileAttributesA(path);
+    if (attr == INVALID_FILE_ATTRIBUTES)
+        return 0;
+
+    return (attr & FILE_ATTRIBUTE_DIRECTORY) != 0;
+#else
+    return PF_FS_ENOSYS;
+#endif
+}
+
+PF_API int pf_isfile(const char *path) {
+#ifdef PF_FS_POSIX
+    struct stat st;
+
+    return path && stat(path, &st) == 0 && S_ISREG(st.st_mode);
+#elif defined(PF_FS_WIN32)
+    DWORD attr;
+
+    if (!path)
+        return 0;
+
+    attr = GetFileAttributesA(path);
+    if (attr == INVALID_FILE_ATTRIBUTES)
+        return 0;
+
+    return (attr & FILE_ATTRIBUTE_DIRECTORY) == 0;
+#else
+    return PF_FS_ENOSYS;
+#endif
+}
+
+PF_API int pf_exists(const char *path) {
+#ifdef PF_FS_POSIX
+    return path && access(path, F_OK) == 0;
+#elif defined(PF_FS_WIN32)
+    if (!path)
+        return 0;
+
+    return GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES;
+#else
+    return PF_FS_ENOSYS;
+#endif
+}
+
+PF_API int pf_canread(const char *path) {
+#ifdef PF_FS_POSIX
+    return path && access(path, R_OK) == 0;
+#elif defined(PF_FS_WIN32)
+    DWORD attr;
+
+    if (!path)
+        return 0;
+
+    attr = GetFileAttributesA(path);
+    if (attr == INVALID_FILE_ATTRIBUTES)
+        return 0;
+
+    /* Windows doesn't have a direct POSIX-style read permission bit.
+       Existence is therefore the basic check here. */
+    return 1;
+#else
+    return PF_FS_ENOSYS;
+#endif
+}
+
+PF_API int pf_canwrite(const char *path) {
+#ifdef PF_FS_POSIX
+    return path && access(path, W_OK) == 0;
+#elif defined(PF_FS_WIN32)
+    DWORD attr;
+
+    if (!path)
+        return 0;
+
+    attr = GetFileAttributesA(path);
+    if (attr == INVALID_FILE_ATTRIBUTES)
+        return 0;
+
+    if (attr & FILE_ATTRIBUTE_READONLY)
+        return 0;
+
+    return 1;
+#else
+    return PF_FS_ENOSYS;
+#endif
+}
+
+PF_API int pf_canexecute(const char *path) {
+#ifdef PF_FS_POSIX
+    return path && access(path, X_OK) == 0;
+#elif defined(PF_FS_WIN32)
+    const char *ext;
+    DWORD attr;
+
+    if (!path)
+        return 0;
+
+    attr = GetFileAttributesA(path);
+    if (attr == INVALID_FILE_ATTRIBUTES || (attr & FILE_ATTRIBUTE_DIRECTORY))
+        return 0;
+
+    ext = strrchr(path, '.');
+    if (!ext)
+        return 0;
+
+    /* clang-format off */
+    return _stricmp(ext, ".exe") == 0 ||
+           _stricmp(ext, ".com") == 0 ||
+           _stricmp(ext, ".bat") == 0 ||
+           _stricmp(ext, ".cmd") == 0;
+        /* clang-format on */
+#else
+    return PF_FS_ENOSYS;
 #endif
 }
 
