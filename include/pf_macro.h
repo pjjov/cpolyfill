@@ -19,6 +19,8 @@
             Returns a new pointer with a given byte offset.
         PF_PTRDIFF(x, y)
             Returns the difference between two pointers in bytes.
+        PF_IS_ALIGNED(x, align)
+            Returns true if 'x' has an alignment of at least 'align'.
         PF_ALIGN_PAD(x, align)
             Returns the padding required to align `x` to `PF_ALIGN_CEIL(x, align)`.
         PF_ALIGN_CEIL(x, align) and PF_ALIGN_UP(x, align)
@@ -149,6 +151,7 @@ extern "C" {
 
 #define PF_OFFSET(ptr, offset) ((void *)(&((char *)(ptr))[offset]))
 #define PF_PTRDIFF(x, y) (((char *)(x)) - ((char *)(y)))
+#define PF_IS_ALIGNED(x, align) (!((x) & ((align) - 1)))
 
 #ifndef PF__ALIGN
     #define PF__ALIGN

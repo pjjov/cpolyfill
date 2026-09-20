@@ -41,11 +41,16 @@ extern "C" {
     #define PF_SYS_NONE
 #endif
 
+#include <stdio.h> // IWYU pragma: keep
+
 #ifdef PF_SYS_POSIX
     #include <unistd.h>
 #elif defined(PF_SYS_WIN32)
 
     #include <windows.h>
+
+    #define popen _popen
+    #define pclose _pclose
 
 PF_API int getpid(void) { return (int)GetCurrentProcessId(); }
 
@@ -79,6 +84,8 @@ PF_API int usleep(unsigned int usec) {
 
 #else
 
+PF_API FILE *popen(const char *command, const char *type) { return NULL; }
+PF_API int pclose(FILE *stream) { return -1; }
 PF_API int getpid(void) { return -1; }
 PF_API unsigned int sleep(unsigned int seconds) { return 0; }
 PF_API int usleep(unsigned int usec) { return -1; }
