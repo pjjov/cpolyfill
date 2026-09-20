@@ -1,7 +1,7 @@
 /** Polyfill for C - Filling the gaps between C standards and compilers
 
-    This file provides a custom interface for byte/character streams. The file
-    also provides a wrapper around the standard library input/output functions.
+    This file provides I/O utility functions and a custom interface for byte
+    streams. The file also provides a wrapper around the standard library I/O.
 
     Last-updated: September 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
@@ -36,6 +36,7 @@ extern "C" {
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define PF_STREAM_STATE_SIZE 56
@@ -247,6 +248,86 @@ PF_API int pf_stream_open(
         return PF_STREAM_EIO;
 
     return PF_STREAM_OK;
+}
+
+int pf_readall(const char *path, void **data, size_t *size) {
+    FILE *fp;
+    long len;
+    size_t n;
+    void *buf;
+
+    if (!path || !data || !size)
+        return -1;
+
+    *data = NULL;
+    *size = 0;
+    buf = 0;
+
+    fp = fopen(path, "rb");
+    if (!fp)
+        return -1;
+
+    if (fseek(fp, 0, SEEK_END) != 0)
+        goto fail;
+
+    len = ftell(fp);
+    if (len < 0)
+        goto fail;
+
+    if (fseek(fp, 0, SEEK_SET) != 0)
+        goto fail;
+
+    /*
+     * Allocate one extra byte so the result can safely be
+     * treated as a C string when appropriate.
+     */
+    buf = malloc((size_t)len + 1);
+    if (!buf)
+        goto fail;
+
+    n = fread(buf, 1, (size_t)len, fp);
+
+    if (n != (size_t)len)
+        goto fail;
+
+    ((unsigned char *)buf)[n] = 0;
+
+    fclose(fp);
+
+    *data = buf;
+    *size = n;
+
+    return 0;
+
+fail:
+    if (buf)
+        free(buf);
+    fclose(fp);
+    return -1;
+}
+
+int pf_writeall(const char *path, const void *data, size_t size) {
+    FILE *fp;
+    size_t n;
+
+    if (!path || (!data && size != 0))
+        return -1;
+
+    fp = fopen(path, "wb");
+    if (!fp)
+        return -1;
+
+    n = fwrite(data, 1, size, fp);
+
+    if (n != size) {
+        fclose(fp);
+        return -1;
+    }
+
+    if (fclose(fp) != 0)
+        return -1;
+
+    return 0;
 }
 
 #ifdef __cplusplus
