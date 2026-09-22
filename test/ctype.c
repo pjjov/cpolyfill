@@ -45,19 +45,19 @@ TEST_CTYPE(isxdigit);
 TEST_CTYPE(tolower);
 TEST_CTYPE(toupper);
 
-pf_test suite_ctype[] = {
-    { &test_ctype_isalnum, "/ctype/isalnum", 1 },
-    { &test_ctype_isalpha, "/ctype/isalpha", 1 },
-    { &test_ctype_isblank, "/ctype/isblank", 1 },
-    { &test_ctype_iscntrl, "/ctype/iscntrl", 1 },
-    { &test_ctype_isdigit, "/ctype/isdigit", 1 },
-    { &test_ctype_isgraph, "/ctype/isgraph", 1 },
-    { &test_ctype_islower, "/ctype/islower", 1 },
-    { &test_ctype_isprint, "/ctype/isprint", 1 },
-    { &test_ctype_ispunct, "/ctype/ispunct", 1 },
-    { &test_ctype_isspace, "/ctype/isspace", 1 },
-    { &test_ctype_isupper, "/ctype/isupper", 1 },
-    { &test_ctype_isxdigit, "/ctype/isxdigit", 1 },
-    { &test_ctype_tolower, "/ctype/tolower", 1 },
-    { &test_ctype_toupper, "/ctype/toupper", 1 },
+pf_test_t suite_ctype[] = {
+    { &test_ctype_isalnum, "/ctype/isalnum" },
+    { &test_ctype_isalpha, "/ctype/isalpha" },
+    { &test_ctype_isblank, "/ctype/isblank" },
+    { &test_ctype_iscntrl, "/ctype/iscntrl" },
+    { &test_ctype_isdigit, "/ctype/isdigit" },
+    { &test_ctype_isgraph, "/ctype/isgraph" },
+    { &test_ctype_islower, "/ctype/islower" },
+    { &test_ctype_isprint, "/ctype/isprint" },
+    { &test_ctype_ispunct, "/ctype/ispunct" },
+    { &test_ctype_isspace, "/ctype/isspace" },
+    { &test_ctype_isupper, "/ctype/isupper" },
+    { &test_ctype_isxdigit, "/ctype/isxdigit" },
+    { &test_ctype_tolower, "/ctype/tolower" },
+    { &test_ctype_toupper, "/ctype/toupper" },
 };

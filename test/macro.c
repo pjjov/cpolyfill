@@ -50,8 +50,8 @@ int test_macro_countof(int seed, int rep) {
     return 0;
 }
 
-pf_test suite_macro[] = {
-    { test_macro_math, "/macro/math", 1 },
-    { test_macro_countof, "/macro/countof", 1 },
+pf_test_t suite_macro[] = {
+    { test_macro_math, "/macro/math" },
+    { test_macro_countof, "/macro/countof" },
     { 0 },
 };

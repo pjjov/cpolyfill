@@ -96,13 +96,9 @@ int test_letoh(int seed, int rep) {
     return 0;
 }
 
-pf_test suite_endian[] = {
-    { &test_bswap16, "/endian/bswap16", 1 },
-    { &test_bswap32, "/endian/bswap32", 1 },
-    { &test_bswap64, "/endian/bswap64", 1 },
-    { &test_htobe, "/endian/htobe", 1 },
-    { &test_htole, "/endian/htole", 1 },
-    { &test_betoh, "/endian/betoh", 1 },
-    { &test_letoh, "/endian/letoh", 1 },
-    { 0 },
+pf_test_t suite_endian[] = {
+    { &test_bswap16, "/endian/bswap16" }, { &test_bswap32, "/endian/bswap32" },
+    { &test_bswap64, "/endian/bswap64" }, { &test_htobe, "/endian/htobe" },
+    { &test_htole, "/endian/htole" },     { &test_betoh, "/endian/betoh" },
+    { &test_letoh, "/endian/letoh" },     { 0 },
 };

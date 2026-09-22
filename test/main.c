@@ -18,59 +18,23 @@
 */
 
 #include "../include/pf_test.h"
-#include <string.h>
 
 /* clang-format off */
 
-extern pf_test suite_bitwise[];
-extern pf_test suite_ctype[];
-extern pf_test suite_endian[];
-extern pf_test suite_macro[];
-extern pf_test suite_overflow[];
-
-static const pf_test *suites[] = {
-    suite_bitwise,
-    suite_ctype,
-    suite_endian,
-    suite_macro,
-    suite_overflow,
-    NULL,
-};
-
-static const char *names[] = {
-    "bitwise",
-    "ctype",
-    "endian",
-    "macro",
-    "overflow",
-    NULL
-};
+extern pf_test_t suite_bitwise[];
+extern pf_test_t suite_ctype[];
+extern pf_test_t suite_endian[];
+extern pf_test_t suite_macro[];
+extern pf_test_t suite_overflow[];
 
 /* clang-format on */
 
 int main(int argc, char *argv[]) {
-    if (argc > 2) {
-        fputs("usage: cpolyfill-test [suite]\nsuites:", stderr);
+    static const pf_suite_t suites[] = {
+        { "bitwise", 1, suite_bitwise },   { "ctype", 1, suite_ctype },
+        { "endian", 1, suite_endian },     { "macro", 1, suite_macro },
+        { "overflow", 1, suite_overflow }, { 0 },
+    };
 
-        for (int i = 0; names[i]; i++) {
-            fputc(' ', stderr);
-            fputs(names[i], stderr);
-        }
-
-        fputc('\n', stderr);
-        return -1;
-    }
-
-    if (argc == 1)
-        return pf_suite_run_all(suites, 0, NULL);
-
-    for (int i = 0; names[i]; i++) {
-        if (0 == strcmp(argv[1], names[i])) {
-            pf_suite_run_tap(suites[i], 0, NULL);
-            return 0;
-        }
-    }
-
-    fprintf(stderr, "cpolyfill-test: unknown suite '%s'\n", argv[1]);
-    return -1;
+    return pf_test_main(argc, argv, suites);
 }
