@@ -250,7 +250,7 @@ PF_API int pf_stream_open(
     return PF_STREAM_OK;
 }
 
-int pf_readall(const char *path, void **data, size_t *size) {
+PF_API int pf_readall(const char *path, void **data, size_t *size) {
     FILE *fp;
     long len;
     size_t n;
@@ -306,7 +306,7 @@ fail:
     return -1;
 }
 
-int pf_writeall(const char *path, const void *data, size_t size) {
+PF_API int pf_writeall(const char *path, const void *data, size_t size) {
     FILE *fp;
     size_t n;
 
