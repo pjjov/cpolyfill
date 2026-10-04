@@ -49,6 +49,13 @@
             Checks if `bit` is turned on in `x`.
         PF_COUNTOF(array)
             Returns the number of elements inside `array`.
+        PF_ENUM_GUARD(name, previousSentinel)
+            Guards enum users with static assertions. Upon updating enum values,
+            the sentinel constant should be updated as well, which produces
+            assertion errors on all guards. This helps catch bugs for enums
+            which are used by many switch cases and static arrays.
+        pf_static_assert(expr, msg)
+            Static assertions wrapper that checks if they are available.
         PF_EXPECT(expr, expect)
             Annotate that the value of `expr` is expected to be `expect`.
         PF_EXPECT_P(expr, expect, prop)
@@ -185,6 +192,21 @@ extern "C" {
 #define PF_COUNTOF(array)                                \
     ((sizeof(array) / sizeof(0 [array]))                 \
      / ((size_t)(!(sizeof(array) % sizeof(0 [array])))))
+
+#define PF_ENUM_GUARD(name, previousSentinel)             \
+    static_assert(                                        \
+        name##_sentinel == (previousSentinel),            \
+        "Enum has been changed; update the guarded code." \
+    );
+
+#ifndef pf_static_assert
+    #if __STDC_VERSION__ >= 201112L
+        #include <assert.h>
+        #define pf_static_assert static_assert
+    #else
+        #define pf_static_assert(...)
+    #endif
+#endif
 
 #if pf_has_builtin(__builtin_expect)
     #define PF_EXPECT(expr, expect) (__builtin_expect((expr) != 0, (expect)))
