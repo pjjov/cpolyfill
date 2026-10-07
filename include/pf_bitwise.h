@@ -91,7 +91,7 @@
     Note that the MSVC tier is not constexpr: with it, C++ gets plain
     `static inline` functions.
 
-    Last-updated: August 2026
+    Last-updated: September 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

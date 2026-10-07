@@ -24,7 +24,7 @@
     - PF_ARRAY_RESIZE(array, capacity)
     - PF_ARRAY_SETLEN(array, length)
 
-    Last-updated: August 2026
+    Last-updated: October 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

@@ -3,7 +3,7 @@
     This file provides I/O utility functions and a custom interface for byte
     streams. The file also provides a wrapper around the standard library I/O.
 
-    Last-updated: September 2026
+    Last-updated: October 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 

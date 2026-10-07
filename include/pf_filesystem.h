@@ -18,7 +18,7 @@
     - pf_runtimedir
     - pf_userdir
 
-    Last-updated: September 2026
+    Last-updated: October 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 
