@@ -76,6 +76,25 @@ extern "C" {
     #define PF_FREE free
 #endif
 
+#include <limits.h>
+
+#ifdef PF_FS_WIN32
+    #include <windows.h>
+    #ifndef PATH_MAX
+        #define PATH_MAX MAX_PATH
+    #endif
+#else
+    #include <unistd.h>
+    #ifndef PATH_MAX
+        #define PATH_MAX 4096
+    #endif
+    #ifndef MAX_PATH
+        #define MAX_PATH PATH_MAX
+    #endif
+#endif
+
+#define PF_PATH_MAX PATH_MAX
+
 #ifndef pf_static_assert
     #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) \
         || defined(static_assert)

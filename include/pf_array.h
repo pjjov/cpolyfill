@@ -132,10 +132,8 @@ struct pf_array {
         PF__ARRAY_BASE(array), (count) * PF__ARRAY_SIZE(array) \
     ))
 
-#define PF_ARRAY_POP(array, out, count)                               \
-    pf__array_push(                                                   \
-        PF__ARRAY_BASE(array), (out), (count) * PF__ARRAY_SIZE(array) \
-    )
+#define PF_ARRAY_POP(array, out, count) \
+    pf__array_pop(PF__ARRAY_BASE(array), (out), (count) * PF__ARRAY_SIZE(array))
 
 #define PF_ARRAY_UNSHIFT(array, item, count)                           \
     pf__array_unshift(                                                 \
@@ -194,18 +192,21 @@ PF_API int pf__array_init(struct pf_array *a, size_t capacity) {
     if (!a || capacity == 0)
         return PF_ARRAY_EINVAL;
 
+    a->length = 0;
+    a->capacity = 0;
+    a->items = NULL;
+
+#ifdef PF_ARRAY_USE_ALLOCATOR_T
+    a->alloc = PF_ARRAY_DEFAULT_ALLOCATOR;
+#endif
+
     void *buf = PF_ARRAY_MALLOC(a, capacity);
 
     if (!buf)
         return PF_ARRAY_ENOMEM;
 
     a->items = buf;
-    a->length = 0;
     a->capacity = capacity;
-
-#ifdef PF_ARRAY_USE_ALLOCATOR_T
-    a->alloc = PF_ARRAY_DEFAULT_ALLOCATOR;
-#endif
 
     return PF_ARRAY_OK;
 }
@@ -325,7 +326,7 @@ PF_API int pf__array_pop(struct pf_array *a, void *out, size_t size) {
     return PF_ARRAY_OK;
 }
 
-PF_API int pf__array_unpshift(struct pf_array *a, void *item, size_t size) {
+PF_API int pf__array_unshift(struct pf_array *a, void *item, size_t size) {
     if (!a || size == 0)
         return PF_ARRAY_EINVAL;
     if (pf__array_reserve(a, size))

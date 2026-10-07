@@ -96,6 +96,27 @@ typedef _locale_t locale_t;
     #include <strings.h>
 #endif
 
+#if defined(_WIN32) || defined(_MSC_VER)
+    /* Windows environment fallback to the secure CRT name */
+    #define strdup _strdup
+#else
+    /* Check if the system is running a POSIX compliant environment */
+    #if !defined(_POSIX_C_SOURCE) && !defined(_XOPEN_SOURCE)
+/* Pure fallback for systems without built-in strdup */
+PF_API char *pf_strdup(const char *s) {
+    if (s == NULL)
+        return NULL;
+    size_t len = strlen(s) + 1;
+    char *p = (char *)malloc(len);
+    if (p != NULL) {
+        memcpy(p, s, len);
+    }
+    return p;
+}
+        #define strdup pf_strdup
+    #endif
+#endif
+
 #ifdef __cplusplus
 }
 #endif

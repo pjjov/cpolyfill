@@ -49,6 +49,12 @@ enum pf_stream_error {
     PF_STREAM_EINVAL = -22,
 };
 
+enum pf_stream_origin {
+    PF_SEEK_SET,
+    PF_SEEK_CUR,
+    PF_SEEK_END,
+};
+
 typedef struct pf_stream_t pf_stream_t;
 
 struct pf_stream_vt {
@@ -193,6 +199,16 @@ static size_t pf__file_write(
 
 static int pf__file_seek(pf_stream_t *stream, long offset, int origin) {
     FILE *file = stream->state.ptr[0];
+
+    switch (origin) {
+        /* clang-format off */
+    case PF_SEEK_SET: origin = SEEK_SET; break;
+    case PF_SEEK_CUR: origin = SEEK_CUR; break;
+    case PF_SEEK_END: origin = SEEK_END; break;
+    default:          break;
+        /* clang-format on */
+    }
+
     return fseek(file, offset, origin);
 }
 
