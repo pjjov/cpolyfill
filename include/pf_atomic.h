@@ -9,6 +9,10 @@
     - Only integer atomic types are supported (no `_Atomic(struct example)`).
     - `_Atomic` must be used with parentheses, keyword version is not supported.
     - `memory_order` is ignored in threads fallback as of time of writing.
+    - The threads fallback needs `typeof` (or `__typeof__` on GNU compilers).
+    - Objects in the threads fallback must be initialized with `atomic_init`
+      (or `pf_atomic_flag_init`) before use unless a zeroed `mtx_t` is valid
+      on the platform. Arguments to the macros may be evaluated more than once.
     - `kill_dependency`, `atomic_signal_fence` and `atomic_thread_fence` are not
       implemented on non-GNU platforms. Functions are replaced as no-op.
 
@@ -19,7 +23,7 @@
     If threads are not available, PF_NO_ATOMICS will be defined and all
     functions will be replaced with no-ops to allow clean compilations.
 
-    Last-updated: August 2026
+    Last-updated: October 2026
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
 
@@ -70,106 +74,173 @@
 
 #ifdef PF_ATOMIC_STD
     #include <stdatomic.h>
-#elif defined(PF_ATOMIC_GNUC)
+#else
+
+    /* Common definitions for every non-standard implementation. These must come
+       before the implementations, which refer to `_Bool` and `memory_order`. */
 
     #include <stddef.h>
     #include <stdint.h>
+    #include <wchar.h>
 
-    #define _Atomic(...) __VA_ARGS__
+    #if defined(__has_include)
+        #if __has_include(<uchar.h>)
+            #include <uchar.h>
+        #elif !defined(__cplusplus)
+typedef uint_least16_t char16_t;
+typedef uint_least32_t char32_t;
+        #endif
+    #elif !defined(__APPLE__)
+        #include <uchar.h>
+    #endif
 
-    #define ATOMIC_BOOL_LOCK_FREE (__atomic_always_lock_free(sizeof(_Bool), 0))
-    #define ATOMIC_CHAR_LOCK_FREE (__atomic_always_lock_free(sizeof(char), 0))
-    #define ATOMIC_CHAR16_T_LOCK_FREE                    \
-        (__atomic_always_lock_free(sizeof(char16_t), 0))
-    #define ATOMIC_CHAR32_T_LOCK_FREE                    \
-        (__atomic_always_lock_free(sizeof(char32_t), 0))
-    #define ATOMIC_WCHAR_T_LOCK_FREE                    \
-        (__atomic_always_lock_free(sizeof(wchar_t), 0))
-    #define ATOMIC_SHORT_LOCK_FREE (__atomic_always_lock_free(sizeof(short), 0))
-    #define ATOMIC_INT_LOCK_FREE (__atomic_always_lock_free(sizeof(int), 0))
-    #define ATOMIC_LONG_LOCK_FREE (__atomic_always_lock_free(sizeof(long), 0))
-    #define ATOMIC_LLONG_LOCK_FREE                        \
-        (__atomic_always_lock_free(sizeof(long long), 0))
-    #define ATOMIC_POINTER_LOCK_FREE                   \
-        (__atomic_always_lock_free(sizeof(void *), 0))
-    #define ATOMIC_CHAR8_T_LOCK_FREE                    \
-        (__atomic_always_lock_free(sizeof(char8_t), 0))
+    #if defined(__cplusplus)
+typedef bool _Bool;
+    #elif (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L) \
+        && !defined(__GNUC__)
+typedef int _Bool;
+    #endif
 
-    #define atomic_is_lock_free(obj) __atomic_is_lock_free(sizeof(obj), 0)
+    #if defined(__cplusplus)
+        #ifndef __cpp_char8_t
+typedef unsigned char char8_t;
+        #endif
+    #elif !defined(__STDC_VERSION__) || __STDC_VERSION__ < 202311L
+typedef uint8_t char8_t;
+    #endif
 
-    #define atomic_store(obj, desired)                       \
-        __atomic_store_n(obj, desired, memory_order_seq_cst)
-    #define atomic_store_explicit __atomic_store_n
-
-    #define atomic_load(obj) __atomic_load_n(obj, memory_order_seq_cst)
-    #define atomic_load_explicit __atomic_load_n
-
-    #define atomic_exchange(obj, desired)                       \
-        __atomic_exchange_n(obj, desired, memory_order_seq_cst)
-    #define atomic_exchange_explicit(obj, desired, order) \
-        __atomic_exchange_n(obj, desired, order)
-
-    #define atomic_compare_exchange_strong(o, expect, desire)                \
-        __atomic_compare_exchange_n(                                         \
-            o, expect, desire, 0, memory_order_seq_cst, memory_order_seq_cst \
-        )
-
-    #define atomic_compare_exchange_weak(o, expect, desire)                  \
-        __atomic_compare_exchange_n(                                         \
-            o, expect, desire, 1, memory_order_seq_cst, memory_order_seq_cst \
-        )
-
-    #define atomic_compare_exchange_strong_explicit(                \
-        o, expect, desire, ok, fail                                 \
-    )                                                               \
-        __atomic_compare_exchange_n(o, expect, desire, 0, ok, fail)
-
-    #define atomic_compare_exchange_weak_explicit(o, expect, desire, ok, fail) \
-        __atomic_compare_exchange_n(o, expect, desire, 1, ok, fail)
-
-    #define atomic_fetch_add(obj, arg)                     \
-        __atomic_fetch_add(obj, arg, memory_order_seq_cst)
-    #define atomic_fetch_add_explicit(obj, arg, order) \
-        __atomic_fetch_add_n(obj, arg, order)
-
-    #define atomic_fetch_sub(obj, arg)                     \
-        __atomic_fetch_sub(obj, arg, memory_order_seq_cst)
-    #define atomic_fetch_sub_explicit(obj, arg, order) \
-        __atomic_fetch_sub_n(obj, arg, order)
-
-    #define atomic_fetch_or(obj, arg)                     \
-        __atomic_fetch_or(obj, arg, memory_order_seq_cst)
-    #define atomic_fetch_or_explicit(obj, arg, order) \
-        __atomic_fetch_or_n(obj, arg, order)
-
-    #define atomic_fetch_xor(obj, arg)                     \
-        __atomic_fetch_xor(obj, arg, memory_order_seq_cst)
-    #define atomic_fetch_xor_explicit(obj, arg, order) \
-        __atomic_fetch_xor_n(obj, arg, order)
-
-    #define atomic_fetch_and(obj, arg)                     \
-        __atomic_fetch_and(obj, arg, memory_order_seq_cst)
-    #define atomic_fetch_and_explicit(obj, arg, order) \
-        __atomic_fetch_and_n(obj, arg, order)
-
-typedef struct {
-    char value;
-} atomic_flag;
-
+    #ifdef PF_ATOMIC_GNUC
 enum memory_order {
     memory_order_relaxed = __ATOMIC_RELAXED,
     memory_order_consume = __ATOMIC_CONSUME,
     memory_order_acquire = __ATOMIC_ACQUIRE,
     memory_order_release = __ATOMIC_RELEASE,
     memory_order_acq_rel = __ATOMIC_ACQ_REL,
-    memory_order_seq_cst = __ATOMIC_SEQ_CST,
+    memory_order_seq_cst = __ATOMIC_SEQ_CST
 };
+    #else
+enum memory_order {
+    memory_order_relaxed,
+    memory_order_consume,
+    memory_order_acquire,
+    memory_order_release,
+    memory_order_acq_rel,
+    memory_order_seq_cst
+};
+    #endif
+typedef enum memory_order memory_order;
 
-    #define atomic_flag_test_and_set(obj)                \
-        __atomic_test_and_set(obj, memory_order_seq_cst)
-    #define atomic_flag_test_and_set_explicit __atomic_test_and_set
-    #define atomic_flag_clear(obj) __atomic_clear(obj, memory_order_seq_cst)
-    #define atomic_flag_clear_explicit __atomic_clear
+#endif
+
+#ifdef PF_ATOMIC_STD
+    /* Nothing more to do. */
+#elif defined(PF_ATOMIC_GNUC)
+
+    #define _Atomic(...) __VA_ARGS__
+
+    /* Lock-free macros are 0 (never), 1 (sometimes) or 2 (always). */
+    #define PF__GNUC_LOCK_FREE(type)                         \
+        (__atomic_always_lock_free(sizeof(type), 0) ? 2 : 0)
+
+    #define ATOMIC_BOOL_LOCK_FREE PF__GNUC_LOCK_FREE(_Bool)
+    #define ATOMIC_CHAR_LOCK_FREE PF__GNUC_LOCK_FREE(char)
+    #define ATOMIC_CHAR8_T_LOCK_FREE PF__GNUC_LOCK_FREE(char8_t)
+    #define ATOMIC_CHAR16_T_LOCK_FREE PF__GNUC_LOCK_FREE(char16_t)
+    #define ATOMIC_CHAR32_T_LOCK_FREE PF__GNUC_LOCK_FREE(char32_t)
+    #define ATOMIC_WCHAR_T_LOCK_FREE PF__GNUC_LOCK_FREE(wchar_t)
+    #define ATOMIC_SHORT_LOCK_FREE PF__GNUC_LOCK_FREE(short)
+    #define ATOMIC_INT_LOCK_FREE PF__GNUC_LOCK_FREE(int)
+    #define ATOMIC_LONG_LOCK_FREE PF__GNUC_LOCK_FREE(long)
+    #define ATOMIC_LLONG_LOCK_FREE PF__GNUC_LOCK_FREE(long long)
+    #define ATOMIC_POINTER_LOCK_FREE PF__GNUC_LOCK_FREE(void *)
+
+    /* `obj` is a pointer to the atomic object, not the object itself. */
+    #define atomic_is_lock_free(obj)                 \
+        __atomic_is_lock_free(sizeof(*(obj)), (obj))
+
+    #define atomic_store(obj, desired)                           \
+        __atomic_store_n((obj), (desired), memory_order_seq_cst)
+    #define atomic_store_explicit(obj, desired, order) \
+        __atomic_store_n((obj), (desired), (order))
+
+    #define atomic_load(obj) __atomic_load_n((obj), memory_order_seq_cst)
+    #define atomic_load_explicit(obj, order) __atomic_load_n((obj), (order))
+
+    #define atomic_exchange(obj, desired)                           \
+        __atomic_exchange_n((obj), (desired), memory_order_seq_cst)
+    #define atomic_exchange_explicit(obj, desired, order) \
+        __atomic_exchange_n((obj), (desired), (order))
+
+    #define atomic_compare_exchange_strong(o, expect, desire) \
+        __atomic_compare_exchange_n(                          \
+            (o),                                              \
+            (expect),                                         \
+            (desire),                                         \
+            0,                                                \
+            memory_order_seq_cst,                             \
+            memory_order_seq_cst                              \
+        )
+
+    #define atomic_compare_exchange_weak(o, expect, desire) \
+        __atomic_compare_exchange_n(                        \
+            (o),                                            \
+            (expect),                                       \
+            (desire),                                       \
+            1,                                              \
+            memory_order_seq_cst,                           \
+            memory_order_seq_cst                            \
+        )
+
+    #define atomic_compare_exchange_strong_explicit(                          \
+        o, expect, desire, ok, fail                                           \
+    )                                                                         \
+        __atomic_compare_exchange_n((o), (expect), (desire), 0, (ok), (fail))
+
+    #define atomic_compare_exchange_weak_explicit(o, expect, desire, ok, fail) \
+        __atomic_compare_exchange_n((o), (expect), (desire), 1, (ok), (fail))
+
+    #define atomic_fetch_add(obj, arg)                         \
+        __atomic_fetch_add((obj), (arg), memory_order_seq_cst)
+    #define atomic_fetch_add_explicit(obj, arg, order) \
+        __atomic_fetch_add((obj), (arg), (order))
+
+    #define atomic_fetch_sub(obj, arg)                         \
+        __atomic_fetch_sub((obj), (arg), memory_order_seq_cst)
+    #define atomic_fetch_sub_explicit(obj, arg, order) \
+        __atomic_fetch_sub((obj), (arg), (order))
+
+    #define atomic_fetch_or(obj, arg)                         \
+        __atomic_fetch_or((obj), (arg), memory_order_seq_cst)
+    #define atomic_fetch_or_explicit(obj, arg, order) \
+        __atomic_fetch_or((obj), (arg), (order))
+
+    #define atomic_fetch_xor(obj, arg)                         \
+        __atomic_fetch_xor((obj), (arg), memory_order_seq_cst)
+    #define atomic_fetch_xor_explicit(obj, arg, order) \
+        __atomic_fetch_xor((obj), (arg), (order))
+
+    #define atomic_fetch_and(obj, arg)                         \
+        __atomic_fetch_and((obj), (arg), memory_order_seq_cst)
+    #define atomic_fetch_and_explicit(obj, arg, order) \
+        __atomic_fetch_and((obj), (arg), (order))
+
+typedef struct {
+    char value;
+} atomic_flag;
+
+    #define atomic_flag_test_and_set(obj)                          \
+        __atomic_test_and_set(&(obj)->value, memory_order_seq_cst)
+    #define atomic_flag_test_and_set_explicit(obj, order) \
+        __atomic_test_and_set(&(obj)->value, (order))
+    #define atomic_flag_clear(obj)                          \
+        __atomic_clear(&(obj)->value, memory_order_seq_cst)
+    #define atomic_flag_clear_explicit(obj, order) \
+        __atomic_clear(&(obj)->value, (order))
+
+    #define PF_HAS_ATOMIC_FLAG_INIT
+PF_API void pf_atomic_flag_init(volatile atomic_flag *obj) {
+    atomic_flag_clear(obj);
+}
 
     #define atomic_init(obj, desired) (*(obj) = (desired))
     #define ATOMIC_VAR_INIT(...) __VA_ARGS__
@@ -186,11 +257,27 @@ enum memory_order {
     #endif
 
     #include <limits.h>
-    #include <stdint.h>
+    #include <string.h>
 
+    #ifdef PF_ATOMIC_WIN32
+        #include <windows.h>
+        #if defined(_MSC_VER)
+            #include <intrin.h>
+        #endif
+    #endif
+
+    #if defined(__GNUC__) || defined(__clang__)
+        #define PF__TYPEOF __typeof__
+    #else
+        #define PF__TYPEOF typeof
+    #endif
+
+/* Values are stored zero-extended and truncated to the size of the atomic type
+   (the "raw bits" of the object), so wrap-around, comparisons and exchanges
+   behave as they do on the real type. */
 typedef struct pf_atomic_t {
     mtx_t lock;
-    intmax_t value;
+    uintmax_t value;
 } pf_atomic_t;
 
     #define _Atomic(TYPE)     \
@@ -199,144 +286,323 @@ typedef struct pf_atomic_t {
             TYPE type;        \
         }
 
-static inline void pf_atomic_init(pf_atomic_t *atomic, intmax_t desired);
-static inline void pf_atomic_init_lock(mtx_t *lock);
+PF_API void pf_atomic_init_lock(mtx_t *lock) {
+    (void)mtx_init(lock, mtx_plain);
+}
 
-static inline void pf_atomic_lock(mtx_t *lock);
+PF_API void pf_atomic_lock(mtx_t *lock) { (void)mtx_lock(lock); }
 
-static inline void pf_atomic_unlock(mtx_t *lock);
+PF_API void pf_atomic_unlock(mtx_t *lock) { (void)mtx_unlock(lock); }
 
+PF_API uintmax_t pf_atomic_mask(size_t size) {
+    if (size >= sizeof(uintmax_t))
+        return UINTMAX_MAX;
+    return (((uintmax_t)1) << (size * 8)) - 1;
+}
+
+/* Copy between an object of `size` bytes and a uintmax_t, in either byte
+   order. */
+PF_API uintmax_t pf_atomic_unpack(const void *src, size_t size) {
+    const unsigned one = 1;
+    uintmax_t value = 0;
+    unsigned char *bytes = (unsigned char *)&value;
+
+    if (*(const unsigned char *)&one)
+        memcpy(bytes, src, size);
+    else
+        memcpy(bytes + sizeof(value) - size, src, size);
+    return value;
+}
+
+PF_API void pf_atomic_pack(void *dst, uintmax_t value, size_t size) {
+    const unsigned one = 1;
+    const unsigned char *bytes = (const unsigned char *)&value;
+
+    if (*(const unsigned char *)&one)
+        memcpy(dst, bytes, size);
+    else
+        memcpy(dst, bytes + sizeof(value) - size, size);
+}
+
+/* On Windows, objects of size 1, 2, 4 and 8 are *only* ever accessed through
+   interlocked operations. Mixing them with mutex-protected operations on the
+   same object would not be atomic, so the choice depends on size alone. */
+PF_API _Bool pf_atomic_lock_free(size_t size) {
     #ifdef PF_ATOMIC_WIN32
-        #define PF__IMPL_WIN32(FUNC, ...)                               \
-            switch (size) {                                             \
-            case sizeof(int8_t):                                        \
-                return FUNC##8((CHAR *)&atomic->value, __VA_ARGS__);    \
-            case sizeof(int16_t):                                       \
-                return FUNC##16((SHORT *)&atomic->value, __VA_ARGS__);  \
-            case sizeof(int32_t):                                       \
-                return FUNC((LONG *)&atomic->value, __VA_ARGS__);       \
-            case sizeof(int64_t):                                       \
-                return FUNC##64((LONG64 *)&atomic->value, __VA_ARGS__); \
-            default:                                                    \
-                break;                                                  \
-            }
+    return size == 1 || size == 2 || size == 4 || size == 8;
     #else
-        #define PF__IMPL_WIN32(FUNC, ...) (void)size
+    (void)size;
+    return 0;
     #endif
+}
 
-    #define PF__IMPL_WIN32_add (void)size
-    #define PF__IMPL_WIN32_sub (void)size
-    #define PF__IMPL_WIN32_or PF__IMPL_WIN32(InterlockedOr, other)
-    #define PF__IMPL_WIN32_xor PF__IMPL_WIN32(InterlockedXor, other)
-    #define PF__IMPL_WIN32_and PF__IMPL_WIN32(InterlockedAnd, other)
-    #define PF__IMPL_WIN32_xchg PF__IMPL_WIN32(InterlockedExchange, desired)
-    #define PF__IMPL_WIN32_cas                                        \
-        PF__IMPL_WIN32(InterlockedCompareExchange, expected, desired)
+/* Returns the previous (truncated) value. */
+PF_API uintmax_t pf_atomic_w32_cmpxchg(
+    pf_atomic_t *atomic, size_t size, uintmax_t expected, uintmax_t desired
+) {
+    #ifdef PF_ATOMIC_WIN32
+        #if defined(_MSC_VER)
+    switch (size) {
+    case 1:
+        return (unsigned char)_InterlockedCompareExchange8(
+            (char volatile *)&atomic->value, (char)desired, (char)expected
+        );
+    case 2:
+        return (unsigned short)_InterlockedCompareExchange16(
+            (short volatile *)&atomic->value, (short)desired, (short)expected
+        );
+    case 4:
+        return (uint32_t)_InterlockedCompareExchange(
+            (long volatile *)&atomic->value, (long)desired, (long)expected
+        );
+    case 8:
+        return (uint64_t)_InterlockedCompareExchange64(
+            (__int64 volatile *)&atomic->value,
+            (__int64)desired,
+            (__int64)expected
+        );
+    default:
+        break;
+    }
+        #else
+    /* GNU-compatible compilers on Windows lack some of the intrinsics. */
+    switch (size) {
+    case 1:
+        return __sync_val_compare_and_swap(
+            (volatile uint8_t *)&atomic->value,
+            (uint8_t)expected,
+            (uint8_t)desired
+        );
+    case 2:
+        return __sync_val_compare_and_swap(
+            (volatile uint16_t *)&atomic->value,
+            (uint16_t)expected,
+            (uint16_t)desired
+        );
+    case 4:
+        return __sync_val_compare_and_swap(
+            (volatile uint32_t *)&atomic->value,
+            (uint32_t)expected,
+            (uint32_t)desired
+        );
+    case 8:
+        return __sync_val_compare_and_swap(
+            (volatile uint64_t *)&atomic->value,
+            (uint64_t)expected,
+            (uint64_t)desired
+        );
+    default:
+        break;
+    }
+        #endif
+    #else
+    (void)atomic;
+    (void)size;
+    (void)expected;
+    (void)desired;
+    #endif
+    return 0;
+}
 
-    #define PF__IMPL_ATOMIC_FETCH_OP(NAME, OPERATION, ...) \
-        PF_API intmax_t pf_atomic_##NAME(                  \
-            pf_atomic_t *atomic, size_t size, __VA_ARGS__  \
-        ) {                                                \
-            PF__IMPL_WIN32_##NAME;                         \
-            intmax_t prev;                                 \
-            pf_atomic_lock(&atomic->lock);                 \
-            prev = atomic->value;                          \
-            atomic->value = OPERATION;                     \
-            pf_atomic_unlock(&atomic->lock);               \
-            return prev;                                   \
-        }
+PF_API void pf_atomic_init(
+    pf_atomic_t *atomic, size_t size, uintmax_t desired
+) {
+    atomic->value = desired & pf_atomic_mask(size);
+    if (!pf_atomic_lock_free(size))
+        pf_atomic_init_lock(&atomic->lock);
+}
 
-PF__IMPL_ATOMIC_FETCH_OP(add, prev + other, intmax_t other);
-PF__IMPL_ATOMIC_FETCH_OP(sub, prev - other, intmax_t other);
-PF__IMPL_ATOMIC_FETCH_OP(and, prev &other, intmax_t other);
-PF__IMPL_ATOMIC_FETCH_OP(or, prev | other, intmax_t other);
-PF__IMPL_ATOMIC_FETCH_OP(xor, prev ^ other, intmax_t other);
-PF__IMPL_ATOMIC_FETCH_OP(xchg, desired, intmax_t desired);
+PF_API uintmax_t pf_atomic_load(pf_atomic_t *atomic, size_t size) {
+    uintmax_t out;
 
-PF_API intmax_t pf_atomic_load(pf_atomic_t *atomic) {
-    intmax_t out;
+    if (pf_atomic_lock_free(size))
+        return pf_atomic_w32_cmpxchg(atomic, size, 0, 0);
+
     pf_atomic_lock(&atomic->lock);
-    out = atomic->value;
+    out = atomic->value & pf_atomic_mask(size);
     pf_atomic_unlock(&atomic->lock);
     return out;
 }
 
-PF_API void pf_atomic_store(pf_atomic_t *atomic, intmax_t value) {
+enum {
+    PF__ATOMIC_OP_ADD,
+    PF__ATOMIC_OP_SUB,
+    PF__ATOMIC_OP_AND,
+    PF__ATOMIC_OP_OR,
+    PF__ATOMIC_OP_XOR,
+    PF__ATOMIC_OP_XCHG
+};
+
+PF_API uintmax_t pf_atomic_apply(int op, uintmax_t old, uintmax_t arg) {
+    switch (op) {
+    case PF__ATOMIC_OP_ADD:
+        return old + arg;
+    case PF__ATOMIC_OP_SUB:
+        return old - arg;
+    case PF__ATOMIC_OP_AND:
+        return old & arg;
+    case PF__ATOMIC_OP_OR:
+        return old | arg;
+    case PF__ATOMIC_OP_XOR:
+        return old ^ arg;
+    default:
+        return arg;
+    }
+}
+
+/* Read-modify-write; returns the previous value. */
+PF_API uintmax_t
+pf_atomic_rmw(pf_atomic_t *atomic, size_t size, int op, uintmax_t arg) {
+    uintmax_t mask = pf_atomic_mask(size);
+    uintmax_t prev;
+
+    if (pf_atomic_lock_free(size)) {
+        uintmax_t seen = pf_atomic_w32_cmpxchg(atomic, size, 0, 0);
+        do {
+            prev = seen;
+            seen = pf_atomic_w32_cmpxchg(
+                atomic, size, prev, pf_atomic_apply(op, prev, arg) & mask
+            );
+        } while (seen != prev);
+        return prev;
+    }
+
     pf_atomic_lock(&atomic->lock);
-    atomic->value = value;
+    prev = atomic->value & mask;
+    atomic->value = pf_atomic_apply(op, prev, arg) & mask;
     pf_atomic_unlock(&atomic->lock);
+    return prev;
 }
 
-PF_API _Bool pf_atomic_cas_w(
-    pf_atomic_t *atomic, size_t size, intmax_t *expected, intmax_t desired
+    #define PF__IMPL_ATOMIC_OP(NAME, OP)                    \
+        PF_API uintmax_t pf_atomic_##NAME(                  \
+            pf_atomic_t *atomic, size_t size, uintmax_t arg \
+        ) {                                                 \
+            return pf_atomic_rmw(atomic, size, OP, arg);    \
+        }
+
+PF__IMPL_ATOMIC_OP(fetch_add, PF__ATOMIC_OP_ADD)
+PF__IMPL_ATOMIC_OP(fetch_sub, PF__ATOMIC_OP_SUB)
+PF__IMPL_ATOMIC_OP(fetch_and, PF__ATOMIC_OP_AND)
+PF__IMPL_ATOMIC_OP(fetch_or, PF__ATOMIC_OP_OR)
+PF__IMPL_ATOMIC_OP(fetch_xor, PF__ATOMIC_OP_XOR)
+PF__IMPL_ATOMIC_OP(exchange, PF__ATOMIC_OP_XCHG)
+
+PF_API void pf_atomic_store(pf_atomic_t *atomic, size_t size, uintmax_t value) {
+    (void)pf_atomic_rmw(atomic, size, PF__ATOMIC_OP_XCHG, value);
+}
+
+/* `expected` points to an object of `size` bytes. */
+PF_API _Bool pf_atomic_cas(
+    pf_atomic_t *atomic, size_t size, void *expected, uintmax_t desired
 ) {
-    _Bool result;
+    uintmax_t mask = pf_atomic_mask(size);
+    uintmax_t want = pf_atomic_unpack(expected, size);
+    uintmax_t prev;
+    _Bool ok;
 
-    pf_atomic_lock(&atomic->lock);
-    result = atomic->value == *expected;
-    *expected = atomic->value;
+    desired &= mask;
 
-    if (result)
-        atomic->value = desired;
-    pf_atomic_unlock(&atomic->lock);
-    return result;
+    if (pf_atomic_lock_free(size)) {
+        prev = pf_atomic_w32_cmpxchg(atomic, size, want, desired);
+        ok = prev == want;
+    } else {
+        pf_atomic_lock(&atomic->lock);
+        prev = atomic->value & mask;
+        ok = prev == want;
+        if (ok)
+            atomic->value = desired;
+        pf_atomic_unlock(&atomic->lock);
+    }
+
+    if (!ok)
+        pf_atomic_pack(expected, prev, size);
+    return ok;
 }
 
-PF_API _Bool pf_atomic_cas_s(
-    pf_atomic_t *atomic, size_t size, intmax_t *expected, intmax_t desired
-) {
-    return pf_atomic_cas_w(atomic, size, expected, desired);
-}
-
-    #define PF__ATOMIC_UNWRAP(obj, FUNC, ...)                      \
-        ((typeof((obj)->type))                                     \
-             FUNC(&(obj)->base, sizeof((obj)->type), __VA_ARGS__))
-
-    #define atomic_init(obj, desired) (pf_atomic_init(&(obj)->base, (desired)))
-    #define atomic_load(obj) ((typeof((obj)->type))pf_atomic_load(&(obj)->base))
-    #define atomic_store(obj, value) pf_atomic_store(&(obj)->base, (value))
-    #define atomic_fetch_add(obj, other)               \
-        PF__ATOMIC_UNWRAP(obj, pf_atomic_add, (other))
-    #define atomic_fetch_sub(obj, other)               \
-        PF__ATOMIC_UNWRAP(obj, pf_atomic_sub, (other))
-    #define atomic_fetch_or(obj, other)               \
-        PF__ATOMIC_UNWRAP(obj, pf_atomic_or, (other))
-    #define atomic_fetch_xor(obj, other)               \
-        PF__ATOMIC_UNWRAP(obj, pf_atomic_xor, (other))
-    #define atomic_fetch_and(obj, other)               \
-        PF__ATOMIC_UNWRAP(obj, pf_atomic_and, (other))
-    #define atomic_exchange(obj, desired)                 \
-        PF__ATOMIC_UNWRAP(obj, pf_atomic_xchg, (desired))
-    #define atomic_compare_exchange_weak(obj, expected, desired)       \
-        PF__ATOMIC_UNWRAP(obj, pf_atomic_cas_w, (expected), (desired))
-    #define atomic_compare_exchange_strong(obj, expected, desired)     \
-        PF__ATOMIC_UNWRAP(obj, pf_atomic_cas_s, (expected), (desired))
-
-    #define PF__ATOMIC_WIN32_TYPE(max)                                 \
-        ((max) == INT8_MAX || (max) == INT16_MAX || (max) == INT32_MAX \
-         || (max) == INT64_MAX)
-
-    #ifdef PF_ATOMIC_WIN32
-        #define PF_ATOMIC_LOCK_FREE(max) (PF__ATOMIC_WIN32_TYPE(max) ? 1 : 0)
+    #define PF__ATOMIC_TYPE(obj) PF__TYPEOF((obj)->type)
+    #define PF__ATOMIC_ARG(obj, value)             \
+        ((uintmax_t)(PF__ATOMIC_TYPE(obj))(value))
+    /* The statement expression avoids "value computed is not used" warnings
+       when the result of a fetch operation is discarded. */
+    #if defined(__GNUC__) || defined(__clang__)
+        #define PF__ATOMIC_UNWRAP(obj, FUNC, ...)                  \
+            __extension__({                                        \
+                PF__ATOMIC_TYPE(obj)                               \
+                pf__result_ = (PF__ATOMIC_TYPE(obj))FUNC(          \
+                    &(obj)->base, sizeof((obj)->type), __VA_ARGS__ \
+                );                                                 \
+                pf__result_;                                       \
+            })
     #else
-        #define PF_ATOMIC_LOCK_FREE(max) 0
+        #define PF__ATOMIC_UNWRAP(obj, FUNC, ...)                      \
+            ((PF__ATOMIC_TYPE(obj))                                    \
+                 FUNC(&(obj)->base, sizeof((obj)->type), __VA_ARGS__))
     #endif
 
-    #define ATOMIC_BOOL_LOCK_FREE PF_ATOMIC_LOCK_FREE(1)
-    #define ATOMIC_CHAR_LOCK_FREE PF_ATOMIC_LOCK_FREE(CHAR_MAX)
-    #define ATOMIC_CHAR16_T_LOCK_FREE PF_ATOMIC_LOCK_FREE(INT16_MAX)
-    #define ATOMIC_CHAR32_T_LOCK_FREE PF_ATOMIC_LOCK_FREE(INT32_MAX)
-    #define ATOMIC_WCHAR_T_LOCK_FREE PF_ATOMIC_LOCK_FREE(WCHAR_MAX)
-    #define ATOMIC_SHORT_LOCK_FREE PF_ATOMIC_LOCK_FREE(SHRT_MAX)
-    #define ATOMIC_INT_LOCK_FREE PF_ATOMIC_LOCK_FREE(INT_MAX)
-    #define ATOMIC_LONG_LOCK_FREE PF_ATOMIC_LOCK_FREE(LONG_MAX)
-    #define ATOMIC_LLONG_LOCK_FREE PF_ATOMIC_LOCK_FREE(LLONG_MAX)
-    #define ATOMIC_POINTER_LOCK_FREE PF_ATOMIC_LOCK_FREE(INTPTR_MAX)
+    #define atomic_init(obj, desired)                                       \
+        pf_atomic_init(                                                     \
+            &(obj)->base, sizeof((obj)->type), PF__ATOMIC_ARG(obj, desired) \
+        )
+    #define atomic_load(obj)                                    \
+        ((PF__ATOMIC_TYPE(obj))                                 \
+             pf_atomic_load(&(obj)->base, sizeof((obj)->type)))
+    #define atomic_store(obj, value)                                      \
+        pf_atomic_store(                                                  \
+            &(obj)->base, sizeof((obj)->type), PF__ATOMIC_ARG(obj, value) \
+        )
+    #define atomic_fetch_add(obj, other) \
+        PF__ATOMIC_UNWRAP(obj, pf_atomic_fetch_add, PF__ATOMIC_ARG(obj, other))
+    #define atomic_fetch_sub(obj, other) \
+        PF__ATOMIC_UNWRAP(obj, pf_atomic_fetch_sub, PF__ATOMIC_ARG(obj, other))
+    #define atomic_fetch_or(obj, other)                                        \
+        PF__ATOMIC_UNWRAP(obj, pf_atomic_fetch_or, PF__ATOMIC_ARG(obj, other))
+    #define atomic_fetch_xor(obj, other) \
+        PF__ATOMIC_UNWRAP(obj, pf_atomic_fetch_xor, PF__ATOMIC_ARG(obj, other))
+    #define atomic_fetch_and(obj, other) \
+        PF__ATOMIC_UNWRAP(obj, pf_atomic_fetch_and, PF__ATOMIC_ARG(obj, other))
+    #define atomic_exchange(obj, desired) \
+        PF__ATOMIC_UNWRAP(obj, pf_atomic_exchange, PF__ATOMIC_ARG(obj, desired))
+    #define atomic_compare_exchange_weak(obj, expected, desired) \
+        pf_atomic_cas(                                           \
+            &(obj)->base,                                        \
+            sizeof((obj)->type),                                 \
+            (expected),                                          \
+            PF__ATOMIC_ARG(obj, desired)                         \
+        )
+    #define atomic_compare_exchange_strong(obj, expected, desired) \
+        atomic_compare_exchange_weak(obj, expected, desired)
 
-    #define atomic_is_lock_free(obj) 0
+    #ifdef PF_ATOMIC_WIN32
+        #define PF_ATOMIC_LOCK_FREE(type)                                 \
+            ((sizeof(type) == 1 || sizeof(type) == 2 || sizeof(type) == 4 \
+              || sizeof(type) == 8)                                       \
+                 ? 2                                                      \
+                 : 0)
+    #else
+        #define PF_ATOMIC_LOCK_FREE(type) 0
+    #endif
 
-    /* Use atomic_init instead of this macro. */
-    #define ATOMIC_VAR_INIT(value) { 0 }
+    #define ATOMIC_BOOL_LOCK_FREE PF_ATOMIC_LOCK_FREE(_Bool)
+    #define ATOMIC_CHAR_LOCK_FREE PF_ATOMIC_LOCK_FREE(char)
+    #define ATOMIC_CHAR8_T_LOCK_FREE PF_ATOMIC_LOCK_FREE(char8_t)
+    #define ATOMIC_CHAR16_T_LOCK_FREE PF_ATOMIC_LOCK_FREE(char16_t)
+    #define ATOMIC_CHAR32_T_LOCK_FREE PF_ATOMIC_LOCK_FREE(char32_t)
+    #define ATOMIC_WCHAR_T_LOCK_FREE PF_ATOMIC_LOCK_FREE(wchar_t)
+    #define ATOMIC_SHORT_LOCK_FREE PF_ATOMIC_LOCK_FREE(short)
+    #define ATOMIC_INT_LOCK_FREE PF_ATOMIC_LOCK_FREE(int)
+    #define ATOMIC_LONG_LOCK_FREE PF_ATOMIC_LOCK_FREE(long)
+    #define ATOMIC_LLONG_LOCK_FREE PF_ATOMIC_LOCK_FREE(long long)
+    #define ATOMIC_POINTER_LOCK_FREE PF_ATOMIC_LOCK_FREE(void *)
+
+    #define atomic_is_lock_free(obj)                     \
+        (PF_ATOMIC_LOCK_FREE(PF__ATOMIC_TYPE(obj)) != 0)
+
+    /* The value is kept, but the lock still needs atomic_init (see above). */
+    #define ATOMIC_VAR_INIT(value)      \
+        {                               \
+            .base = {.value = (value) } \
+        }
 
     #define atomic_load_explicit(obj, order) atomic_load(obj)
     #define atomic_store_explicit(obj, value, order) atomic_store(obj, value)
@@ -353,11 +619,11 @@ PF_API _Bool pf_atomic_cas_s(
     #define atomic_exchange_explicit(obj, desired, order) \
         atomic_exchange(obj, desired)
     #define atomic_compare_exchange_weak_explicit(           \
-        obj, expected, desired, order                        \
+        obj, expected, desired, success, failure             \
     )                                                        \
         atomic_compare_exchange_weak(obj, expected, desired)
     #define atomic_compare_exchange_strong_explicit(           \
-        obj, expected, desired, order                          \
+        obj, expected, desired, success, failure               \
     )                                                          \
         atomic_compare_exchange_strong(obj, expected, desired)
 
@@ -370,47 +636,56 @@ typedef struct {
     #define PF_HAS_ATOMIC_FLAG_INIT
 
 PF_API void pf_atomic_flag_init(volatile atomic_flag *obj) {
-    pf_atomic_init_lock(&obj->lock);
-    obj->value = 0;
+    atomic_flag *flag = (atomic_flag *)obj;
+    pf_atomic_init_lock(&flag->lock);
+    flag->value = 0;
 }
 
 PF_API _Bool atomic_flag_test_and_set(volatile atomic_flag *obj) {
-    pf_atomic_lock(&obj->lock);
-    _Bool prev = obj->value;
-    obj->value = 1;
-    pf_atomic_unlock(&obj->lock);
+    atomic_flag *flag = (atomic_flag *)obj;
+    _Bool prev;
+    pf_atomic_lock(&flag->lock);
+    prev = flag->value;
+    flag->value = 1;
+    pf_atomic_unlock(&flag->lock);
     return prev;
 }
 
 PF_API _Bool atomic_flag_test_and_set_explicit(
     volatile atomic_flag *obj, memory_order order
 ) {
+    (void)order;
     return atomic_flag_test_and_set(obj);
 }
 
 PF_API void atomic_flag_clear(volatile atomic_flag *obj) {
-    pf_atomic_lock(&obj->lock);
-    obj->value = 0;
-    pf_atomic_unlock(&obj->lock);
+    atomic_flag *flag = (atomic_flag *)obj;
+    pf_atomic_lock(&flag->lock);
+    flag->value = 0;
+    pf_atomic_unlock(&flag->lock);
 }
 
 PF_API void atomic_flag_clear_explicit(
     volatile atomic_flag *obj, memory_order order
 ) {
-    return atomic_flag_clear(obj);
+    (void)order;
+    atomic_flag_clear(obj);
 }
 
-    #define kill_dependency(y)
-    #define atomic_thread_fence(order)
-    #define atomic_signal_fence(order)
+    #define kill_dependency(y) (y)
+    #define atomic_thread_fence(order) ((void)(order))
+    #define atomic_signal_fence(order) ((void)(order))
 #else
 
     /* Fallback implementation with no threads. These macros allow for code to
    compile cleanly, but the user should still check for PF_NO_ATOMICS macro.
 */
 
+    #define _Atomic(...) __VA_ARGS__
+
     #define ATOMIC_BOOL_LOCK_FREE -1
     #define ATOMIC_CHAR_LOCK_FREE -1
+    #define ATOMIC_CHAR8_T_LOCK_FREE -1
     #define ATOMIC_CHAR16_T_LOCK_FREE -1
     #define ATOMIC_CHAR32_T_LOCK_FREE -1
     #define ATOMIC_WCHAR_T_LOCK_FREE -1
@@ -446,12 +721,12 @@ PF_API void atomic_flag_clear_explicit(
     #define atomic_flag_clear(...)
     #define atomic_flag_clear_explicit(...)
     #define atomic_init(...)
-    #define kill_dependency(...)
+    #define kill_dependency(y) (y)
     #define atomic_thread_fence(...)
     #define atomic_signal_fence(...)
 
     #define ATOMIC_FLAG_INIT { 0 }
-    #define ATOMIC_VAR_INIT(value) { 0 }
+    #define ATOMIC_VAR_INIT(value) (value)
 typedef struct {
     char unused;
 } atomic_flag;
@@ -459,35 +734,16 @@ typedef struct {
 #endif
 
 #ifndef PF_HAS_ATOMIC_FLAG_INIT
+    #ifdef PF_ATOMIC_STD
+PF_API void pf_atomic_flag_init(volatile atomic_flag *obj) {
+    atomic_flag_clear(obj);
+}
+    #else
 PF_API void pf_atomic_flag_init(volatile atomic_flag *obj) { (void)obj; }
+    #endif
 #endif
 
 #ifndef PF_ATOMIC_STD
-    #include <stddef.h>
-    #include <stdint.h>
-    #include <uchar.h>
-    #include <wchar.h>
-
-    #if defined(__cplusplus) || defined(bool)
-typedef bool _Bool;
-    #elif !defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L
-typedef int _Bool;
-    #endif
-
-    #if __STDC_VERSION__ < 202311L
-typedef uint8_t char8_t;
-    #endif
-
-    #ifndef PF_ATOMIC_GNUC
-enum memory_order {
-    memory_order_relaxed,
-    memory_order_consume,
-    memory_order_acquire,
-    memory_order_release,
-    memory_order_acq_rel,
-    memory_order_seq_cst
-};
-    #endif
 
 typedef _Atomic(_Bool) atomic_bool;
 typedef _Atomic(char) atomic_char;
