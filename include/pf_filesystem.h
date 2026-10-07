@@ -64,6 +64,7 @@ extern "C" {
     #include <sys/types.h>
     #include <unistd.h>
 #elif defined(PF_FS_WIN32)
+    #include <io.h>
     #include <knownfolders.h>
     #include <lm.h>
     #include <shlobj.h>
@@ -825,6 +826,107 @@ PF_API int pf_canexecute(const char *path) {
 #else
     return PF_FS_ENOSYS;
 #endif
+}
+
+PF_API int64_t pf__filesize(FILE *fp) {
+    long current;
+    long end;
+
+    current = ftell(fp);
+    if (current < 0)
+        return -1;
+
+    if (fseek(fp, 0, SEEK_END) != 0)
+        return -1;
+
+    end = ftell(fp);
+
+    /* Best effort to restore the original position. */
+    if (fseek(fp, current, SEEK_SET) != 0)
+        return -1;
+
+    if (end < 0)
+        return -1;
+
+    return (int64_t)end;
+}
+
+PF_API int64_t pf_filesize(const char *path) {
+    if (!path)
+        return -1;
+
+#ifdef PF_FS_WIN32
+
+    WIN32_FILE_ATTRIBUTE_DATA data;
+
+    if (GetFileAttributesExA(path, GetFileExInfoStandard, &data)) {
+        ULARGE_INTEGER size;
+
+        size.HighPart = data.nFileSizeHigh;
+        size.LowPart = data.nFileSizeLow;
+
+        return (int64_t)size.QuadPart;
+    }
+
+#elif defined(__unix__) || defined(__unix) || defined(__APPLE__)         \
+    || defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) \
+    || defined(__OpenBSD__) || defined(__DragonFly__)
+
+    struct stat st;
+
+    if (stat(path, &st) == 0)
+        return (int64_t)st.st_size;
+
+#endif
+
+    FILE *fp;
+
+    if (!(fp = fopen(path, "rb")))
+        return -1;
+
+    int64_t result = pf__filesize(fp);
+    fclose(fp);
+    return result;
+}
+
+PF_API int64_t pf_filesizef(FILE *fp) {
+    if (!fp)
+        return -1;
+
+#ifdef PF_FS_WIN32
+
+    int fd = _fileno(fp);
+    HANDLE h;
+    LARGE_INTEGER size;
+
+    if (fd < 0)
+        goto fallback;
+
+    h = (HANDLE)_get_osfhandle(fd);
+    if (h == INVALID_HANDLE_VALUE)
+        goto fallback;
+
+    if (GetFileSizeEx(h, &size))
+        return (int64_t)size.QuadPart;
+
+    #define PF__ADD_LABEL
+#elif defined(__unix__) || defined(__unix) || defined(__APPLE__)         \
+    || defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) \
+    || defined(__OpenBSD__) || defined(__DragonFly__)
+
+    int fd = fileno(fp);
+    struct stat st;
+
+    if (fd >= 0 && fstat(fd, &st) == 0)
+        return (int64_t)st.st_size;
+#endif
+
+#ifdef PF__ADD_LABEL
+fallback:
+    #undef PF__ADD_LABEL
+#endif
+
+    return pf__filesize(fp);
 }
 
 #ifdef __cplusplus

@@ -266,18 +266,13 @@ PF_API int pf_stream_open(
     return PF_STREAM_OK;
 }
 
-PF_API int pf_readall(const char *path, void **data, size_t *size) {
+PF_API int pf_readall(const char *path, void *buffer, size_t *size) {
     FILE *fp;
     long len;
-    size_t n;
-    void *buf;
+    size_t n, max;
 
-    if (!path || !data || !size)
+    if (!path || !buffer || !size)
         return -1;
-
-    *data = NULL;
-    *size = 0;
-    buf = 0;
 
     fp = fopen(path, "rb");
     if (!fp)
@@ -286,38 +281,27 @@ PF_API int pf_readall(const char *path, void **data, size_t *size) {
     if (fseek(fp, 0, SEEK_END) != 0)
         goto fail;
 
+    max = *size;
     len = ftell(fp);
-    if (len < 0)
+    if (len < 0 || len >= max)
         goto fail;
 
     if (fseek(fp, 0, SEEK_SET) != 0)
         goto fail;
 
-    /*
-     * Allocate one extra byte so the result can safely be
-     * treated as a C string when appropriate.
-     */
-    buf = malloc((size_t)len + 1);
-    if (!buf)
-        goto fail;
-
-    n = fread(buf, 1, (size_t)len, fp);
+    n = fread(buffer, 1, (size_t)len, fp);
 
     if (n != (size_t)len)
         goto fail;
 
-    ((unsigned char *)buf)[n] = 0;
+    ((unsigned char *)buffer)[n] = 0;
 
     fclose(fp);
 
-    *data = buf;
     *size = n;
-
     return 0;
 
 fail:
-    if (buf)
-        free(buf);
     fclose(fp);
     return -1;
 }
