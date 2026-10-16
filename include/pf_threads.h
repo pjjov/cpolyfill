@@ -221,7 +221,13 @@ PF_API int cnd_broadcast(cnd_t *cond) { return PF__PT(cond_broadcast, cond); }
 PF_API void mtx_destroy(mtx_t *mtx) { pthread_mutex_destroy(mtx); }
 PF_API int mtx_lock(mtx_t *mtx) { return PF__PT(mutex_lock, mtx); }
 PF_API int mtx_unlock(mtx_t *mtx) { return PF__PT(mutex_unlock, mtx); }
-PF_API int mtx_trylock(mtx_t *mtx) { return PF__PT(mutex_trylock, mtx); }
+PF_API int mtx_trylock(mtx_t *mtx) {
+    switch (pthread_mutex_trylock(mtx)) {
+    case 0: return thrd_success;
+    case EBUSY: return thrd_busy;
+    default: return thrd_error;
+    }
+}
 PF_API int tss_create(tss_t *key, tss_dtor_t dtor) { return PF__PT(key_create, key, dtor); }
 PF_API int tss_set(tss_t key, void *val) { return PF__PT(setspecific, key, val); }
 PF_API void tss_delete(tss_t key) { pthread_key_delete(key); }
