@@ -41,6 +41,45 @@ Polyfills are header-only. Just copy and include them in your project. Some
 polyfills can gain additional behaviour and safety if other polyfills are
 included alongside it.
 
+## Testing
+
+Every header has a test suite in [test/](./test). They are built with
+[Meson](https://mesonbuild.com) and report with the Test Anything Protocol:
+
+```sh
+meson setup build
+meson test -C build
+```
+
+The same tests are built several times, because what a header does depends on
+the language standard and on which features the system lacks:
+
+| Variant | Purpose |
+| ------- | ------- |
+| `cpolyfill/<suite>` | The compiler's default standard, using system features where they exist. |
+| `cpolyfill-gnu99/<suite>` | `-std=gnu99`, so threads, atomics and `static_assert` come from the polyfills. |
+| `cpolyfill-atomic-fallback/atomic` | Atomics implemented with mutexes (`PF_ATOMIC_NONE`). |
+| `cpolyfill/headers` | Each header compiles on its own, and links when used in two translation units. |
+
+The test program can also be run directly, which is handy on a machine where
+Meson is not available (`cc test/*.c -lpthread -ldl`):
+
+```sh
+build/cpolyfill-test-default --list          # suites and tests
+build/cpolyfill-test-default atomic          # one suite
+build/cpolyfill-test-default atomic:/atomic/cas_int --no-fork
+PF_TEST_VERBOSE=1 build/cpolyfill-test-default   # say why tests are skipped
+```
+
+Tests that need something the platform does not have (sockets in a sandbox,
+unnamed semaphores on macOS, ...) are skipped, not failed.
+
+Tests for defects that are known but not fixed yet are listed as `TODO` (there are none right now). Run
+`meson configure build -Dknown_bugs=true` to run them, and watch them fail.
+Each is registered with `KNOWN_BUG(...)`, so fixing a header means deleting
+that wrapper. The same goes for the `KNOWN` table in
+[test/check_headers.py](./test/check_headers.py).
+
 ## List of polyfills
 
 | Header | Description |

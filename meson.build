@@ -42,25 +42,126 @@ install_headers(
 )
 
 if not meson.is_subproject()
-    tests = executable(
-        'cpolyfill-test',
-        install: false,
-        dependencies: [cpolyfill_dep],
-        sources: [
-            'test/bitwise.c',
-            'test/ctype.c',
-            'test/endian.c',
-            'test/macro.c',
-            'test/main.c',
-            'test/overflow.c',
-        ]
-    )
+    cc = meson.get_compiler('c')
+    is_msvc = cc.get_argument_syntax() == 'msvc'
+    is_windows = host_machine.system() == 'windows'
 
-    test('cpolyfill/bitwise', tests, args: ['bitwise'], protocol: 'tap')
-    test('cpolyfill/ctype', tests, args: ['ctype'], protocol: 'tap')
-    test('cpolyfill/endian', tests, args: ['endian'], protocol: 'tap')
-    test('cpolyfill/macro', tests, args: ['macro'], protocol: 'tap')
-    test('cpolyfill/overflow', tests, args: ['overflow'], protocol: 'tap')
+    # Everything the headers may need from the system.
+    test_deps = [cpolyfill_dep, dependency('threads')]
+    if is_windows
+        foreach lib : ['ws2_32', 'ole32', 'shell32', 'netapi32', 'advapi32']
+            test_deps += cc.find_library(lib, required: false)
+        endforeach
+    else
+        test_deps += cc.find_library('dl', required: false)
+    endif
+
+    test_args = [
+        # The tests must not be compiled out, so they cannot pass by accident.
+        is_msvc ? '/UNDEBUG' : '-UNDEBUG',
+        '-DPF_TEST_KNOWN_BUGS=@0@'.format(get_option('known_bugs') ? 1 : 0),
+    ]
+
+    suites = [
+        'argparse',
+        'array',
+        'assert',
+        'atomic',
+        'attribute',
+        'bitwise',
+        'cli',
+        'cpuinfo',
+        'ctype',
+        'daemon',
+        'dirent',
+        'dlsym',
+        'endian',
+        'errno',
+        'exception',
+        'filesystem',
+        'io',
+        'macro',
+        'overflow',
+        'pipe',
+        'process',
+        'semaphore',
+        'socket',
+        'string',
+        'test',
+        'threads',
+        'typeid',
+        'types',
+    ]
+
+    test_sources = files('test/main.c')
+    foreach suite : suites
+        test_sources += files('test' / suite + '.c')
+    endforeach
+
+    # The same tests are built several times, because what the headers do
+    # depends on the language standard and on which features are missing:
+    #
+    #   default          what the compiler picks, usually the newest standard.
+    #   gnu99            C11 features (threads, atomics, ...) are missing, so
+    #                    the polyfills are used instead of the system ones.
+    #   atomic-fallback  atomics implemented with mutexes, as on platforms
+    #                    that have threads but no atomic instructions.
+    variants = {
+        'default': {'args': [], 'suites': suites},
+    }
+    if not is_msvc
+        variants += {
+            'gnu99': {'args': ['-std=gnu99'], 'suites': suites},
+            'atomic-fallback': {
+                'args': ['-DPF_ATOMIC_NONE'],
+                'suites': ['atomic'],
+            },
+        }
+    endif
+
+    foreach name, variant : variants
+        exe = executable(
+            'cpolyfill-test-' + name,
+            install: false,
+            dependencies: test_deps,
+            sources: test_sources,
+            c_args: test_args + variant['args'],
+        )
+
+        prefix = name == 'default' ? 'cpolyfill' : 'cpolyfill-' + name
+        foreach suite : variant['suites']
+            test(
+                prefix / suite,
+                exe,
+                args: ['--tap', suite],
+                protocol: 'tap',
+                suite: [name, suite],
+                timeout: 120,
+            )
+        endforeach
+    endforeach
+
+    # Every header on its own: it compiles, and links when used twice.
+    python = find_program('python3', 'python', required: false)
+    if python.found()
+        checker_args = [
+            files('test/check_headers.py'),
+            '--include', meson.current_source_dir() / 'include',
+            '--style', is_msvc ? 'msvc' : 'gcc',
+        ]
+        foreach part : cc.cmd_array()
+            checker_args += ['--cc', part]
+        endforeach
+        if is_windows and not is_msvc
+            checker_args += ['--lib=-lws2_32', '--lib=-lole32', '--lib=-lshell32', '--lib=-lnetapi32']
+        elif not is_windows
+            checker_args += ['--lib=-lpthread', '--lib=-ldl']
+        endif
+        if get_option('known_bugs')
+            checker_args += '--known-bugs'
+        endif
+        test('cpolyfill/headers', python, args: checker_args, suite: ['headers'], timeout: 600)
+    endif
 endif
 
 pkg = import('pkgconfig')
