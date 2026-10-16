@@ -48,6 +48,7 @@ extern "C" {
     #include <poll.h>
     #include <sys/socket.h>
     #include <sys/types.h>
+    #include <sys/un.h>
     #include <unistd.h>
     #define PF_INVALID_SOCKET -1
 #endif
@@ -481,6 +482,36 @@ PF_API const char *pf_inet_ntop(
 
 PF_API int pf_inet_pton(int af, const char *src, void *dst) {
     return inet_pton(af, src, dst);
+}
+
+PF_API pf_sock_t pf_sock_open_un(const char *path) {
+#ifdef _WIN32
+    (void)path;
+    return PF_INVALID_SOCKET;
+#else
+    pf_sock_t sock = pf_sock_open(AF_UNIX, SOCK_STREAM, 0);
+
+    if (sock == PF_INVALID_SOCKET)
+        return PF_INVALID_SOCKET;
+
+    struct sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+
+    if (strlen(path) >= sizeof(addr.sun_path)) {
+        pf_sock_close(sock);
+        return PF_INVALID_SOCKET;
+    }
+
+    strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
+
+    if (pf_sock_connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        pf_sock_close(sock);
+        return PF_INVALID_SOCKET;
+    }
+
+    return sock;
+#endif
 }
 
 #ifdef __cplusplus
