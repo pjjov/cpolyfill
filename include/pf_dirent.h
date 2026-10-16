@@ -83,23 +83,23 @@ typedef struct DIR {
 PF_API DIR *opendir(const char *path) {
     errno = 0;
     if (!path) {
-        errno = PF_DE_ENOENT;
+        errno = -PF_DE_ENOENT;
         return NULL;
     }
 
     size_t length = strnlen(path, MAX_PATH - 1);
     if (length == 0) {
-        errno = PF_DE_ENOENT;
+        errno = -PF_DE_ENOENT;
         return NULL;
     }
     if (length == MAX_PATH - 1) {
-        errno = PF_DE_ENAMETOOLONG;
+        errno = -PF_DE_ENAMETOOLONG;
         return NULL;
     }
 
     DIR *dir = PF_MALLOC(sizeof(DIR) + length + 3);
     if (!dir) {
-        errno = PF_DE_ENOMEM;
+        errno = -PF_DE_ENOMEM;
         return NULL;
     }
 
@@ -114,8 +114,8 @@ PF_API DIR *opendir(const char *path) {
 
     dir->handle = FindFirstFile(dir->path, &dir->find);
     if (dir->handle == INVALID_HANDLE_VALUE) {
-        errno = GetLastError() == ERROR_FILE_NOT_FOUND ? PF_DE_ENOENT
-                                                       : PF_DE_EIO;
+        errno = GetLastError() == ERROR_FILE_NOT_FOUND ? -PF_DE_ENOENT
+                                                       : -PF_DE_EIO;
         PF_FREE(dir);
         return NULL;
     }
@@ -127,7 +127,7 @@ PF_API DIR *opendir(const char *path) {
 
 PF_API int closedir(DIR *dir) {
     if (!dir) {
-        errno = PF_DE_EBADF;
+        errno = -PF_DE_EBADF;
         return -1;
     }
 
@@ -136,7 +136,7 @@ PF_API int closedir(DIR *dir) {
 
     if (dir->handle != INVALID_HANDLE_VALUE) {
         if (!FindClose(dir->handle)) {
-            errno = PF_DE_EIO;
+            errno = -PF_DE_EIO;
             PF_FREE(dir);
             return -1;
         }
@@ -150,7 +150,7 @@ PF_API int readdir_r(DIR *dir, struct dirent *ent, struct dirent **result) {
     errno = 0;
     if (!dir || !ent || !result || dir->handle == INVALID_HANDLE_VALUE) {
         *result = NULL;
-        return !dir ? PF_DE_EBADF : PF_DE_EINVAL;
+        return !dir ? -PF_DE_EBADF : -PF_DE_EINVAL;
     }
 
     if (dir->pos > 0) {
@@ -160,12 +160,12 @@ PF_API int readdir_r(DIR *dir, struct dirent *ent, struct dirent **result) {
                 return 0;
             }
 
-            return PF_DE_EINVAL;
+            return -PF_DE_EINVAL;
         }
     }
 
     ent->d_ino = 0;
-    strncpy(ent->d_name, dir->find.cFilename, MAX_PATH);
+    strncpy(ent->d_name, dir->find.cFileName, MAX_PATH);
     ent->d_name[MAX_PATH] = '\0';
 
     #ifndef PF_KEEP_BACKSLASHES
@@ -178,14 +178,14 @@ PF_API int readdir_r(DIR *dir, struct dirent *ent, struct dirent **result) {
 
 PF_API struct dirent *readdir(DIR *dir) {
     if (!dir) {
-        errno = PF_DE_EBADF;
+        errno = -PF_DE_EBADF;
         return NULL;
     }
 
     if (!dir->ent) {
         dir->ent = PF_MALLOC(sizeof(struct dirent));
         if (!dir->ent) {
-            errno = PF_DE_ENOMEM;
+            errno = -PF_DE_ENOMEM;
             return NULL;
         }
     }
@@ -223,7 +223,7 @@ typedef int(pf_iterdir_fn)(const struct dirent *entry, void *user_data);
 
 PF_API int pf_iterdir(const char *path, pf_iterdir_fn *callback, void *user) {
     if (!callback) {
-        errno = PF_DE_EINVAL;
+        errno = -PF_DE_EINVAL;
         return -1;
     }
 
