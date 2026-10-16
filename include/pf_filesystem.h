@@ -134,15 +134,15 @@ PF_API int pf__fs_copy(char *buf, size_t size, const char *src) {
     size_t len;
 
     if (!src)
-        return -PF_FS_EINVAL;
+        return PF_FS_EINVAL;
 
     len = strlen(src);
 
     if (len + 1 > size)
-        return -PF_FS_ERANGE;
+        return PF_FS_ERANGE;
 
     if (!buf)
-        return -PF_FS_EINVAL;
+        return PF_FS_EINVAL;
 
     memcpy(buf, src, len + 1);
     return (int)len;
@@ -161,9 +161,9 @@ PF_API int pf__fs_copy_join(
     size_t total = dlen + (need_sep ? 1 : 0) + llen;
 
     if (total + 1 > size)
-        return -PF_FS_ERANGE;
+        return PF_FS_ERANGE;
     if (!buf)
-        return -PF_FS_EINVAL;
+        return PF_FS_EINVAL;
 
     memcpy(buf, dir, dlen);
     if (need_sep) {
@@ -184,7 +184,7 @@ PF_API int mkdir(const char *path, int mode) {
     (void)mode;
     errno = 0;
     if (!path) {
-        errno = PF_FS_ENOENT;
+        errno = -PF_FS_ENOENT;
         return -1;
     }
 
@@ -192,13 +192,13 @@ PF_API int mkdir(const char *path, int mode) {
         DWORD err = GetLastError();
         switch (err) {
         case ERROR_ALREADY_EXISTS:
-            errno = PF_FS_EEXIST;
+            errno = -PF_FS_EEXIST;
             break;
         case ERROR_PATH_NOT_FOUND:
-            errno = PF_FS_ENOENT;
+            errno = -PF_FS_ENOENT;
             break;
         default:
-            errno = PF_FS_EIO;
+            errno = -PF_FS_EIO;
             break;
         }
         return -1;
@@ -210,7 +210,7 @@ PF_API int mkdir(const char *path, int mode) {
 PF_API int rmdir(const char *path) {
     errno = 0;
     if (!path) {
-        errno = PF_FS_ENOENT;
+        errno = -PF_FS_ENOENT;
         return -1;
     }
 
@@ -218,14 +218,14 @@ PF_API int rmdir(const char *path) {
         DWORD err = GetLastError();
         switch (err) {
         case ERROR_DIR_NOT_EMPTY:
-            errno = PF_FS_ENOTEMPTY;
+            errno = -PF_FS_ENOTEMPTY;
             break;
         case ERROR_FILE_NOT_FOUND:
         case ERROR_PATH_NOT_FOUND:
-            errno = PF_FS_ENOENT;
+            errno = -PF_FS_ENOENT;
             break;
         default:
-            errno = PF_FS_EIO;
+            errno = -PF_FS_EIO;
             break;
         }
         return -1;
@@ -237,7 +237,7 @@ PF_API int rmdir(const char *path) {
 PF_API int chdir(const char *path) {
     errno = 0;
     if (!path) {
-        errno = PF_FS_ENOENT;
+        errno = -PF_FS_ENOENT;
         return -1;
     }
 
@@ -257,7 +257,7 @@ PF_API char *getcwd(char *buf, size_t size) {
 
     DWORD needed = GetCurrentDirectoryA(0, NULL);
     if (needed == 0) {
-        errno = PF_FS_EIO;
+        errno = -PF_FS_EIO;
         return NULL;
     }
 
@@ -267,12 +267,12 @@ PF_API char *getcwd(char *buf, size_t size) {
         size = size ? size : (size_t)needed;
         buf = PF_MALLOC(size);
         if (!buf) {
-            errno = PF_FS_ENOMEM;
+            errno = -PF_FS_ENOMEM;
             return NULL;
         }
         allocated = 1;
     } else if (size < (size_t)needed) {
-        errno = PF_FS_ERANGE;
+        errno = -PF_FS_ERANGE;
         return NULL;
     }
 
@@ -280,7 +280,7 @@ PF_API char *getcwd(char *buf, size_t size) {
     if (written == 0 || written > size) {
         if (allocated)
             PF_FREE(buf);
-        errno = PF_FS_EIO;
+        errno = -PF_FS_EIO;
         return NULL;
     }
 
@@ -309,7 +309,7 @@ PF_API int pf_homedir_unix(const char *username, char *buf, size_t size) {
         char stackbuf[4096];
         int rc = getpwuid_r(getuid(), &pwbuf, stackbuf, sizeof(stackbuf), &pw);
         if (rc != 0 || !pw)
-            return -PF_FS_ENOENT;
+            return PF_FS_ENOENT;
         return pf__fs_copy(buf, size, pw->pw_dir);
     }
 
@@ -318,7 +318,7 @@ PF_API int pf_homedir_unix(const char *username, char *buf, size_t size) {
     char stackbuf[4096];
     int rc = getpwnam_r(username, &pwbuf, stackbuf, sizeof(stackbuf), &pw);
     if (rc != 0 || !pw)
-        return -PF_FS_ENOENT;
+        return PF_FS_ENOENT;
     return pf__fs_copy(buf, size, pw->pw_dir);
 }
 #endif
@@ -338,21 +338,21 @@ PF_API int pf_homedir_windows(const char *username, char *buf, size_t size) {
                 "USERPROFILE", envbuf, sizeof(envbuf)
             );
             if (n == 0 || n >= sizeof(envbuf))
-                return -PF_FS_ENOENT;
+                return PF_FS_ENOENT;
             return pf__fs_copy(buf, size, envbuf);
         }
 
         BOOL ok = GetUserProfileDirectoryW(tok, wpath, &wsize);
         CloseHandle(tok);
         if (!ok)
-            return -PF_FS_ENOENT;
+            return PF_FS_ENOENT;
 
         char narrow[MAX_PATH * 2];
         int n = WideCharToMultiByte(
             CP_UTF8, 0, wpath, -1, narrow, sizeof(narrow), NULL, NULL
         );
         if (n <= 0)
-            return -PF_FS_ENOENT;
+            return PF_FS_ENOENT;
         return pf__fs_copy(buf, size, narrow);
     }
 
@@ -366,7 +366,7 @@ PF_API int pf_homedir_windows(const char *username, char *buf, size_t size) {
    */
     wchar_t wuser[256];
     if (MultiByteToWideChar(CP_UTF8, 0, username, -1, wuser, 256) <= 0)
-        return -PF_FS_EINVAL;
+        return PF_FS_EINVAL;
 
     USER_INFO_3 *info = NULL;
     NET_API_STATUS st = NetUserGetInfo(NULL, wuser, 3, (LPBYTE *)&info);
@@ -385,7 +385,7 @@ PF_API int pf_homedir_windows(const char *username, char *buf, size_t size) {
             );
             NetApiBufferFree(info);
             if (n <= 0)
-                return -PF_FS_ENOENT;
+                return PF_FS_ENOENT;
             return pf__fs_copy(buf, size, narrow);
         }
         NetApiBufferFree(info);
@@ -440,7 +440,7 @@ PF_API int pf_known_folder(char *buf, size_t size, REFKNOWNFOLDERID id) {
     PWSTR wpath = NULL;
     HRESULT hr = SHGetKnownFolderPath(id, 0, NULL, &wpath);
     if (FAILED(hr) || !wpath)
-        return -PF_FS_ENOENT;
+        return PF_FS_ENOENT;
 
     char narrow[MAX_PATH * 2];
     int n = WideCharToMultiByte(
@@ -448,7 +448,7 @@ PF_API int pf_known_folder(char *buf, size_t size, REFKNOWNFOLDERID id) {
     );
     CoTaskMemFree(wpath);
     if (n <= 0)
-        return -PF_FS_ENOENT;
+        return PF_FS_ENOENT;
 
     return pf__fs_copy(buf, size, narrow);
 }
@@ -496,7 +496,7 @@ PF_API int pf_cachedir(char *buf, size_t size) {
     char tmp[MAX_PATH];
     DWORD n = GetTempPathA(sizeof(tmp), tmp);
     if (n == 0 || n >= sizeof(tmp))
-        return -PF_FS_ENOENT;
+        return PF_FS_ENOENT;
     /* strip trailing backslash for consistency with other dirs */
     if (n > 0 && tmp[n - 1] == '\\')
         tmp[n - 1] = '\0';
@@ -524,7 +524,7 @@ PF_API int pf_runtimedir(char *buf, size_t size) {
     char tmp[MAX_PATH];
     DWORD n = GetTempPathA(sizeof(tmp), tmp);
     if (n == 0 || n >= sizeof(tmp))
-        return -PF_FS_ENOENT;
+        return PF_FS_ENOENT;
     if (n > 0 && tmp[n - 1] == '\\')
         tmp[n - 1] = '\0';
     return pf__fs_copy(buf, size, tmp);
@@ -550,14 +550,14 @@ PF_API int pf_parse_user_dirs_dirs(const char *key, char *out, size_t outsize) {
     char filepath[4200];
     if (pf__fs_copy_join(filepath, sizeof(filepath), confpath, "user-dirs.dirs")
         < 0)
-        return -PF_FS_ERANGE;
+        return PF_FS_ERANGE;
 
     FILE *f = fopen(filepath, "r");
     if (!f)
-        return -PF_FS_ENOENT;
+        return PF_FS_ENOENT;
 
     char line[4096];
-    int found = -PF_FS_ENOENT;
+    int found = PF_FS_ENOENT;
 
     while (fgets(line, sizeof(line), f)) {
         char *p = line;
@@ -613,7 +613,7 @@ PF_API int pf_parse_user_dirs_dirs(const char *key, char *out, size_t outsize) {
 }
 
 PF_API int pf_userdir_unix(int kind, char *buf, size_t size) {
-    static_assert(
+    pf_static_assert(
         PF__USERDIR_COUNT == 9, "Update below tables if enum changed."
     );
 
@@ -633,15 +633,15 @@ PF_API int pf_userdir_unix(int kind, char *buf, size_t size) {
     };
 
     if (kind < 0 || (size_t)kind >= PF__USERDIR_COUNT)
-        return -PF_FS_EINVAL;
+        return PF_FS_EINVAL;
 
     const char *key = pf_xdg_user_key[kind];
 
     if (key) {
         int r = pf_parse_user_dirs_dirs(key, buf, size);
-        if (r >= 0 || r == -PF_FS_ERANGE)
+        if (r >= 0 || r == PF_FS_ERANGE)
             return r;
-        /* -PF_FS_ENOENT (no config file / key missing): fall through to default */
+        /* PF_FS_ENOENT (no config file / key missing): fall through to default */
     }
 
     char home[4096];
@@ -685,7 +685,7 @@ PF_API int pf_userdir_windows(int kind, char *buf, size_t size) {
         return pf__fs_copy_join(buf, size, docs, "Projects");
     }
     default:
-        return -PF_FS_EINVAL;
+        return PF_FS_EINVAL;
     }
 }
 
