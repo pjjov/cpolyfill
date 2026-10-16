@@ -164,7 +164,7 @@ enum pf_errno {
     PF_ENOTRECOVERABLE = 131, /* State not recoverable */
     PF_ERFKILL = 132, /* Operation not possible due to RF-kill */
     PF_EHWPOISON = 133, /* Memory page has hardware error */
-    PF_ENOTSUP = 134, /* Not supported parameter or option */
+    PF_ENOTSUP = 95, /* Operation not supported (same as PF_EOPNOTSUPP) */
 };
 
 #ifdef __cplusplus
