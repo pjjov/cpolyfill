@@ -254,6 +254,8 @@ typedef struct pf_daemon_t {
     pf_daemon_error_info_t error;
 } pf_daemon_t;
 
+PF_API void pf_daemon_stop(pf_daemon_t *daemon);
+
 #ifdef _WIN32
 
     #include <windows.h>
