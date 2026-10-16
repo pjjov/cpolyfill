@@ -109,7 +109,7 @@ PF_API int pf__sem_error_map(DWORD err) {
     switch (err) {
         /* clang-format off */
     case ERROR_INVALID_HANDLE:      errno = PF_SEM_EINVAL; break;
-    case ERROR_ACCESS_DENIED:       errno = PF_SEM_EACCES; break;
+    case ERROR_ACCESS_DENIED:       errno = PF_SEM_EACCESS; break;
     case ERROR_ALREADY_EXISTS:      errno = PF_SEM_EEXIST; break;
     case ERROR_FILE_NOT_FOUND:      errno = PF_SEM_ENOENT; break;
     case ERROR_TOO_MANY_OPEN_FILES: errno = PF_SEM_EMFILE; break;
@@ -268,7 +268,7 @@ PF_API int sem_unlink(const char *name) {
 
     if (!h) {
         DWORD err = GetLastError();
-        int e = (err == ERROR_FILE_NOT_FOUND) ? PF_SEM_ENOENT : PF_SEM_EACCES;
+        int e = (err == ERROR_FILE_NOT_FOUND) ? PF_SEM_ENOENT : PF_SEM_EACCESS;
         return pf__sem_error(e);
     }
 
