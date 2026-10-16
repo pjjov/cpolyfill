@@ -249,8 +249,14 @@ PF_API double pf_cli_now(void) {
 #else
     struct timespec ts;
 
+    #ifdef CLOCK_MONOTONIC
+    /* timespec_get needs C11, while this is available everywhere else. */
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
+        return 0.0;
+    #else
     if (timespec_get(&ts, TIME_UTC) != TIME_UTC)
         return 0.0;
+    #endif
 
     return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
 #endif
