@@ -188,13 +188,13 @@ typedef pf_max_align_t max_align_t;
 #endif
 
 #if pf_has_builtin(__builtin_choose_expr) && !defined(PF_NO_IS_TYPE)
-    #define pf_if_type(type, exp1, exp2)                        \
-        __builtin_choose_expr(pf_is_type(type), (exp1), (exp2))
-    #define pf_if_not_type(type, exp1, exp2)                     \
-        __builtin_choose_expr(!pf_is_type(type), (exp1), (exp2))
+    #define pf_if_type(type, expr, exp1, exp2)                        \
+        __builtin_choose_expr(pf_is_type(type, expr), (exp1), (exp2))
+    #define pf_if_not_type(type, expr, exp1, exp2)                     \
+        __builtin_choose_expr(!pf_is_type(type, expr), (exp1), (exp2))
 #else
-    #define pf_if_type(type, exp1, exp2) (exp1)
-    #define pf_if_not_type(type, exp1, exp2) (exp2)
+    #define pf_if_type(type, expr, exp1, exp2) (exp1)
+    #define pf_if_not_type(type, expr, exp1, exp2) (exp2)
 #endif
 
 #if !defined(pf_check_type) && !defined(PF_NO_CHECK_TYPE)
