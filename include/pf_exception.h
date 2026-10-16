@@ -16,15 +16,18 @@
     surround the entire program with 0 as masks for `module` and `code`.
 
     If the maximum number of handlers is reached, further calls will return
-    `NULL`. This can be changed by redefining `PF_ON_MAX_EXCEPTIONS`.
+    `NULL`, as if there was nothing to catch. Handlers are removed when they
+    catch an exception, or with `pf_try_end` when the `try` block completes.
+    The capacity of the stack is `PF_EXCEPTION_STACK_SIZE` (default 16).
 
     Libraries should expose functionality for setting the stack object.
     In multithreaded programs, there should be separate stacks for each
     thread (thread_local), or a single one protected by a lock.
 
     Reference API:
-    - pf_init_exception_stack(stack, capacity, msgBuffer, msgCapacity)
-    - pf_try_catch(stack, module, code)
+    - pf_init_exception_stack(stack, capacity, msgCapacity, msgBuffer)
+    - pf_try_catch(stack, module, code)  (a macro)
+    - pf_try_end(stack)
     - pf_throw(stack, code, msg)
     - pf_throwf(stack, code, fmt, ...)
     - pf_vthrowf(stack, code, fmt, args)
@@ -76,11 +79,7 @@ extern "C" {
 #endif
 
 #ifndef PF_EXCEPTION_STACK_SIZE
-    #define PF_EXCEPTION_STACK_SIZE
-#endif
-
-#ifndef PF_ON_MAX_EXCEPTIONS
-    #define PF_ON_MAX_EXCEPTIONS return NULL
+    #define PF_EXCEPTION_STACK_SIZE 16
 #endif
 
 #ifdef NDEBUG
@@ -99,7 +98,7 @@ typedef struct pf_exception_t {
 } pf_exception_t;
 
 typedef struct pf_exception_handler_t {
-    jmp_buf *jump;
+    jmp_buf jump;
     int module;
     int code;
 } pf_exception_handler_t;
@@ -133,26 +132,41 @@ PF_API void pf_init_exception_stack(
     }
 }
 
-PF_API pf_exception_t *pf_try_catch(
-    pf_exception_stack_t *stack, int module, int code
-) {
-    if (!stack)
-        return NULL;
+/* Registers a handler. Returns 0 if the stack is missing or full. */
+PF_API int pf__try_enter(pf_exception_stack_t *stack, int module, int code) {
+    int index;
 
-    if (stack->length >= stack->capacity)
-        PF_ON_MAX_EXCEPTIONS;
+    if (!stack || stack->length >= stack->capacity)
+        return 0;
 
-    jmp_buf jump;
+    index = stack->length++;
+    stack->buffer[index].module = module;
+    stack->buffer[index].code = code;
+    return 1;
+}
 
-    if (0 == setjmp(jump)) {
-        int index = stack->length++;
-        stack->buffer[index].jump = &jump;
-        stack->buffer[index].module = module;
-        stack->buffer[index].code = code;
-        return NULL;
-    }
+PF_API jmp_buf *pf__try_jump(pf_exception_stack_t *stack) {
+    return &stack->buffer[stack->length - 1].jump;
+}
 
+PF_API pf_exception_t *pf__try_current(pf_exception_stack_t *stack) {
     return &stack->current;
+}
+
+/* The handler needs `setjmp` to be called from the function that is trying,
+   as returning from it would invalidate the saved state. This is why
+   registering is a macro: it evaluates to NULL for the `try` block and to the
+   exception for the `catch` block. When the stack is full it is NULL too. */
+#define pf_try_catch(stack, module, code)                              \
+    (pf__try_enter((stack), (module), (code))                          \
+         ? (setjmp(*pf__try_jump(stack)) ? pf__try_current(stack) : NULL) \
+         : NULL)
+
+/* Unregisters the innermost handler, when the `try` block finished without
+   an exception. */
+PF_API void pf_try_end(pf_exception_stack_t *stack) {
+    if (stack && stack->length > 0)
+        stack->length--;
 }
 
 PF_API int pf_rethrow(pf_exception_stack_t *stack, pf_exception_t *e) {
@@ -162,7 +176,7 @@ PF_API int pf_rethrow(pf_exception_stack_t *stack, pf_exception_t *e) {
     if (&stack->current != e)
         stack->current = *e;
 
-    for (int i = stack->length - 1; i > 0; i--) {
+    for (int i = stack->length - 1; i >= 0; i--) {
         pf_exception_handler_t *handler = &stack->buffer[i];
         if (handler->module != 0 && handler->module != e->module)
             continue;
@@ -170,7 +184,7 @@ PF_API int pf_rethrow(pf_exception_stack_t *stack, pf_exception_t *e) {
             continue;
 
         stack->length = i;
-        longjmp(*handler->jump, 1);
+        longjmp(handler->jump, 1);
     }
 
     return e->code;
@@ -213,9 +227,9 @@ PF_API int pf__vthrowf(
 
     const char *msg = fmt;
 
-    if (!stack->msgBuffer || stack->msgCapacity <= 0) {
-        int len = vsnprintf(stack->msgBuffer, stack->msgCapacity, fmt, args);
-        if (len >= 0 || len < stack->msgCapacity)
+    if (stack->msgBuffer && stack->msgCapacity > 0) {
+        /* Long messages are cut, but always terminated. */
+        if (vsnprintf(stack->msgBuffer, stack->msgCapacity, fmt, args) >= 0)
             msg = stack->msgBuffer;
     }
 
