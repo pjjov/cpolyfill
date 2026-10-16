@@ -88,7 +88,7 @@ PF_API int pf__pipe_fix_path(const char *path, char *buf) {
     if (len >= PF_PIPE_MAX_NAME)
         return PF_PIPE_FALSE;
 
-    const char *curr = &buf[9];
+    char *curr = &buf[9];
     while ((curr = strchr(curr, '\\')))
         *curr = '/';
 
@@ -187,7 +187,8 @@ PF_API int pf_pipe_connect(pf_pipe_t *pipe) {
         return PF_PIPE_EINVAL;
 
 #ifdef _WIN32
-    if (!ConnectNamedPipe(pipe->handle))
+    if (!ConnectNamedPipe(pipe->handle, NULL)
+        && GetLastError() != ERROR_PIPE_CONNECTED)
         return PF_PIPE_EIO;
     return PF_PIPE_OK;
 #else
