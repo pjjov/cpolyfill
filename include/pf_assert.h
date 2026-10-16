@@ -137,7 +137,7 @@ static inline pf_bool pf_check_fail(
     #define pf_check_print pf_check_always
 #else
     #define pf_assert_print(...) ((void)0)
-    #define pf_check(...) ((__VA_ARGS__) ? 1 : 0)
+    #define pf_check_print(msg, ...) ((__VA_ARGS__) ? 1 : 0)
 #endif
 
 #define pf_assert(...)                                                   \
@@ -209,7 +209,7 @@ static inline pf_bool pf_check_fail(
     #define assert pf_assert;
 #endif
 
-#if __STDC_VERSION__ < 201112L
+#if __STDC_VERSION__ < 201112L && !defined(static_assert)
     #define static_assert(expr, msg) assert((expr) && (msg))
 #endif
 
