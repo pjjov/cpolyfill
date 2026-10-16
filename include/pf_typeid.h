@@ -267,7 +267,7 @@ PF_API uintmax_t pf_type_int_max(int type) {
     case PF_TYPE_##u:            \
         return u##_MAX;
 
-    switch (type | 1) {
+    switch (type) {
         PF_TYPEID(PF__X, PF__X, PF__XIGNORE, PF__XIGNORE, PF__XIGNORE)
     default:
         pf__unreachable();
@@ -285,7 +285,7 @@ PF_API intmax_t pf_type_int_min(int type) {
     case PF_TYPE_##u:             \
         return u##_MIN;
 
-    switch (type | 1) {
+    switch (type) {
         PF_TYPEID(PF__XS, PF__XIGNORE, PF__XIGNORE, PF__XIGNORE, PF__XIGNORE)
     default:
         pf__unreachable();
@@ -387,21 +387,19 @@ PF_API int pf_type_int_as_base(int type) {
     if (!pf_type_is_integer(type))
         return PF_TYPE_ERROR;
 
-    uintmax_t max = pf_type_int_max(type);
+    /* The first of the basic types with the same size and signedness. */
+    size_t size = pf_type_int_size(type);
     int sign = type & 1;
 
-    if (sign)
-        max = max * 2 + 1;
-
-    if (max == UCHAR_MAX)
-        return PF_TYPE_CHAR | sign;
-    if (max == USHRT_MAX)
+    if (size == sizeof(char))
+        return PF_TYPE_SCHAR | sign;
+    if (size == sizeof(short))
         return PF_TYPE_SHRT | sign;
-    if (max == UINT_MAX)
+    if (size == sizeof(int))
         return PF_TYPE_INT | sign;
-    if (max == ULONG_MAX)
+    if (size == sizeof(long))
         return PF_TYPE_LONG | sign;
-    if (max == ULLONG_MAX)
+    if (size == sizeof(long long))
         return PF_TYPE_LLONG | sign;
     return PF_TYPE_ERROR;
 }
