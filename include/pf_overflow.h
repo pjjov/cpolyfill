@@ -179,6 +179,10 @@ typedef int pf_bool;
         ckd_sub(out, a, b)
     #define PF__IMPL_OF_MUL(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
         ckd_mul(out, a, b)
+    /* The checked operations store the (wrapped) result themselves. */
+    #define PF__IMPL_OF_STORE_ADD(m_type, m_op)
+    #define PF__IMPL_OF_STORE_SUB(m_type, m_op)
+    #define PF__IMPL_OF_STORE_MUL(m_type, m_op)
 #elif defined(_MSC_VER)
     #include <intsafe.h>
     #define PF__IMPL_OF_ADD(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
@@ -187,25 +191,37 @@ typedef int pf_bool;
         m_msvc##Sub(a, b, out)
     #define PF__IMPL_OF_MUL(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
         m_msvc##Mult(a, b, out)
+    #define PF__IMPL_OF_STORE_ADD(m_type, m_op)
+    #define PF__IMPL_OF_STORE_SUB(m_type, m_op)
+    #define PF__IMPL_OF_STORE_MUL(m_type, m_op)
 #else
+    /* Signed overflow is undefined, so wrap around in unsigned arithmetic. */
+    #define PF__OF_WRAP(m_type, m_op) \
+        *out = (m_type)((uintmax_t)a m_op (uintmax_t)b);
     #if pf_has_builtin(__builtin_add_overflow)
         #define PF__IMPL_OF_ADD(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
             __builtin_add_overflow(a, b, out)
+        #define PF__IMPL_OF_STORE_ADD(m_type, m_op)
     #else
+        #define PF__IMPL_OF_STORE_ADD(m_type, m_op) PF__OF_WRAP(m_type, m_op)
         #define PF__IMPL_OF_ADD(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
             (b > 0 && a > (m_max) - b) || (b < 0 && a < (m_min) - b)
     #endif
     #if pf_has_builtin(__builtin_sub_overflow)
         #define PF__IMPL_OF_SUB(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
             __builtin_sub_overflow(a, b, out)
+        #define PF__IMPL_OF_STORE_SUB(m_type, m_op)
     #else
+        #define PF__IMPL_OF_STORE_SUB(m_type, m_op) PF__OF_WRAP(m_type, m_op)
         #define PF__IMPL_OF_SUB(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
             (b > 0 && a < (m_min) + b) || (b < 0 && a > (m_max) + b)
     #endif
     #if pf_has_builtin(__builtin_mul_overflow)
         #define PF__IMPL_OF_MUL(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
             __builtin_mul_overflow(a, b, out)
+        #define PF__IMPL_OF_STORE_MUL(m_type, m_op)
     #else
+        #define PF__IMPL_OF_STORE_MUL(m_type, m_op) PF__OF_WRAP(m_type, m_op)
         #define PF__IMPL_OF_MUL(m_max, m_min, m_msvc, m_pre, m_post, m_type) \
             (a > (m_max) / b || a < (m_min) / b)
     #endif
@@ -213,7 +229,7 @@ typedef int pf_bool;
 
 #define PF__IMPL_OF(m_def, m_type, m_name, m_impl, m_op)     \
     PF_API pf_bool m_name(m_type a, m_type b, m_type *out) { \
-        *out = a m_op b;                                     \
+        PF__IMPL_OF_STORE_##m_impl(m_type, m_op)             \
         return m_def(PF__IMPL_OF_##m_impl, m_type);          \
     }
 
