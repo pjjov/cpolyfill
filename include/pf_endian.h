@@ -25,6 +25,10 @@
 #ifndef POLYFILL_ENDIAN
 #define POLYFILL_ENDIAN
 
+#ifndef PF_API
+    #define PF_API static inline
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -146,7 +150,7 @@ PF__IMPL_LE(le64toh, 64)
 #endif
 
 #define PF__IMPL_X(m_name, m_check, m_f16, m_f32, m_f64)                   \
-    void m_name(void *out, const void *in, size_t size) {                  \
+    PF_API void m_name(void *out, const void *in, size_t size) {           \
         if (size == 2)                                                     \
             *(uint16_t *)out = m_f16(*(const uint16_t *)in);               \
         if (size == 4)                                                     \
@@ -165,7 +169,7 @@ PF__IMPL_LE(le64toh, 64)
 PF__IMPL_X(htobex, PF_BIG_ENDIAN, htobe16, htobe32, htobe64);
 PF__IMPL_X(htolex, !PF_BIG_ENDIAN, htole16, htole32, htole64);
 PF__IMPL_X(bextoh, PF_BIG_ENDIAN, be16toh, be32toh, be64toh);
-PF__IMPL_X(lextoh, !PF_BIG_ENDIAN, be16toh, be32toh, be64toh);
+PF__IMPL_X(lextoh, !PF_BIG_ENDIAN, le16toh, le32toh, le64toh);
 
 #undef PF__IMPL_X
 
