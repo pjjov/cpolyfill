@@ -231,7 +231,7 @@ static int pf__file_vprintf(
     pf_stream_t *stream, const char *format, va_list vlist
 ) {
     FILE *file = stream->state.ptr[0];
-    return vfprintf(file, format, vlist);
+    return vfprintf(file, format, vlist) < 0 ? PF_STREAM_EIO : PF_STREAM_OK;
 }
 
 PF_API int pf_stream_file(pf_stream_t *out, FILE *file) {
