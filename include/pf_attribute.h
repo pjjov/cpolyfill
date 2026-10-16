@@ -33,7 +33,7 @@ extern "C" {
     #define PF_STD_C23
 #endif
 
-#ifdef __attribute__
+#if defined(__GNUC__) || defined(__clang__) || defined(__attribute__)
     #define pf_attribute __attribute__
 #endif
 
@@ -105,7 +105,7 @@ extern "C" {
 
 #ifndef PF_UNUSED
     #ifdef PF_STD_C23
-        #define PF_UNUSED [[unused]]
+        #define PF_UNUSED [[maybe_unused]]
     #elif pf_has_attribute(unused)
         #define PF_UNUSED pf_attribute((unused))
     #else
