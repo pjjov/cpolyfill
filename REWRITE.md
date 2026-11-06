@@ -11,6 +11,21 @@ library (v1, `include/pf_*.h`) into a linkable meson library (v2,
 that works on the rewrite, and keep it up to date as you go: tick off
 steps, record decisions, and note anything the next session must know.
 
+## Resuming in a new session
+
+1. `git switch v2`, read this whole file.
+2. Look at [Steps](#steps) for the first unchecked step, and at
+   [Current state and notes](#current-state-and-notes).
+3. If the step has an approved spec under
+   [Approved step specs](#approved-step-specs), implement it. Otherwise
+   read the v1 sources of its modules and propose an API first.
+4. Build and test: `meson setup build && meson test -C build`. Before
+   committing, also run a Clang build with
+   `-Db_sanitize=address,undefined -Db_lundef=false`, and a
+   `-Ddefault_library=static` build.
+5. When a step is done: tick it, rewrite "Current state and notes",
+   move its spec into a short summary, log decisions, commit.
+
 ## How to work on the rewrite
 
 - Work happens on the `v2` branch. `main` stays on v1 (1.7.x).
@@ -115,9 +130,21 @@ not portable).
 
 ### Conventions
 
-- Naming: functions `pf_snake_case`, types `pf_name_t`, macros and
-  constants `PF_UPPER`, internals `pf__` / `PF__`. Struct fields are
-  snake_case. Object lifetime is `pf_<x>_init` / `pf_<x>_free`.
+- Naming: functions `pf_snake_case`, types `pf_name_t`, internals
+  `pf__` / `PF__`. Struct fields are snake_case. Object lifetime is
+  `pf_<x>_init` / `pf_<x>_free`.
+- **All macros are upper case** `PF_*`, function-like ones included
+  (`PF_CONTAINER_OF`, `PF_IS_TYPE`, not v1's `pf_container_of`). The only
+  lower-case macros are standard names mapped under the opt-in.
+- **Language keywords count as standard names.** `typeof`, `alignas`,
+  `alignof`, `bool`, `static_assert`, `thread_local`, `noreturn`,
+  `unreachable`, `nullptr`, ... are always available as `PF_TYPEOF`,
+  `PF_ALIGNAS`, `PF_STATIC_ASSERT`, `PF_THREAD_LOCAL`,
+  `PF_UNREACHABLE()`, `PF_NULLPTR`, ... and the keyword names themselves
+  are only defined under the standard-name opt-in (v1 defined them
+  unconditionally).
+- No `pf_bool`. C99 is the baseline, so public APIs use `bool` from
+  `<stdbool.h>` (or `int` where a tri-state/error is returned).
 - Errors: new `pf_*` functions return `int`: `0` on success, a negative
   `PF_E*` code on failure. Functions standing in for a standard function
   keep that standard's convention (e.g. `-1` and `errno`).
@@ -179,12 +206,12 @@ H = header-only (language layer), L = compiled (platform layer).
 | v2 header | From v1 | Layer | Planned changes and additions |
 |---|---|---|---|
 | `platform.h` | (new) | H | see [platform.h](#platformh) |
-| `attribute.h` | `pf_attribute.h` | H | + `PF_PRINTF(fmt, args)`, `PF_NONNULL`, `PF_PURE`, `PF_CONST`, `PF_HOT`, `PF_COLD`, `PF_ALWAYS_INLINE`, `PF_NOINLINE`, `PF_PACKED`, `PF_WEAK`, `PF_CONSTRUCTOR`, `PF_DESTRUCTOR` (MSVC via `.CRT$XCU`), `PF_MALLOC_LIKE`, `PF_RETURNS_NONNULL`, `PF_CLEANUP(fn)` |
-| `stdc.h` | `pf_types.h` (keywords) | H | `typeof`, `typeof_unqual`, `alignof`, `alignas` (fix passing a type), one-argument `static_assert`, `bool`, `thread_local`, `noreturn`, `unreachable()`, `nullptr`, `max_align_t`, `char8_t` |
-| `types.h` | `pf_types.h` (checks) | H | `pf_is_type`, `pf_check_type`, `pf_is_const`, + `pf_is_array`, `pf_is_pointer`, `pf_same_type` |
-| `macro.h` | `pf_macro.h` | H | single `container_of` / `ALIGN_*` (v1 duplicates them in two headers); + `PF_STRINGIFY`, `PF_CONCAT`, `PF_UNIQUE(name)`, `PF_NARGS(...)`, `PF_FOREACH`, `PF_LIKELY`, `PF_UNLIKELY`, `PF_ASSUME` |
-| `assert.h` | `pf_assert.h` | H+L | runtime failure handler; + `PF_DEBUG_ASSERT` |
-| `debug.h` | (new) | L | `pf_debugbreak()`, `pf_debugger_attached()`, `pf_backtrace()` |
+| `attribute.h` | `pf_attribute.h` | H | see [step 2 spec](#step-2-language-layer) |
+| `stdc.h` | `pf_types.h` (keywords) | H | see [step 2 spec](#step-2-language-layer) |
+| `types.h` | `pf_types.h` (checks) | H | see [step 2 spec](#step-2-language-layer) |
+| `macro.h` | `pf_macro.h` | H | see [step 2 spec](#step-2-language-layer) |
+| `assert.h` | `pf_assert.h` | H+L | see [step 2 spec](#step-2-language-layer) |
+| `debug.h` | (new) | L | see [step 2 spec](#step-2-language-layer) |
 | `bitwise.h` | `pf_bitwise.h` | H | keep implementation tiers; + C23 `<stdbit.h>` names when missing |
 | `overflow.h` | `pf_overflow.h` | H | + C23 `ckd_add` / `ckd_sub` / `ckd_mul`, using type-generic builtins where available |
 | `endian.h` | `pf_endian.h` | H | + `htobe16` / `le32toh` / ... on Windows and macOS; unaligned `pf_load_le32` / `pf_store_be64` helpers |
@@ -242,6 +269,109 @@ committed.
 - [ ] 9. Apps: `cli`, `argparse`, `daemon`, `test`, `exception`,
       `array`, `typeid`
 
+## Approved step specs
+
+Specs approved by the maintainer but not implemented yet. Once a step is
+done, replace its spec with a few lines in "Current state and notes".
+
+### Step 2: language layer
+
+Approved 2026-11-06. Header-only except the assert handler and `debug`.
+Follow the naming rules in [Conventions](#conventions) (upper-case
+macros, keywords only under `PF_STD_NAMES_STDC`).
+
+**`attribute.h`**
+- Keep v1's set: `PF_DEPRECATED(reason)`, `PF_FALLTHROUGH`,
+  `PF_NORETURN`, `PF_NODISCARD(reason)`, `PF_UNUSED`,
+  `PF_REPRODUCIBLE`, `PF_UNSEQUENCED`.
+- Add: `PF_PRINTF(fmt_index, args_index)`, `PF_NONNULL(...)`,
+  `PF_RETURNS_NONNULL`, `PF_PURE`, `PF_CONST`, `PF_MALLOC_LIKE`,
+  `PF_HOT`, `PF_COLD`, `PF_ALWAYS_INLINE`, `PF_NOINLINE`, `PF_PACKED`,
+  `PF_WEAK`, `PF_CONSTRUCTOR`, `PF_DESTRUCTOR` (MSVC through
+  `.CRT$XCU` sections), `PF_CLEANUP(fn)`.
+- Use the C23 `[[x]]` form only when compiling as C23 (`PF_STD_C23`, or
+  C++ with `__has_cpp_attribute`): GCC reports `__has_c_attribute` in
+  older modes where `[[ ]]` is not accepted. Otherwise `__attribute__`
+  or `__declspec`, otherwise nothing.
+- Every macro is written at the start of a declaration, which is valid
+  for both forms. Document placement in the header.
+
+**`stdc.h`** (keyword polyfills)
+- `PF_TYPEOF`, `PF_TYPEOF_UNQUAL`, `PF_ALIGNOF`, `PF_ALIGNAS`
+  (accepting a type or an expression, fixing v1's TODO),
+  `PF_STATIC_ASSERT(expr[, msg])`, `PF_THREAD_LOCAL`, `PF_NORETURN`
+  (keyword form; the attribute is in `attribute.h`, avoid a clash),
+  `PF_UNREACHABLE()`, `PF_NULLPTR`, `pf_max_align_t`, `pf_char8_t`.
+- `PF_STATIC_ASSERT` must be a real compile-time check on C99 (the
+  negative-array-size trick with a unique name). v1 fell back to a
+  runtime assert.
+- Availability macros (`PF_HAS_TYPEOF`, ...) where a fallback is not
+  possible.
+- With `PF_STD_NAMES` / `PF_STD_NAMES_STDC`: define `typeof`,
+  `typeof_unqual`, `alignof`, `alignas`, `static_assert`,
+  `thread_local`, `unreachable`, `nullptr`, `bool`/`true`/`false` (via
+  `<stdbool.h>`), only where the language lacks them.
+
+**`types.h`** (type checks)
+- `PF_IS_TYPE(type, expr)`, `PF_SAME_TYPE(a, b)`, `PF_IS_CONST(expr)`,
+  `PF_IS_ARRAY(expr)`, `PF_IS_POINTER(expr)`,
+  `PF_CHECK_TYPE(type, expr)` (compile error on mismatch, yields
+  `expr`), `PF_IF_TYPE(type, expr, a, b)`, `PF_IF_CONST(expr, a, b)`.
+- Prefer `_Generic` / `__builtin_types_compatible_p` /
+  `__builtin_choose_expr`. Where the compiler can't check, fall back to
+  a fixed constant and set `PF_HAS_TYPE_CHECKS` to 0 so callers know.
+- Reference: v1 `pf_types.h` (`git show main:include/pf_types.h`).
+
+**`macro.h`**
+- v1's set, upper case, defined once (v1 defined `container_of` and
+  `ALIGN_*` in two headers, differently): `PF_MIN`, `PF_MAX`, `PF_ABS`,
+  `PF_DIFF`, `PF_CLAMP`, `PF_SWAP`, `PF_OFFSET`, `PF_PTRDIFF`,
+  `PF_IS_ALIGNED`, `PF_ALIGN_PAD`, `PF_ALIGN_UP`, `PF_ALIGN_DOWN`,
+  `PF_FLAG_*`, `PF_BIT*`, `PF_MASK`, `PF_COUNTOF`, `PF_CONTAINER_OF`,
+  `PF_ENUM_GUARD`, `PF_EXPECT`, `PF_EXPECT_P`, `PF_ASSUME_ALIGNED`.
+- Add: `PF_STRINGIFY`, `PF_CONCAT`, `PF_UNIQUE(name)`, `PF_NARGS(...)`
+  (up to 64), `PF_LIKELY`, `PF_UNLIKELY`, `PF_ASSUME(expr)`.
+- `PF_COUNTOF` fails to compile when given a pointer (GCC/Clang).
+- Single-evaluation forms (statement expressions) on GNU compilers,
+  plain forms elsewhere, as in v1. v1's `PF_EXPECT` fallback expanded
+  to nothing, which drops the expression: fall back to `(expr)`.
+
+**`assert.h`**
+- `PF_ASSERT(expr)`, `PF_ASSERT_MSG(expr, fmt, ...)`: compiled out with
+  `NDEBUG`. `PF_ASSERT_ALWAYS(expr)`, `PF_ASSERT_ALWAYS_MSG(...)`: never
+  compiled out.
+- `PF_CHECK(expr)` (+ `_MSG`): asserts in debug builds, a plain boolean
+  condition with `NDEBUG` (v1's `pf_check`), for parameter validation.
+- Comparison variants that print both values on failure:
+  `PF_ASSERT_EQ` / `_NE` / `_LT` / `_LE` / `_GT` / `_GE` (integers),
+  `PF_ASSERT_STR_EQ`, `PF_ASSERT_MEM_EQ`, `PF_ASSERT_NULL`,
+  `PF_ASSERT_NOT_NULL`, and the same for `PF_CHECK_*`.
+- Messages show the expression unexpanded, as in v1.
+- Failure handler in the library: `pf_assert_handler_fn`,
+  `pf_set_assert_handler(fn)` returning the previous one,
+  `pf_assert_fail(...)` noreturn. The default handler prints what users
+  expect from `assert`: the glibc format
+  `prog: file:line: func: Assertion `expr' failed.` on stderr (with the
+  formatted message appended for `_MSG` variants), flushes, and calls
+  `abort()`. No backtrace by default; a custom handler can call
+  `pf_backtrace_print()`.
+- Under the opt-in, `assert` maps to `PF_ASSERT` and `static_assert` to
+  `PF_STATIC_ASSERT`. Fix v1 bugs: `#define assert pf_assert;` had a
+  stray semicolon, the memcmp/strcmp variants ended in `;`, and the
+  `static_assert` fallback was a runtime check.
+- Once done, replace `test/check.h`'s private `CHECK*` macros with
+  `PF_ASSERT_ALWAYS*`.
+
+**`debug.h`**
+- `pf_debugbreak()`: inline, `__builtin_debugtrap` / `__debugbreak` /
+  `raise(SIGTRAP)`.
+- In the library: `bool pf_debugger_attached(void)` (Linux
+  `/proc/self/status` TracerPid, macOS `sysctl` P_TRACED, BSD
+  `sysctl`, Windows `IsDebuggerPresent`), `int pf_backtrace(void **frames,
+  int max)`, `void pf_backtrace_print(FILE *out)` (execinfo where
+  available, else `_Unwind_Backtrace`; Windows
+  `CaptureStackBackTrace`; symbol names best effort).
+
 ## Current state and notes
 
 What exists after step 1:
@@ -274,6 +404,7 @@ Caveats:
 - The UTF-16 conversion is strict: unpaired surrogates in Windows file
   names are rejected with `PF_EILSEQ` (no WTF-8). Revisit in step 6 if
   needed.
+- `README.md` still describes v1. Rewrite it once the steps are done.
 - `PF_E*` keeps only the portable POSIX/C errno set; v1's Linux-only
   codes (STREAMS, Xenix, `EL2HLT`, ...) were dropped. Codes are the
   negated Linux values, `PF_EUNKNOWN` is -4095.
@@ -298,6 +429,11 @@ Caveats:
   instead of a new `pf_allocator_t`.
 - 2026-11-06: `PF_E*` codes moved into step 1.
 - 2026-11-06: The library is compiled as C11; headers support C99.
+- 2026-11-06: Step 2 spec approved. All macros upper case; language
+  keywords count as standard names (opt-in).
+- 2026-11-06: The default assert handler prints the conventional
+  (glibc-style) one-line message and aborts, no backtrace.
+- 2026-11-06: `pf_bool` is dropped; use `bool`.
 
 ## Open questions
 
