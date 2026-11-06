@@ -2,12 +2,14 @@
 # SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
 # SPDX-License-Identifier: Apache-2.0
 #
-# Checks that every header can be used on its own, the way a user copying a
-# single file into a project would use it:
+# Checks that every public header can be used on its own:
 #
-#   compile  the header is the only thing included, in several C standards
-#   link     two translation units include it and are linked together, which
-#            fails if the header defines something that is not static/inline
+#   compile  the header is the only thing included, in every supported C
+#            standard (strict and GNU) and in C++, with warnings as errors
+#            and -Wundef (all platform macros must be defined)
+#   link     two translation units include it and are linked together with
+#            the library, which fails if the header defines something that
+#            is not static/inline
 #
 # Headers with a known defect are expected to fail (reported as "xfail").
 # Pass --known-bugs to count those failures as errors.
@@ -21,32 +23,56 @@ import tempfile
 # header -> why it fails
 KNOWN = {}
 
-STANDARDS = {
-    'gcc': ['gnu99', 'gnu11', 'gnu17', None],
-    'msvc': [None],
+C_STANDARDS = {
+    'gcc': ['c99', 'gnu99', 'c11', 'gnu11', 'c17', 'gnu17', 'c23', 'gnu23'],
+    'msvc': [None, 'c11', 'c17'],
+}
+CXX_STANDARDS = {
+    'gcc': ['c++11', 'c++17', 'c++20'],
+    'msvc': ['c++17', 'c++20'],
 }
 
+GCC_WARNINGS = ['-Wall', '-Wextra', '-Wundef', '-Werror']
 
-def compile_command(cc, style, std, source):
+
+def compile_command(cc, style, std, source, includes, cxx=False):
     cmd = list(cc)
     if style == 'msvc':
-        cmd += ['/nologo', '/TC']
+        cmd += ['/nologo', '/TP' if cxx else '/TC', '/W4', '/WX']
         if std:
             cmd.append('/std:' + std)
-        cmd += ['/Zs', source]
-    else:
-        cmd += ['-Werror=implicit-function-declaration']
-        if std:
-            cmd.append('-std=' + std)
-        cmd += ['-fsyntax-only', source]
-    return cmd
+        cmd += ['/I' + inc for inc in includes]
+        return cmd + ['/Zs', source]
+    cmd += GCC_WARNINGS
+    if std:
+        cmd.append('-std=' + std)
+        if not std.startswith('gnu'):
+            cmd.append('-pedantic-errors')
+    if cxx:
+        cmd += ['-x', 'c++']
+    cmd += ['-I' + inc for inc in includes]
+    return cmd + ['-fsyntax-only', source]
 
 
-def link_command(cc, style, libs, a, b, exe):
+def link_command(cc, style, includes, libs, a, b, exe):
     cmd = list(cc)
     if style == 'msvc':
-        return cmd + ['/nologo', '/TC', a, b, '/Fe' + exe, '/link'] + libs
-    return cmd + ['-Werror=implicit-function-declaration', a, b, '-o', exe] + libs
+        cmd += ['/nologo', '/TC'] + ['/I' + inc for inc in includes]
+        return cmd + [a, b, '/Fe' + exe, '/link'] + libs
+    cmd += GCC_WARNINGS + ['-I' + inc for inc in includes]
+    return cmd + [a, b, '-o', exe] + libs
+
+
+def supported(cc, style, std, tmp, cxx=False):
+    """Whether the compiler accepts the standard at all."""
+    if not std:
+        return True
+    probe = os.path.join(tmp, 'probe.cpp' if cxx else 'probe.c')
+    write(probe, 'int main(void) { return 0; }\n')
+    flag = ('/std:' if style == 'msvc' else '-std=') + std
+    extra = ['/Zs'] if style == 'msvc' else ['-fsyntax-only']
+    ok, _ = run(list(cc) + [flag] + extra + [probe], tmp)
+    return ok
 
 
 def run(cmd, cwd):
@@ -72,77 +98,96 @@ def write(path, text):
         f.write(text)
 
 
-def check_header(args, tmp, header):
+def check_header(args, tmp, header, c_stds, cxx_stds):
     """Returns a list of (what, ok, output)."""
-    path = os.path.abspath(os.path.join(args.include, header)).replace('\\', '/')
+    include = '#include <cpolyfill/%s>\n' % header
     results = []
 
-    for std in STANDARDS[args.style]:
-        src = os.path.join(tmp, 'one.c')
-        write(src, '#include "%s"\n' % path)
-        ok, out = run(compile_command(args.cc, args.style, std, src), tmp)
+    source = os.path.join(tmp, 'only.c')
+    write(source, include + 'int main(void) { return 0; }\n')
+    for std in c_stds:
+        ok, out = run(compile_command(
+            args.cc, args.style, std, source, args.include), tmp)
         results.append(('compile ' + (std or 'default'), ok, out))
-        if not ok:
-            return results
+
+    if args.cxx:
+        source = os.path.join(tmp, 'only.cpp')
+        write(source, include + 'int main() { return 0; }\n')
+        for std in cxx_stds:
+            ok, out = run(compile_command(
+                args.cxx, args.style, std, source, args.include, cxx=True), tmp)
+            results.append(('compile ' + std, ok, out))
 
     a = os.path.join(tmp, 'a.c')
     b = os.path.join(tmp, 'b.c')
-    write(a, '#include "%s"\nint pf_other(void) { return 0; }\n' % path)
-    write(b, '#include "%s"\nint main(void) { return 0; }\n' % path)
-    ok, out = run(
-        link_command(args.cc, args.style, args.lib, a, b,
-                     os.path.join(tmp, 'link.exe')), tmp)
-    results.append(('link twice', ok, out))
-
-    if header == 'pf_assert.h':
-        # With NDEBUG, the checks become plain conditions.
-        write(a, '#define NDEBUG\n#include "%s"\n'
-                 'int main(void) { return pf_check(1) && !pf_check_false(1) '
-                 '? 0 : 1; }\n' % path)
-        ok, out = run(compile_command(args.cc, args.style, None, a), tmp)
-        results.append(('NDEBUG', ok, out))
+    write(a, include + 'int other(void);\nint main(void) { return other(); }\n')
+    write(b, include + 'int other(void) { return 0; }\n')
+    exe = os.path.join(tmp, 'linked.exe')
+    ok, out = run(link_command(
+        args.cc, args.style, args.include, args.lib + args.link_arg, a, b,
+        exe), tmp)
+    results.append(('link', ok, out))
     return results
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--include', required=True, help='directory of the headers')
-    ap.add_argument('--style', choices=['gcc', 'msvc'], default='gcc')
-    ap.add_argument('--known-bugs', action='store_true')
-    ap.add_argument('--lib', action='append', default=[],
-                    help='linker argument, can be repeated')
-    ap.add_argument('--cc', action='append', required=True,
-                    help='part of the compiler command, can be repeated')
-    args = ap.parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--cc', action='append', required=True,
+                        help='C compiler command, one argument per --cc')
+    parser.add_argument('--cxx', action='append', default=[],
+                        help='C++ compiler command, one argument per --cxx')
+    parser.add_argument('--style', choices=['gcc', 'msvc'], default='gcc')
+    parser.add_argument('--include', action='append', required=True,
+                        help='include directory (repeatable)')
+    parser.add_argument('--header', action='append', required=True,
+                        help='public header to check (repeatable)')
+    parser.add_argument('--lib', action='append', default=[],
+                        help='library to link with (repeatable)')
+    parser.add_argument('--link-arg', action='append', default=[],
+                        help='extra argument for the link check (repeatable)')
+    parser.add_argument('--known-bugs', action='store_true')
+    args = parser.parse_args()
+    args.include = [os.path.abspath(p) for p in args.include]
+    args.lib = [os.path.abspath(p) for p in args.lib]
 
-    headers = sorted(h for h in os.listdir(args.include)
-                     if h.startswith('pf_') and h.endswith('.h'))
-    failures = 0
-    expected = 0
-    fixed = []
+    headers = sorted(os.path.basename(h) for h in args.header)
+    failed = 0
 
+    print('TAP version 13')
+    print('1..%d' % len(headers))
     with tempfile.TemporaryDirectory() as tmp:
-        for header in headers:
-            results = check_header(args, tmp, header)
-            bad = [r for r in results if not r[1]]
+        c_stds = [s for s in C_STANDARDS[args.style]
+                  if supported(args.cc, args.style, s, tmp)]
+        cxx_stds = [s for s in CXX_STANDARDS[args.style]
+                    if args.cxx and supported(args.cxx, args.style, s, tmp, True)]
+        print('# C standards: %s' % ', '.join(s or 'default' for s in c_stds))
+        if args.cxx:
+            print('# C++ standards: %s' % ', '.join(cxx_stds))
 
-            if header in KNOWN and not args.known_bugs:
-                if not bad:
-                    fixed.append(header)
-                for what, ok, out in bad:
-                    expected += 1
-                    print('xfail  %-16s %-14s %s' % (header, what, KNOWN[header]))
+        for n, header in enumerate(headers, 1):
+            results = check_header(args, tmp, header, c_stds, cxx_stds)
+            bad = [(what, out) for what, ok, out in results if not ok]
+            known = KNOWN.get(header)
+
+            if not bad:
+                if known and not args.known_bugs:
+                    print('ok %d - %s # TODO fixed? remove from KNOWN' % (n, header))
+                else:
+                    print('ok %d - %s' % (n, header))
                 continue
 
-            for what, ok, out in bad:
-                failures += 1
-                print('FAIL   %-16s %-14s %s' % (header, what, first_error(out)))
+            if known and not args.known_bugs:
+                print('not ok %d - %s # TODO %s' % (n, header, known))
+                continue
 
-    for header in fixed:
-        print('note   %s passes now; remove it from KNOWN' % header)
-    print('%d headers, %d failures, %d expected failures'
-          % (len(headers), failures, expected))
-    return 1 if failures else 0
+            failed += 1
+            print('not ok %d - %s' % (n, header))
+            for what, out in bad:
+                print('#   %s: %s' % (what, first_error(out)))
+                for line in out.strip().splitlines()[:20]:
+                    print('#     ' + line)
+
+    return 1 if failed else 0
 
 
 if __name__ == '__main__':

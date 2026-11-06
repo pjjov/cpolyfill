@@ -2,8 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 option(
+    'tests',
+    type: 'boolean',
+    value: true,
+    description: 'Build the tests (ignored when cpolyfill is a subproject).',
+)
+
+option(
     'known_bugs',
     type: 'boolean',
     value: false,
-    description: 'Run the tests that fail because of known defects in the headers, instead of reporting them as TODO.',
+    description: 'Run the tests that fail because of known defects in the library, instead of reporting them as TODO.',
 )
