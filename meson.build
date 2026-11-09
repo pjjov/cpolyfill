@@ -26,6 +26,7 @@ inc = include_directories('include')
 
 sources = files(
     'src/alloc.c',
+    'src/assert.c',
     'src/errno.c',
     'src/utf16.c',
     'src/version.c',
@@ -38,6 +39,7 @@ lib_args = ['-DPF__BUILDING']
 if is_msvc
     lib_args += ['-D_CRT_SECURE_NO_WARNINGS']
 endif
+
 
 lib = library(
     'cpolyfill',

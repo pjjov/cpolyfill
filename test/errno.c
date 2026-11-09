@@ -23,16 +23,16 @@ static int test_values(int seed, int i) {
     size_t a, b;
     (void)seed, (void)i;
 
-    CHECK_INT(PF_OK, 0);
+    PF_ASSERT_ALWAYS_EQ(PF_OK, 0);
     for (a = 0; a < COUNT; a++) {
-        CHECK(codes[a] < 0);
-        CHECK_INT(codes[a], -values[a]);
+        PF_ASSERT_ALWAYS(codes[a] < 0);
+        PF_ASSERT_ALWAYS_EQ(codes[a], -values[a]);
         for (b = a + 1; b < COUNT; b++)
-            CHECK(codes[a] != codes[b]);
+            PF_ASSERT_ALWAYS(codes[a] != codes[b]);
     }
-    CHECK_INT(PF_EWOULDBLOCK, PF_EAGAIN);
-    CHECK_INT(PF_ENOTSUP, PF_EOPNOTSUPP);
-    CHECK_INT(PF_EDEADLOCK, PF_EDEADLK);
+    PF_ASSERT_ALWAYS_EQ(PF_EWOULDBLOCK, PF_EAGAIN);
+    PF_ASSERT_ALWAYS_EQ(PF_ENOTSUP, PF_EOPNOTSUPP);
+    PF_ASSERT_ALWAYS_EQ(PF_EDEADLOCK, PF_EDEADLK);
     return 0;
 }
 
@@ -44,7 +44,7 @@ static int test_roundtrip(int seed, int i) {
         int sys = pf_error_to_errno(codes[k]);
         if (sys == EINVAL && codes[k] != PF_EINVAL)
             continue; /* the system has no such errno value */
-        CHECK_INT(pf_error_from_errno(sys), codes[k]);
+        PF_ASSERT_ALWAYS_EQ(pf_error_from_errno(sys), codes[k]);
     }
     return 0;
 }
@@ -52,22 +52,22 @@ static int test_roundtrip(int seed, int i) {
 static int test_common(int seed, int i) {
     (void)seed, (void)i;
 
-    CHECK_INT(pf_error_from_errno(0), PF_OK);
-    CHECK_INT(pf_error_to_errno(PF_OK), 0);
-    CHECK_INT(pf_error_from_errno(ENOENT), PF_ENOENT);
-    CHECK_INT(pf_error_from_errno(EINVAL), PF_EINVAL);
-    CHECK_INT(pf_error_from_errno(ENOMEM), PF_ENOMEM);
-    CHECK_INT(pf_error_from_errno(EAGAIN), PF_EAGAIN);
-    CHECK_INT(pf_error_from_errno(EWOULDBLOCK), PF_EAGAIN);
-    CHECK_INT(pf_error_from_errno(ENOTSUP), PF_ENOTSUP);
-    CHECK_INT(pf_error_from_errno(EILSEQ), PF_EILSEQ);
-    CHECK_INT(pf_error_to_errno(PF_ENOENT), ENOENT);
-    CHECK_INT(pf_error_to_errno(PF_ERANGE), ERANGE);
+    PF_ASSERT_ALWAYS_EQ(pf_error_from_errno(0), PF_OK);
+    PF_ASSERT_ALWAYS_EQ(pf_error_to_errno(PF_OK), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_error_from_errno(ENOENT), PF_ENOENT);
+    PF_ASSERT_ALWAYS_EQ(pf_error_from_errno(EINVAL), PF_EINVAL);
+    PF_ASSERT_ALWAYS_EQ(pf_error_from_errno(ENOMEM), PF_ENOMEM);
+    PF_ASSERT_ALWAYS_EQ(pf_error_from_errno(EAGAIN), PF_EAGAIN);
+    PF_ASSERT_ALWAYS_EQ(pf_error_from_errno(EWOULDBLOCK), PF_EAGAIN);
+    PF_ASSERT_ALWAYS_EQ(pf_error_from_errno(ENOTSUP), PF_ENOTSUP);
+    PF_ASSERT_ALWAYS_EQ(pf_error_from_errno(EILSEQ), PF_EILSEQ);
+    PF_ASSERT_ALWAYS_EQ(pf_error_to_errno(PF_ENOENT), ENOENT);
+    PF_ASSERT_ALWAYS_EQ(pf_error_to_errno(PF_ERANGE), ERANGE);
 
-    CHECK_INT(pf_error_from_errno(-12345), PF_EUNKNOWN);
-    CHECK_INT(pf_error_from_errno(1 << 20), PF_EUNKNOWN);
-    CHECK_INT(pf_error_to_errno(12345), EINVAL);
-    CHECK_INT(pf_error_to_errno(-123456), EINVAL);
+    PF_ASSERT_ALWAYS_EQ(pf_error_from_errno(-12345), PF_EUNKNOWN);
+    PF_ASSERT_ALWAYS_EQ(pf_error_from_errno(1 << 20), PF_EUNKNOWN);
+    PF_ASSERT_ALWAYS_EQ(pf_error_to_errno(12345), EINVAL);
+    PF_ASSERT_ALWAYS_EQ(pf_error_to_errno(-123456), EINVAL);
     return 0;
 }
 
@@ -82,8 +82,8 @@ static int test_linux(int seed, int i) {
     for (k = 0; k < COUNT; k++) {
         if (codes[k] == PF_EUNKNOWN)
             continue;
-        CHECK_INT(pf_error_from_errno(-codes[k]), codes[k]);
-        CHECK_INT(pf_error_to_errno(codes[k]), -codes[k]);
+        PF_ASSERT_ALWAYS_EQ(pf_error_from_errno(-codes[k]), codes[k]);
+        PF_ASSERT_ALWAYS_EQ(pf_error_to_errno(codes[k]), -codes[k]);
     }
     return 0;
 #endif

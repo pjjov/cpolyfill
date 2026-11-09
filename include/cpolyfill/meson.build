@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 public_headers = files(
+    'assert.h',
     'attribute.h',
     'errno.h',
     'macro.h',

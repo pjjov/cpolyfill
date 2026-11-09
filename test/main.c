@@ -22,8 +22,10 @@
 /* clang-format off */
 
 extern pf_test_t suite_alloc[];
+extern pf_test_t suite_assert[];
 extern pf_test_t suite_errno[];
 extern pf_test_t suite_platform[];
+extern pf_test_t suite_std_names[];
 extern pf_test_t suite_utf16[];
 extern pf_test_t suite_version[];
 
@@ -34,8 +36,10 @@ extern pf_test_t suite_version[];
 int main(int argc, char *argv[]) {
     static const pf_suite_t suites[] = {
         { "alloc", 5, suite_alloc },
+        { "assert", 1, suite_assert },
         { "errno", 1, suite_errno },
         { "platform", 1, suite_platform },
+        { "std_names", 1, suite_std_names },
         { "utf16", 5, suite_utf16 },
         { "version", 1, suite_version },
         { 0 },

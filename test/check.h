@@ -10,39 +10,13 @@
 
 #include "runner.h"
 
+/* The tests check with PF_ASSERT_ALWAYS*: never compiled out, and the
+   default handler aborts, so a forked test reports the failure. */
+#include <cpolyfill/assert.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-/* Aborts on failure, so a forked test reports it. Never compiled out.
-   Moves to <cpolyfill/assert.h> once that module is ported. */
-#define CHECK(...)                                                        \
-    do {                                                                  \
-        if (!(__VA_ARGS__)) {                                             \
-            fprintf(                                                      \
-                stderr, "%s:%d: Check `%s` failed!\n", __FILE__, __LINE__, \
-                #__VA_ARGS__                                              \
-            );                                                            \
-            abort();                                                      \
-        }                                                                 \
-    } while (0)
-
-#define CHECK_EQ(a, b, fmt)                                               \
-    do {                                                                  \
-        long long check_a_ = (long long)(a), check_b_ = (long long)(b);   \
-        if (check_a_ != check_b_) {                                       \
-            fprintf(                                                      \
-                stderr, "%s:%d: `%s` == `%s` failed: " fmt " != " fmt "\n", \
-                __FILE__, __LINE__, #a, #b, check_a_, check_b_            \
-            );                                                            \
-            abort();                                                      \
-        }                                                                 \
-    } while (0)
-
-#define CHECK_INT(a, b) CHECK_EQ(a, b, "%lld")
-
-#define CHECK_STR(a, b) CHECK(0 == strcmp((a), (b)))
-#define CHECK_MEM(a, b, n) CHECK(0 == memcmp((a), (b), (n)))
 
 /* Tests that exercise a confirmed defect are registered with
    `KNOWN_BUG(fn)`. They are reported as TODO until the build is configured
