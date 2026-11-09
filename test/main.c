@@ -24,6 +24,7 @@
 extern pf_test_t suite_alloc[];
 extern pf_test_t suite_assert[];
 extern pf_test_t suite_attribute[];
+extern pf_test_t suite_debug[];
 extern pf_test_t suite_errno[];
 extern pf_test_t suite_macro[];
 extern pf_test_t suite_platform[];
@@ -42,6 +43,7 @@ int main(int argc, char *argv[]) {
         { "alloc", 5, suite_alloc },
         { "assert", 1, suite_assert },
         { "attribute", 1, suite_attribute },
+        { "debug", 1, suite_debug },
         { "errno", 1, suite_errno },
         { "macro", 1, suite_macro },
         { "platform", 1, suite_platform },

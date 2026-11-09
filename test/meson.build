@@ -5,6 +5,7 @@ suites = [
     'alloc',
     'assert',
     'attribute',
+    'debug',
     'errno',
     'macro',
     'platform',
@@ -71,6 +72,29 @@ foreach name, options : variants
         )
     endforeach
 endforeach
+
+# The headers used from C++, where several macros have their own
+# implementation.
+if add_languages('cpp', required: false, native: false)
+    cpp = meson.get_compiler('cpp')
+    foreach std : is_msvc ? ['c++17', 'c++20'] : ['c++11', 'c++20']
+        if not cpp.has_argument((is_msvc ? '/std:' : '-std=') + std)
+            continue
+        endif
+        name = std.replace('+', 'x')
+        cxx_exe = executable(
+            'cpolyfill-test-' + name,
+            'cxx.cpp',
+            objects: lib_objects,
+            include_directories: inc,
+            dependencies: sys_deps,
+            cpp_args: test_args,
+            override_options: ['cpp_std=' + std],
+            install: false,
+        )
+        test('cpolyfill' / name, cxx_exe, suite: ['cxx'])
+    endforeach
+endif
 
 # Every public header on its own: it compiles in every supported standard
 # and in C++, and links when included by two translation units.

@@ -4,6 +4,7 @@
 public_headers = files(
     'assert.h',
     'attribute.h',
+    'debug.h',
     'errno.h',
     'macro.h',
     'platform.h',

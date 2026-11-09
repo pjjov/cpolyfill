@@ -27,6 +27,7 @@ inc = include_directories('include')
 sources = files(
     'src/alloc.c',
     'src/assert.c',
+    'src/debug.c',
     'src/errno.c',
     'src/utf16.c',
     'src/version.c',
@@ -40,6 +41,51 @@ if is_msvc
     lib_args += ['-D_CRT_SECURE_NO_WARNINGS']
 endif
 
+# Backtraces (debug.c): execinfo (glibc, macOS, BSDs with libexecinfo),
+# else the unwinder of libgcc / LLVM (musl), and dladdr for symbol names.
+if not is_windows
+    have_execinfo = false
+    if cc.has_header('execinfo.h')
+        execinfo_prefix = '#include <execinfo.h>'
+        if cc.has_function('backtrace', prefix: execinfo_prefix)
+            have_execinfo = true
+        else
+            execinfo_dep = cc.find_library('execinfo', required: false)
+            if execinfo_dep.found() and cc.has_function(
+                'backtrace',
+                prefix: execinfo_prefix,
+                dependencies: execinfo_dep,
+            )
+                have_execinfo = true
+                sys_deps += execinfo_dep
+            endif
+        endif
+    endif
+    have_unwind = cc.has_function(
+        '_Unwind_Backtrace',
+        prefix: '#include <unwind.h>',
+    )
+
+    dl_dep = cc.find_library('dl', required: false)
+    dladdr_prefix = '#define _GNU_SOURCE\n#include <dlfcn.h>'
+    have_dladdr = cc.has_function('dladdr', prefix: dladdr_prefix)
+    if not have_dladdr and dl_dep.found()
+        have_dladdr = cc.has_function(
+            'dladdr',
+            prefix: dladdr_prefix,
+            dependencies: dl_dep,
+        )
+        if have_dladdr
+            sys_deps += dl_dep
+        endif
+    endif
+
+    lib_args += [
+        '-DPF__HAVE_EXECINFO=@0@'.format(have_execinfo ? 1 : 0),
+        '-DPF__HAVE_UNWIND=@0@'.format(have_unwind ? 1 : 0),
+        '-DPF__HAVE_DLADDR=@0@'.format(have_dladdr ? 1 : 0),
+    ]
+endif
 
 lib = library(
     'cpolyfill',
