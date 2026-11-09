@@ -34,6 +34,22 @@ CXX_STANDARDS = {
 
 GCC_WARNINGS = ['-Wall', '-Wextra', '-Wundef', '-Werror']
 
+# With PF_STD_NAMES, the system headers that define the same names are
+# included after the header, so a conflicting definition shows up.
+STD_NAMES_AFTER = '''\
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#include <stdalign.h>
+#if !defined(__STDC_NO_THREADS__) && defined(__has_include)
+#if __has_include(<threads.h>)
+#include <threads.h>
+#endif
+#endif
+#endif
+'''
+
 
 def compile_command(cc, style, std, source, includes, cxx=False):
     cmd = list(cc)
@@ -105,10 +121,16 @@ def check_header(args, tmp, header, c_stds, cxx_stds):
 
     source = os.path.join(tmp, 'only.c')
     write(source, include + 'int main(void) { return 0; }\n')
+    names = os.path.join(tmp, 'names.c')
+    write(names, '#define PF_STD_NAMES\n' + include + STD_NAMES_AFTER
+          + 'int main(void) { return 0; }\n')
     for std in c_stds:
         ok, out = run(compile_command(
             args.cc, args.style, std, source, args.include), tmp)
         results.append(('compile ' + (std or 'default'), ok, out))
+        ok, out = run(compile_command(
+            args.cc, args.style, std, names, args.include), tmp)
+        results.append(('PF_STD_NAMES ' + (std or 'default'), ok, out))
 
     if args.cxx:
         source = os.path.join(tmp, 'only.cpp')

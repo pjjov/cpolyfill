@@ -70,24 +70,25 @@ endforeach
 # and in C++, and links when included by two translation units.
 python = find_program('python3', 'python', required: false)
 if python.found()
-    checker_args = [
-        files('check_headers.py'),
+    # The compilers and include directories, for the checks below.
+    compiler_args = [
         '--style', is_msvc ? 'msvc' : 'gcc',
         '--include', meson.project_source_root() / 'include',
         '--include', meson.project_build_root() / 'include',
-        '--lib', lib,
     ]
-    foreach header : public_headers
-        checker_args += ['--header', header]
-    endforeach
     foreach part : cc.cmd_array()
-        checker_args += ['--cc', part]
+        compiler_args += ['--cc', part]
     endforeach
     if add_languages('cpp', required: false, native: false)
         foreach part : meson.get_compiler('cpp').cmd_array()
-            checker_args += ['--cxx', part]
+            compiler_args += ['--cxx', part]
         endforeach
     endif
+
+    checker_args = [files('check_headers.py'), '--lib', lib] + compiler_args
+    foreach header : public_headers
+        checker_args += ['--header', header]
+    endforeach
     # A sanitized library needs the sanitizer runtime to link.
     sanitize = get_option('b_sanitize')
     if meson.version().version_compare('>= 1.8')
@@ -104,6 +105,17 @@ if python.found()
         python,
         args: checker_args,
         suite: ['headers'],
+        timeout: 600,
+    )
+
+    # Misuse of the compile-time checks must not compile.
+    test(
+        'cpolyfill/errors',
+        python,
+        args: [files('check_errors.py'), '--source', files('errors.c')]
+            + compiler_args,
+        protocol: 'tap',
+        suite: ['errors'],
         timeout: 600,
     )
 endif
