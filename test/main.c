@@ -23,9 +23,13 @@
 
 extern pf_test_t suite_alloc[];
 extern pf_test_t suite_assert[];
+extern pf_test_t suite_attribute[];
 extern pf_test_t suite_errno[];
+extern pf_test_t suite_macro[];
 extern pf_test_t suite_platform[];
 extern pf_test_t suite_std_names[];
+extern pf_test_t suite_stdc[];
+extern pf_test_t suite_types[];
 extern pf_test_t suite_utf16[];
 extern pf_test_t suite_version[];
 
@@ -37,9 +41,13 @@ int main(int argc, char *argv[]) {
     static const pf_suite_t suites[] = {
         { "alloc", 5, suite_alloc },
         { "assert", 1, suite_assert },
+        { "attribute", 1, suite_attribute },
         { "errno", 1, suite_errno },
+        { "macro", 1, suite_macro },
         { "platform", 1, suite_platform },
         { "std_names", 1, suite_std_names },
+        { "stdc", 1, suite_stdc },
+        { "types", 1, suite_types },
         { "utf16", 5, suite_utf16 },
         { "version", 1, suite_version },
         { 0 },

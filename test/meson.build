@@ -4,9 +4,13 @@
 suites = [
     'alloc',
     'assert',
+    'attribute',
     'errno',
+    'macro',
     'platform',
     'std_names',
+    'stdc',
+    'types',
     'utf16',
     'version',
 ]
