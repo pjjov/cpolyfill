@@ -24,11 +24,15 @@
 extern pf_test_t suite_alloc[];
 extern pf_test_t suite_assert[];
 extern pf_test_t suite_attribute[];
+extern pf_test_t suite_bitwise[];
 extern pf_test_t suite_debug[];
+extern pf_test_t suite_endian[];
 extern pf_test_t suite_errno[];
 extern pf_test_t suite_macro[];
+extern pf_test_t suite_overflow[];
 extern pf_test_t suite_platform[];
 extern pf_test_t suite_std_names[];
+extern pf_test_t suite_std_polyfill[];
 extern pf_test_t suite_stdc[];
 extern pf_test_t suite_types[];
 extern pf_test_t suite_utf16[];
@@ -43,11 +47,15 @@ int main(int argc, char *argv[]) {
         { "alloc", 5, suite_alloc },
         { "assert", 1, suite_assert },
         { "attribute", 1, suite_attribute },
+        { "bitwise", 3, suite_bitwise },
         { "debug", 1, suite_debug },
+        { "endian", 3, suite_endian },
         { "errno", 1, suite_errno },
         { "macro", 1, suite_macro },
+        { "overflow", 3, suite_overflow },
         { "platform", 1, suite_platform },
         { "std_names", 1, suite_std_names },
+        { "std_polyfill", 3, suite_std_polyfill },
         { "stdc", 1, suite_stdc },
         { "types", 1, suite_types },
         { "utf16", 5, suite_utf16 },

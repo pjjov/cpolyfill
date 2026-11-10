@@ -8,9 +8,12 @@
 
 #include <cpolyfill/assert.h>
 #include <cpolyfill/attribute.h>
+#include <cpolyfill/bitwise.h>
 #include <cpolyfill/debug.h>
+#include <cpolyfill/endian.h>
 #include <cpolyfill/errno.h>
 #include <cpolyfill/macro.h>
+#include <cpolyfill/overflow.h>
 #include <cpolyfill/stdc.h>
 #include <cpolyfill/types.h>
 
@@ -116,6 +119,50 @@ static void test_debug() {
     (void)pf_debugger_attached();
 }
 
+#if PF_CPP >= 201402L
+/* constexpr in C++14 and later. */
+PF_STATIC_ASSERT(pf_clz32(1) == 31);
+PF_STATIC_ASSERT(pf_pow2ceil8(5) == 8);
+PF_STATIC_ASSERT(pf_rotr16(1, 1) == 0x8000);
+PF_STATIC_ASSERT(PF_POPCOUNT(0xFFull) == 8);
+PF_STATIC_ASSERT(pf_bswap32(0x11223344) == 0x44332211);
+#endif
+PF_STATIC_ASSERT(PF_BSWAP16(0x1234) == 0x3412);
+
+template <class T, class U> static bool same_type(T, U) { return false; }
+template <class T> static bool same_type(T, T) { return true; }
+
+static void test_integers() {
+    unsigned char uc = 0x30;
+    unsigned short us = 0x300;
+    unsigned long long ull = 1ull << 40;
+    unsigned char out = 0;
+    int r = 0;
+
+    PF_STATIC_ASSERT(PF_HAS_BITWISE_GENERIC);
+    PF_ASSERT_ALWAYS_EQ(PF_CLZ(uc), 2);
+    PF_ASSERT_ALWAYS_EQ(PF_CLZ(us), 6);
+    PF_ASSERT_ALWAYS_EQ(PF_CTZ(ull), 40);
+    PF_ASSERT_ALWAYS_EQ(PF_FLO(1u), 32);
+    PF_ASSERT_ALWAYS_EQ(PF_POW2CEIL(uc), 0x40);
+    PF_ASSERT_ALWAYS_EQ(PF_ROTL(uc, 4), 0x03);
+    PF_ASSERT_ALWAYS(same_type(PF_POW2CEIL(uc), uc));
+    PF_ASSERT_ALWAYS(same_type(PF_ROTR(us, 1), us));
+    PF_ASSERT_ALWAYS(same_type(PF_BITREVERSE(ull), ull));
+    PF_ASSERT_ALWAYS(same_type(PF_CLZ(ull), 0));
+
+    PF_ASSERT_ALWAYS(pf_overflow_sadd(2147483647, 1, &r));
+    PF_ASSERT_ALWAYS_EQ(pf_saturated_umul8(16, 16), 255);
+    PF_ASSERT_ALWAYS_EQ(pf_checked_ssub(1, 2), -1);
+#if PF_HAS_CKD
+    PF_ASSERT_ALWAYS(!PF_CKD_ADD(&out, 300, -100) && out == 200);
+#endif
+    (void)out;
+
+    PF_ASSERT_ALWAYS_EQ(pf_load_be16("\x12\x34"), 0x1234);
+    PF_ASSERT_ALWAYS_EQ(pf_be32toh(pf_htobe32(7)), 7u);
+}
+
 int main() {
     PF_ASSERT_ALWAYS_EQ(constructed, 1);
     test_types();
@@ -123,5 +170,6 @@ int main() {
     test_macro();
     test_assert();
     test_debug();
+    test_integers();
     return 0;
 }

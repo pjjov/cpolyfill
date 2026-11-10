@@ -5,18 +5,23 @@ suites = [
     'alloc',
     'assert',
     'attribute',
+    'bitwise',
     'debug',
+    'endian',
     'errno',
     'macro',
+    'overflow',
     'platform',
     'std_names',
+    'std_polyfill',
     'stdc',
     'types',
     'utf16',
     'version',
 ]
 
-test_sources = files('main.c')
+# The portable implementations, compared with the builtins.
+test_sources = files('main.c', 'bitwise_portable.c', 'overflow_portable.c')
 foreach suite : suites
     test_sources += files(suite + '.c')
 endforeach

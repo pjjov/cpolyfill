@@ -7,11 +7,12 @@
    PF_ERROR_CASE=0 it must compile (with warnings as errors); with any
    other case it must fail. Valid in C and C++. */
 
+#include <cpolyfill/bitwise.h>
 #include <cpolyfill/macro.h>
 #include <cpolyfill/stdc.h>
 #include <cpolyfill/types.h>
 
-#define PF_ERROR_CASES 9
+#define PF_ERROR_CASES 11
 
 struct item {
     int key;
@@ -39,6 +40,7 @@ int main(void) {
     n = (int)PF_COUNTOF(arr);
     n = PF_CHECK_TYPE(int, n);
     p = &PF_CONTAINER_OF(&it.key, struct item, key)->key;
+    n = PF_CLZ((unsigned)n) + PF_POPCOUNT((unsigned char)n);
 #elif PF_ERROR_CASE == 3
     /* Not a constant. */
     PF_STATIC_ASSERT(n == 1);
@@ -54,6 +56,14 @@ int main(void) {
     PF_ENUM_GUARD(fruit, 3);
 #elif PF_ERROR_CASE == 9
     p = &PF_CONTAINER_OF(&it.name, struct item, key)->key;
+#elif PF_ERROR_CASE == 10
+    /* The bit operations take unsigned types only. */
+    n = PF_CLZ(n);
+#elif PF_ERROR_CASE == 11
+    {
+        unsigned char a = 1, b = 3;
+        n = PF_CTZ(a & b); /* promoted to int */
+    }
 #endif
 
     (void)n, (void)arr, (void)p, (void)it;

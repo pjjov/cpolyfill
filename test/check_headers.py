@@ -48,6 +48,20 @@ STD_NAMES_AFTER = '''\
 #endif
 #endif
 #endif
+#if defined(__has_include)
+#if __has_include(<stdbit.h>)
+#include <stdbit.h>
+#endif
+#if __has_include(<stdckdint.h>)
+#include <stdckdint.h>
+#endif
+#if __has_include(<endian.h>)
+#include <endian.h>
+#endif
+#if __has_include(<byteswap.h>)
+#include <byteswap.h>
+#endif
+#endif
 '''
 
 
