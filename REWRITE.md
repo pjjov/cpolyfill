@@ -215,17 +215,17 @@ H = header-only (language layer), L = compiled (platform layer).
 | `bitwise.h` | `pf_bitwise.h` | H | done in step 3 |
 | `overflow.h` | `pf_overflow.h` | H | done in step 3 |
 | `endian.h` | `pf_endian.h` | H | done in step 3 |
-| `ctype.h` | `pf_ctype.h` | H | mostly unchanged; UTF-8 helpers move to `unicode.h` |
-| `unicode.h` | (new) | L | UTF-8 <-> UTF-16/32, validation, decode/encode, `mbrtoc16` / `c16rtomb` (missing on macOS) |
-| `string.h` | `pf_string.h` | L | + `strndup`, `strlcpy`, `strlcat`, `strcasecmp`, `strncasecmp`, `strtok_r`, `strsep`, `memmem`, `memrchr`, `stpcpy`, `memccpy`, `memset_explicit`, `asprintf`, `vasprintf` |
-| `stdlib.h` | (new) | L | `pf_aligned_alloc` / `pf_aligned_free`, `reallocarray`, `setenv`, `unsetenv`, `getenv`, `getline`, `getdelim`, `pf_qsort_r` |
-| `errno.h` | `pf_errno.h` | L | step 1: `PF_E*` codes, `pf_error_from_errno` / `pf_error_to_errno`; step 4: public Win32/WSA mapping, `pf_strerror` |
+| `ctype.h` | `pf_ctype.h` | H | done in step 4 |
+| `unicode.h` | (new) | H+L | done in step 4 |
+| `string.h` | `pf_string.h` | L | done in step 4 |
+| `stdlib.h` | (new) | L | done in step 4 |
+| `errno.h` | `pf_errno.h` | L | done in steps 1 and 4 |
 | `version.h` | (new) | L | done in step 1 |
 | `time.h` | (new) | L | `clock_gettime` (monotonic, realtime) on Windows, `pf_time_ns()`, `nanosleep`, `timespec_get`, `gmtime_r`, `localtime_r`, `timegm` |
 | `threads.h` | `pf_threads.h` | L | C11 API; thread name, id, affinity, priority; Windows tss destructors via `FlsAlloc` (drops `pf_tss_cleanup`); rwlock, spinlock, barrier stay |
 | `atomic.h` | `pf_atomic.h` | H+L | fallback uses a global striped lock table (like libatomic) instead of a mutex per object, so no `atomic_init` requirement and `_Atomic(T)` keeps the size of `T` |
 | `semaphore.h` | `pf_semaphore.h` | L | + working unnamed semaphores on macOS |
-| `fs.h` | `pf_filesystem.h` | L | unified `pf_stat` (64-bit size, ns times), `pf_mkdirs`, `pf_remove_all`, replacing `rename` on Windows, `mkstemp`, `mkdtemp`, file locks, symlinks, path join / normalize / basename / dirname; known directories stay |
+| `fs.h` | `pf_filesystem.h` | L | unified `pf_stat` (64-bit size, ns times), `pf_mkdirs`, `pf_remove_all`, replacing `rename` on Windows, `realpath` (moved from `stdlib.h`), `mkstemp`, `mkdtemp`, file locks, symlinks, path join / normalize / basename / dirname; known directories stay |
 | `dirent.h` | `pf_dirent.h` | L | UTF-8, `d_type` on Windows |
 | `dlfcn.h` | `pf_dlsym.h` | L | renamed after the POSIX header; + `PF_DL_EXT` |
 | `mman.h` | (new) | L | `mmap`, `munmap`, `mprotect` on Windows, page size, file mapping |
@@ -261,7 +261,7 @@ committed.
 - [x] 2. Language layer: `attribute`, `stdc`, `types`, `macro`,
       `assert`, `debug`
 - [x] 3. Integers: `bitwise`, `overflow`, `endian`
-- [ ] 4. Text: `ctype`, `unicode`, `string`, `stdlib`, `errno`
+- [x] 4. Text: `ctype`, `unicode`, `string`, `stdlib`, `errno`
 - [ ] 5. Concurrency: `time`, `threads`, `atomic`, `semaphore`
 - [ ] 6. Files: `fs`, `dirent`, `dlfcn`, `mman`, `io`
 - [ ] 7. OS: `process`, `signal`, `random`, `sysinfo`, `cpuid`, `term`
@@ -274,98 +274,24 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-### Step 4: text
-
-Approved 2026-11-10. Reference: `git show main:include/pf_{ctype,string,errno}.h`.
-
-**`ctype.h`** (header-only, `PF_INLINE`, `constexpr` in C++14)
-- Locale-independent `pf_isalpha` `pf_isdigit` `pf_isxdigit` `pf_isspace`
-  `pf_isblank` `pf_iscntrl` `pf_isgraph` `pf_isprint` `pf_ispunct`
-  `pf_islower` `pf_isupper` `pf_isalnum` returning `bool`, plus
-  `pf_tolower` / `pf_toupper` (`int`). Defined for every `int` (EOF,
-  negative `char`, > 127 are false / returned unchanged).
-- New `pf_isascii`, `pf_isodigit`, `pf_digit_value(c, base)` (value for
-  base 2..36, or -1).
-- `PF_CTYPE_*` strings and `enum pf_ascii_control` stay; add
-  `PF_ASCII_SP` (32) and `PF_ASCII_DEL` (127).
-- UTF-8 helpers and `enum pf_unicode_special` move to `unicode.h`. No
-  standard names.
-
-**`unicode.h`** (L, small inline helpers)
-- Code units are `uint16_t` / `uint32_t`.
-- Inline: `pf_utf8_clen(lead)` (strict: 0 for C0, C1, F5..FF),
-  `pf_utf8_iscont(c)`, `pf_unicode_isvalid(cp)` (scalar values),
-  `pf_unicode_issurrogate(cp)`, `enum pf_unicode_special`
-  (`PF_UNICODE_REPLACEMENT`, ...).
-- `int pf_utf8_decode(const char *s, size_t n, uint32_t *cp)`: bytes
-  consumed 1..4, 0 if `n == 0`, `PF_EILSEQ` (overlong, surrogate,
-  truncated). `int pf_utf8_encode(uint32_t cp, char out[4])`: 1..4 or
-  `PF_EILSEQ`. Same for `pf_utf16_decode` / `pf_utf16_encode`.
-- `size_t pf_utf8_valid_prefix(s, n)`, `ptrdiff_t pf_utf8_count(s, n)`.
-- Conversions `pf_utf8_to_utf16`, `pf_utf16_to_utf8`, `pf_utf8_to_utf32`,
-  `pf_utf32_to_utf8`, `pf_utf8_to_wcs`, `pf_wcs_to_utf8` with the internal
-  contract (`PF_NTS` length, NULL `dst` measures, `PF_ERANGE` when `cap`
-  is too small) and an `unsigned flags` argument: `PF_UNICODE_REPLACE`
-  replaces invalid input with U+FFFD instead of failing. `pf__wstr` stays
-  internal on top of them.
-- `pf_mbrtoc8/16/32`, `pf_c8/16/32rtomb` always exported, through
-  `mbrtowc` / `wcrtomb`. `PF_STD_NAMES_UNICODE` maps the standard names
-  and `char8_t` / `char16_t` / `char32_t` (C only) where `<uchar.h>` or the
-  function is missing.
-
-**`string.h`** (L)
-- `pf_strdup` `pf_strndup` `pf_strnlen` `pf_strlcpy` `pf_strlcat`
-  `pf_strcasecmp` `pf_strncasecmp` `pf_strtok_r` `pf_strsep`
-  `pf_strchrnul` `pf_memmem` `pf_memrchr` `pf_mempcpy` `pf_stpcpy`
-  `pf_stpncpy` `pf_memccpy` `pf_memset_explicit` `pf_asprintf`
-  `pf_vasprintf`.
-- BSD `strlcpy` / `strlcat`; C23 `memset_explicit`; `asprintf` sets
-  `*strp = NULL` on failure; case-insensitive compares fold ASCII only;
-  `pf_strnlen(NULL, n)` is 0; allocating functions use `malloc`.
-- `PF_STD_NAMES_STRING` maps a standard name only when the library found
-  it missing or different at build time (`PF_CONFIG_HAVE_*` in
-  `config.h`).
-- v1's MSVC `locale_t` / `*_l` and `wcscasecmp` mappings are dropped.
-
-**`stdlib.h`** (L)
-- `pf_aligned_alloc` / `pf_aligned_free` (no standard name),
-  `pf_reallocarray`, `pf_getline`, `pf_getdelim`, `pf_setenv`,
-  `pf_unsetenv`, `pf_qsort_r` (POSIX 2024 / GNU order, moved from
-  `string.h`), `ptrdiff_t pf_getenv(name, buf, size)` (UTF-8 on Windows,
-  NULL `buf` measures, `PF_ERANGE`, `PF_ENOENT`), `pf_ssize_t`.
-- `PF_STD_NAMES_STDLIB`: `reallocarray`, `getline`, `getdelim`, `setenv`,
-  `unsetenv` where missing, `qsort_r` where missing or BSD order,
-  `ssize_t` on MSVC.
-- `realpath` moves to `fs.h` (step 6).
-
-**`errno.h`**
-- Public `pf_error_from_win32`, `pf_error_from_wsa`,
-  `pf_error_last_win32` (declared only with `PF_OS_WINDOWS`).
-- `const char *pf_strerror(int code)`, `const char *pf_error_name(int
-  code)`, `int pf_strerror_r(int errnum, char *buf, size_t size)` (XSI);
-  `PF_STD_NAMES_ERRNO` maps `strerror_r` only where it is missing.
-
-**Tests**: ctype -1..255 against `<ctype.h>` in the C locale; unicode
-round trips of every code point, invalid sequence tables in strict and
-replace mode (absorbs the `utf16` suite); string edge cases against the
-system functions; stdlib alignments, `reallocarray` overflow, UTF-8
-environment, `getline` on long lines / no final newline / embedded NUL;
-errno strings and names for every code; `check_headers` standard-name
-cases.
+None pending. Step 5 (`time`, `threads`, `atomic`, `semaphore`) needs
+an API proposal first.
 
 ## Current state and notes
 
-What exists after step 3:
+What exists after step 4:
 
 - `include/cpolyfill/`: `platform.h`, `config.h.in` (+ `meson.build`
   listing `public_headers`; add new headers there), `version.h`,
   `errno.h`, the language layer: `attribute.h`, `stdc.h`, `types.h`,
-  `macro.h`, `assert.h`, `debug.h`, and the integer headers `bitwise.h`,
-  `overflow.h`, `endian.h` (header-only). Each header documents its
-  API in its top comment.
+  `macro.h`, `assert.h`, `debug.h`, the integer headers `bitwise.h`,
+  `overflow.h`, `endian.h` (header-only), and the text headers
+  `ctype.h`, `unicode.h`, `string.h`, `stdlib.h`. Each header documents
+  its API in its top comment.
 - `src/`: `internal.h` (include first in every source), `allocator.h`
-  (vendored), `alloc.c`, `assert.c`, `debug.c`, `errno.c`, `utf16.c`,
-  `version.c`, `win32/error.c` (Win32/WSA -> `PF_E*`, internal for now).
+  (vendored), `alloc.c`, `assert.c`, `debug.c`, `errno.c`, `stdlib.c`,
+  `string.c`, `uchar.c`, `unicode.c`, `version.c`, `win32/error.c`
+  (Win32/WSA -> `PF_E*`, public since step 4).
   `debug.c` uses execinfo, else `_Unwind_Backtrace`, plus `dladdr`;
   meson detects them and passes `PF__HAVE_EXECINFO` / `PF__HAVE_UNWIND`
   / `PF__HAVE_DLADDR` as library arguments (not in `config.h`).
@@ -416,6 +342,40 @@ Integer headers (step 3):
 - MSVC paths (`_BitScan*`, `__popcnt`, `_rotl*`, `_byteswap_*`) are not
   compiled here, like the rest of the Windows code.
 
+Text headers (step 4):
+
+- `config.h` records what the C library has: `PF_CONFIG_HAVE_<FN>` for
+  every function with a standard-name mapping (plus `STRINGS_H`,
+  `UCHAR_H`; `QSORT_R` means the POSIX argument order). Meson checks
+  them with `cc.links()` taking the function's address, not
+  `has_function`, which accepts GCC builtins (`__builtin_strndup`). MSVC's
+  deprecated `strdup` / `memccpy` count as missing. Facts only the
+  library needs are `lib_args`: `PF__HAVE_QSORT_R_BSD`,
+  `PF__HAVE_GETC_UNLOCKED`, `PF__HAVE_EXPLICIT_BZERO`,
+  `PF__HAVE_MEMSET_S`, `PF__STRERROR_R_GNU`. Add new mappings the same
+  way: a `libc_functions` entry in `include/cpolyfill/meson.build` and a
+  line in `config.h.in`.
+- The simple string functions always use the library's own code (what
+  the tests check); `memmem`, `memset_explicit`, `getdelim`, `qsort_r`,
+  `strerror_r` and the uchar functions call the system's where present.
+  The fallbacks `pf__getdelim_portable` and `pf__qsort_r_portable`
+  (heapsort) are tested on every platform.
+- `uchar.c`: without the system functions, a `wc` backend (mbrtowc /
+  wcrtomb, needs 32-bit `wchar_t` and an mbstate_t of at least 16 bytes,
+  its UTF-16 / UTF-8 layer state in the last 8 bytes: macOS, BSDs) or a
+  `utf8` backend (assumes UTF-8, whole mbstate_t is ours). Both are run by
+  the `uchar` suite through `pf__*_with`. `pf_c32rtomb` rejects
+  non-scalar values even where glibc's `c32rtomb` encodes them.
+- The unicode standard names are C only (`char16_t` / `char32_t` are C++
+  keywords). `char8_t` is only typedef'd in C23.
+- `pf_reallocarray(p, 0, n)` returns a minimal block, not NULL
+  (`realloc(p, 0)` is undefined in C23). `pf_aligned_alloc(a, 0)` too.
+- The internal `pf__utf8_to_utf16` / `pf__utf16_to_utf8` and `PF__NTS`
+  are gone: use the public functions with `PF_NTS` and flags 0.
+- Checked by hand: a build with every `PF_CONFIG_HAVE_*` forced to 0
+  passes the suites (the forced XSI `strerror_r` branch cannot run on
+  glibc, which only declares the GNU variant with `_GNU_SOURCE`).
+
 Language layer notes, for later steps:
 
 - Attribute placement: `PF_*` attribute macros go first in a
@@ -456,7 +416,9 @@ Caveats:
   `__pragma(pack)`, `__alignof`, `__debugbreak`). Needs a Windows or
   MinGW build (or CI) before relying on it.
 - The BSD and macOS branches of `pf_debugger_attached` (sysctl) are not
-  compiled here either.
+  compiled here either, nor the BSD `qsort_r` trampoline, the Windows
+  environment functions (`_wgetenv` / `_wputenv_s`; on Windows an empty
+  value removes a variable) and `qsort_s`.
 - The UTF-16 conversion is strict: unpaired surrogates in Windows file
   names are rejected with `PF_EILSEQ` (no WTF-8). Revisit in step 6 if
   needed.
@@ -516,6 +478,9 @@ Caveats:
   standard names follow what the library found at build time; `realpath`
   moves to step 6, `qsort_r` to `stdlib.h`, v1's MSVC locale mappings are
   dropped; UTF conversions take a `flags` argument.
+- 2026-11-10: Step 4 implemented as specified, plus: the unicode standard
+  names are C only; `pf_c32rtomb` rejects values above U+10FFFF on every
+  platform; `pf_strerror_r` returns EINVAL for a zero `size`.
 
 ## Open questions
 
