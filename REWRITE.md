@@ -212,9 +212,9 @@ H = header-only (language layer), L = compiled (platform layer).
 | `macro.h` | `pf_macro.h` | H | done in step 2 |
 | `assert.h` | `pf_assert.h` | H+L | done in step 2 |
 | `debug.h` | (new) | L | done in step 2 |
-| `bitwise.h` | `pf_bitwise.h` | H | keep implementation tiers; + C23 `<stdbit.h>` names when missing |
-| `overflow.h` | `pf_overflow.h` | H | + C23 `ckd_add` / `ckd_sub` / `ckd_mul`, using type-generic builtins where available |
-| `endian.h` | `pf_endian.h` | H | + `htobe16` / `le32toh` / ... on Windows and macOS; unaligned `pf_load_le32` / `pf_store_be64` helpers |
+| `bitwise.h` | `pf_bitwise.h` | H | done in step 3 |
+| `overflow.h` | `pf_overflow.h` | H | done in step 3 |
+| `endian.h` | `pf_endian.h` | H | done in step 3 |
 | `ctype.h` | `pf_ctype.h` | H | mostly unchanged; UTF-8 helpers move to `unicode.h` |
 | `unicode.h` | (new) | L | UTF-8 <-> UTF-16/32, validation, decode/encode, `mbrtoc16` / `c16rtomb` (missing on macOS) |
 | `string.h` | `pf_string.h` | L | + `strndup`, `strlcpy`, `strlcat`, `strcasecmp`, `strncasecmp`, `strtok_r`, `strsep`, `memmem`, `memrchr`, `stpcpy`, `memccpy`, `memset_explicit`, `asprintf`, `vasprintf`, `pf_qsort_r` |
@@ -260,7 +260,7 @@ committed.
       of v1 files
 - [x] 2. Language layer: `attribute`, `stdc`, `types`, `macro`,
       `assert`, `debug`
-- [ ] 3. Integers: `bitwise`, `overflow`, `endian`
+- [x] 3. Integers: `bitwise`, `overflow`, `endian`
 - [ ] 4. Text: `ctype`, `unicode`, `string`, `stdlib`, `errno`
 - [ ] 5. Concurrency: `time`, `threads`, `atomic`, `semaphore`
 - [ ] 6. Files: `fs`, `dirent`, `dlfcn`, `mman`, `io`
@@ -274,74 +274,19 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-### Step 3: integers
-
-Approved 2026-11-10. All three headers are header-only (`PF_INLINE`,
-plus `constexpr` in C++14 except on MSVC intrinsic paths). Reference:
-`git show main:include/pf_{bitwise,overflow,endian}.h`.
-
-**`bitwise.h`**
-- v1's operations `clz ctz clo cto flz flo ftz fto popcount zerocount
-  parity ispow2 pow2ceil pow2floor bitreverse rotl rotr`, suffixes
-  (none) `l ll 8 16 32 64 size ptr max`, v1 edge-case semantics
-  (`clz(0)` = width, `pow2ceil(0)` and unrepresentable = 0, 1-based
-  `ftz`/`flo`, rotation counts modulo the width), v1 tiers (stdbit,
-  generic builtins, classic builtins, MSVC intrinsics, portable C).
-- `PF_IMPL_BITWISE(suffix, type, max)` stays for user types.
-- Add `pf_bitwidth*` (C23 `bit_width`).
-- Type-generic `PF_CLZ(x)`, `PF_ROTL(x, n)`, ...: C11 `_Generic`, GNU
-  C99 `__builtin_choose_expr`, C++ overloads; `PF_HAS_BITWISE_GENERIC`.
-  A signed argument fails to compile (add a `check_errors` case).
-- `PF_USE_CLASSIC` / `PF_USE_MSVC` become `PF_BITWISE_PORTABLE` (force
-  portable C, used by tests). `PF_MSVC_POPCNT` stays opt-in, also on
-  with `__AVX__`. `PF_API` / `pf_has_builtin` are no longer hooks.
-- `PF_STD_NAMES_BITWISE`, only without `<stdbit.h>`: all `stdc_*`
-  functions (`_uc _us _ui _ul _ull`), the type-generic `stdc_*`, and
-  `__STDC_ENDIAN_LITTLE__` / `_BIG__` / `_NATIVE__`. Exact C23
-  semantics (`unsigned int` results, `stdc_bit_ceil(0)` = 1).
-
-**`overflow.h`**
-- v1 families `pf_overflow_*` (returns `bool`, stores the wrapped
-  result), `pf_checked_*`, `pf_saturated_*`, GCC-style names (`sadd`,
-  `usub`, `smul`, ...), suffixes (none) `l ll 32 64 max ptr size diff`,
-  plus new `8` and `16`. `ptrdiff_t` takes the `s` prefix
-  (`pf_overflow_sadddiff`).
-- `pf_checked_*` fail through `PF_ASSERT_ALWAYS` (replaces
-  `pf_overflow_assert`).
-- No `<intsafe.h>`; MSVC gets portable C wrapping through unsigned
-  arithmetic. Fix v1's sign-compare in unsigned saturated sub.
-- `PF_CKD_ADD(r, a, b)` / `PF_CKD_SUB` / `PF_CKD_MUL` with C23 mixed-type
-  semantics, only where exact (`<stdckdint.h>` or
-  `__builtin_*_overflow`): `PF_HAS_CKD`. `PF_STD_NAMES_OVERFLOW` maps
-  `ckd_add` / `ckd_sub` / `ckd_mul` when `<stdckdint.h>` is missing.
-
-**`endian.h`**
-- Byte order in `platform.h`: `PF_ENDIAN_LITTLE`, `PF_ENDIAN_BIG`
-  (always 0/1), from `__BYTE_ORDER__`, the MSVC target, else
-  `PF_CONFIG_BIG_ENDIAN` in `config.h` (`host_machine.endian()`).
-- `pf_bswap16/32/64`, constant-expression `PF_BSWAP16/32/64(c)`.
-- `pf_htobe16`, `pf_be16toh`, `pf_htole16`, `pf_le16toh`, for 16, 32, 64.
-- Unaligned `pf_load_le16/32/64`, `pf_load_be*`, `pf_store_le*`,
-  `pf_store_be*`, native `pf_load16/32/64` / `pf_store*`, through
-  `memcpy`. `pf_memreverse(p, n)`. v1's `htobex` family is dropped.
-- `PF_STD_NAMES_ENDIAN`: `htobe16` ... `le64toh` where `<endian.h>` /
-  `<sys/endian.h>` lack them, `bswap_16/32/64` without `<byteswap.h>`.
-
-**Tests**: bitwise exhaustive for 8/16 bits against a reference, random
-32/64 against a `PF_BITWISE_PORTABLE` translation unit; overflow
-boundary tables for every type and family, mixed-type `PF_CKD_*`;
-endian swaps, constant macros, odd-offset load/store, byte order against
-a runtime check.
+None pending. Step 4 (`ctype`, `unicode`, `string`, `stdlib`,
+`errno`) needs an API proposal first.
 
 ## Current state and notes
 
-What exists after step 2:
+What exists after step 3:
 
 - `include/cpolyfill/`: `platform.h`, `config.h.in` (+ `meson.build`
   listing `public_headers`; add new headers there), `version.h`,
-  `errno.h`, and the language layer: `attribute.h`, `stdc.h`, `types.h`,
-  `macro.h`, `assert.h`, `debug.h`. Each header documents its API in its
-  top comment.
+  `errno.h`, the language layer: `attribute.h`, `stdc.h`, `types.h`,
+  `macro.h`, `assert.h`, `debug.h`, and the integer headers `bitwise.h`,
+  `overflow.h`, `endian.h` (header-only). Each header documents its
+  API in its top comment.
 - `src/`: `internal.h` (include first in every source), `allocator.h`
   (vendored), `alloc.c`, `assert.c`, `debug.c`, `errno.c`, `utf16.c`,
   `version.c`, `win32/error.c` (Win32/WSA -> `PF_E*`, internal for now).
@@ -371,6 +316,29 @@ What exists after step 2:
   internal `pf__assert_fail_*` the assert macros call). The
   `_Unwind_Backtrace` path (musl) and the no-backtrace fallback were run
   by hand with the meson detection overridden.
+
+Integer headers (step 3):
+
+- Byte order is `PF_ENDIAN_LITTLE` / `PF_ENDIAN_BIG` in `platform.h`,
+  with `PF_CONFIG_BIG_ENDIAN` in `config.h` as the last fallback.
+- Internal switches for the tests: `PF_BITWISE_PORTABLE` (public),
+  `PF__OVF_PORTABLE` (overflow without builtins or `<stdckdint.h>`) and
+  `PF__FORCE_STD_NAMES_POLYFILL` (the bitwise, overflow and endian
+  standard names ignore the system headers). `bitwise_portable.c` and
+  `overflow_portable.c` build the dispatchers of `bitwise_ops.h` /
+  `overflow_ops.h` without builtins; the suites compare both against a
+  bit-by-bit (bitwise) or `__int128` (overflow) reference. Without
+  `__int128` the overflow suite only checks that the two agree.
+- `std_polyfill.c` tests the forced polyfills; it `#undef`s the glibc
+  `htobe16`... first, since `<stdlib.h>` pulls in `<endian.h>`.
+- The GNU C99 generic `PF_CLZ` ends its `__builtin_choose_expr` chain in
+  `pf__bitwise_argument_must_be_unsigned(void)`, so a wrong type is a
+  "too many arguments" error naming it. C11 uses `_Generic`, C++
+  overloads (`pf__g_*`, ambiguous for signed types).
+- `overflow.h` keeps its type generators internal (`PF__OVF_SIGNED` /
+  `PF__OVF_UNSIGNED`); v1's `PF_IMPL_OVERFLOW` is not public.
+- MSVC paths (`_BitScan*`, `__popcnt`, `_rotl*`, `_byteswap_*`) are not
+  compiled here, like the rest of the Windows code.
 
 Language layer notes, for later steps:
 
@@ -466,6 +434,8 @@ Caveats:
     `__inline` is untested).
 - 2026-11-10: Step 3 spec approved. Byte-order macros live in
   `platform.h`; the v1 overflow names (`pf_overflow_sadd`, ...) stay.
+- 2026-11-10: Step 3 implemented as specified. The C23 `<stdbit.h>` tier
+  is only used in C23 (where `stdc_*` are guaranteed type-generic).
 
 ## Open questions
 
