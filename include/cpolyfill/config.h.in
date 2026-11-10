@@ -18,4 +18,7 @@
 /* 1 if the library was built only as a shared library (DLL on Windows). */
 #define PF_CONFIG_SHARED @PF_CONFIG_SHARED@
 
+/* 1 if the target is big-endian (fallback for <cpolyfill/platform.h>). */
+#define PF_CONFIG_BIG_ENDIAN @PF_CONFIG_BIG_ENDIAN@
+
 #endif /* CPOLYFILL_CONFIG_H */

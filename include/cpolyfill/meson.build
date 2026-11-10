@@ -4,9 +4,12 @@
 public_headers = files(
     'assert.h',
     'attribute.h',
+    'bitwise.h',
     'debug.h',
+    'endian.h',
     'errno.h',
     'macro.h',
+    'overflow.h',
     'platform.h',
     'stdc.h',
     'types.h',
@@ -21,6 +24,7 @@ conf.set('PF_VERSION_MINOR', version[1])
 conf.set('PF_VERSION_PATCH', version[2])
 conf.set('PF_VERSION_STRING', meson.project_version())
 conf.set10('PF_CONFIG_SHARED', get_option('default_library') == 'shared')
+conf.set10('PF_CONFIG_BIG_ENDIAN', host_machine.endian() == 'big')
 
 config_h = configure_file(
     input: 'config.h.in',

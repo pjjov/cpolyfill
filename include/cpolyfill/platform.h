@@ -54,6 +54,12 @@
 
         ARM64EC code (which MSVC also marks as x64) counts as PF_ARCH_ARM64.
 
+    Byte order:
+        PF_ENDIAN_LITTLE    Little-endian target.
+        PF_ENDIAN_BIG       Big-endian target.
+        Both are 0 on mixed-endian targets (PDP). Detected from the
+        compiler, else from the build configuration of the library.
+
     Language standard:
         PF_STD_VERSION      The value of __STDC_VERSION__, or 0.
         PF_STD_C99, PF_STD_C11, PF_STD_C17, PF_STD_C23
@@ -368,6 +374,38 @@
     #define PF_ARCH_BITS 64
 #else
     #define PF_ARCH_BITS 32
+#endif
+
+/* ---- Byte order ------------------------------------------------------- */
+
+#if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) \
+    && defined(__ORDER_BIG_ENDIAN__)
+    #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+        #define PF_ENDIAN_LITTLE 1
+        #define PF_ENDIAN_BIG 0
+    #elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+        #define PF_ENDIAN_LITTLE 0
+        #define PF_ENDIAN_BIG 1
+    #else
+        #define PF_ENDIAN_LITTLE 0
+        #define PF_ENDIAN_BIG 0
+    #endif
+#elif defined(_MSC_VER) || PF_ARCH_X86 || PF_ARCH_X86_64
+    /* Every Windows target is little-endian. */
+    #define PF_ENDIAN_LITTLE 1
+    #define PF_ENDIAN_BIG 0
+#elif defined(__LITTLE_ENDIAN__) || defined(__ARMEL__) \
+    || defined(__AARCH64EL__) || defined(__MIPSEL__)
+    #define PF_ENDIAN_LITTLE 1
+    #define PF_ENDIAN_BIG 0
+#elif defined(__BIG_ENDIAN__) || defined(__ARMEB__) \
+    || defined(__AARCH64EB__) || defined(__MIPSEB__)
+    #define PF_ENDIAN_LITTLE 0
+    #define PF_ENDIAN_BIG 1
+#else
+    /* The library was built for the same target. */
+    #define PF_ENDIAN_LITTLE (!PF_CONFIG_BIG_ENDIAN)
+    #define PF_ENDIAN_BIG PF_CONFIG_BIG_ENDIAN
 #endif
 
 /* ---- Language standard ------------------------------------------------ */
