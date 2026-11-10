@@ -40,6 +40,10 @@ STD_NAMES_AFTER = '''\
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <wchar.h>
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 #include <stdalign.h>
 #if !defined(__STDC_NO_THREADS__) && defined(__has_include)
@@ -60,6 +64,15 @@ STD_NAMES_AFTER = '''\
 #endif
 #if __has_include(<byteswap.h>)
 #include <byteswap.h>
+#endif
+#if __has_include(<strings.h>)
+#include <strings.h>
+#endif
+#if __has_include(<uchar.h>)
+#include <uchar.h>
+#endif
+#if __has_include(<sys/types.h>)
+#include <sys/types.h>
 #endif
 #endif
 '''

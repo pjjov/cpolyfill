@@ -3,10 +3,10 @@
     SPDX-License-Identifier: Apache-2.0
 */
 
-/* The standard-name polyfills of the integer headers, forced even where
-   the system has the names (PF__FORCE_STD_NAMES_POLYFILL is internal).
-   The system headers come first and their names are removed, so the
-   polyfill defines its own. */
+/* The standard-name polyfills of the integer and text headers, forced
+   even where the system has the names (PF__FORCE_STD_NAMES_POLYFILL is
+   internal). The system headers come first and their names are removed,
+   so the polyfill defines its own. */
 
 #include "check.h"
 
@@ -34,6 +34,13 @@
 #include <cpolyfill/bitwise.h>
 #include <cpolyfill/endian.h>
 #include <cpolyfill/overflow.h>
+
+#include <cpolyfill/errno.h>
+#include <cpolyfill/stdlib.h>
+#include <cpolyfill/string.h>
+#include <cpolyfill/unicode.h>
+
+#include <errno.h>
 
 #ifndef __cplusplus
     #define CHECK_STDBIT(sfx, type, bits)                                  \
@@ -142,9 +149,94 @@ static int test_endian(int seed, int i) {
     return 0;
 }
 
+#define XSTR(x) STR(x)
+#define STR(x) #x
+
+static int cmp_char(const void *a, const void *b, void *arg) {
+    (void)arg;
+    return *(const char *)a - *(const char *)b;
+}
+
+static int test_text(int seed, int i) {
+    static const char *const mapped[][2] = {
+        { XSTR(strdup), "pf_strdup" },
+        { XSTR(strndup), "pf_strndup" },
+        { XSTR(strnlen), "pf_strnlen" },
+        { XSTR(strlcpy), "pf_strlcpy" },
+        { XSTR(strlcat), "pf_strlcat" },
+        { XSTR(strcasecmp), "pf_strcasecmp" },
+        { XSTR(strncasecmp), "pf_strncasecmp" },
+        { XSTR(strtok_r), "pf_strtok_r" },
+        { XSTR(strsep), "pf_strsep" },
+        { XSTR(strchrnul), "pf_strchrnul" },
+        { XSTR(memmem), "pf_memmem" },
+        { XSTR(memrchr), "pf_memrchr" },
+        { XSTR(mempcpy), "pf_mempcpy" },
+        { XSTR(stpcpy), "pf_stpcpy" },
+        { XSTR(stpncpy), "pf_stpncpy" },
+        { XSTR(memccpy), "pf_memccpy" },
+        { XSTR(memset_explicit), "pf_memset_explicit" },
+        { XSTR(asprintf), "pf_asprintf" },
+        { XSTR(vasprintf), "pf_vasprintf" },
+        { XSTR(reallocarray), "pf_reallocarray" },
+        { XSTR(getline), "pf_getline" },
+        { XSTR(getdelim), "pf_getdelim" },
+        { XSTR(setenv), "pf_setenv" },
+        { XSTR(unsetenv), "pf_unsetenv" },
+        { XSTR(qsort_r), "pf_qsort_r" },
+        { XSTR(strerror_r), "pf_strerror_r" },
+        { XSTR(mbrtoc8), "pf_mbrtoc8" },
+        { XSTR(mbrtoc16), "pf_mbrtoc16" },
+        { XSTR(mbrtoc32), "pf_mbrtoc32" },
+        { XSTR(c8rtomb), "pf_c8rtomb" },
+        { XSTR(c16rtomb), "pf_c16rtomb" },
+        { XSTR(c32rtomb), "pf_c32rtomb" },
+    };
+    char buf[16], letters[] = "dcba", *s = NULL;
+    char16_t c16 = 0;
+    char32_t c32 = 0;
+    mbstate_t st;
+    size_t k;
+    int rc;
+    (void)seed, (void)i;
+
+    for (k = 0; k < sizeof(mapped) / sizeof(mapped[0]); k++)
+        PF_ASSERT_ALWAYS_STR_EQ(mapped[k][0], mapped[k][1]);
+
+    /* the standard signatures */
+    PF_ASSERT_ALWAYS_EQ(strlcpy(buf, "hello", 4), 5);
+    PF_ASSERT_ALWAYS_STR_EQ(buf, "hel");
+    PF_ASSERT_ALWAYS_EQ(asprintf(&s, "%d", 12), 2);
+    PF_ASSERT_ALWAYS_STR_EQ(s, "12");
+    free(s);
+    qsort_r(letters, 4, 1, cmp_char, NULL);
+    PF_ASSERT_ALWAYS_STR_EQ(letters, "abcd");
+    rc = strerror_r(EINVAL, buf, sizeof(buf));
+    PF_ASSERT_ALWAYS(rc == 0 || rc == ERANGE);
+    {
+        ssize_t n;
+        size_t cap = 0;
+        char *line = NULL;
+        FILE *f = tmpfile();
+        fputs("x\n", f);
+        rewind(f);
+        n = getline(&line, &cap, f);
+        PF_ASSERT_ALWAYS_EQ(n, 2);
+        free(line);
+        fclose(f);
+    }
+    memset(&st, 0, sizeof(st));
+    PF_ASSERT_ALWAYS_EQ(mbrtoc16(&c16, "A", 1, &st), 1);
+    PF_ASSERT_ALWAYS_EQ(c16, 'A');
+    PF_ASSERT_ALWAYS_EQ(mbrtoc32(&c32, "B", 1, &st), 1);
+    PF_ASSERT_ALWAYS_EQ(c32, 'B');
+    return 0;
+}
+
 pf_test_t suite_std_polyfill[] = {
     { test_stdbit, "stdbit" },
     { test_ckdint, "ckdint" },
     { test_endian, "endian" },
+    { test_text, "text" },
     { 0 },
 };

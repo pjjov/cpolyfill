@@ -6,6 +6,7 @@ suites = [
     'assert',
     'attribute',
     'bitwise',
+    'ctype',
     'debug',
     'endian',
     'errno',
@@ -15,8 +16,11 @@ suites = [
     'std_names',
     'std_polyfill',
     'stdc',
+    'stdlib',
+    'string',
     'types',
-    'utf16',
+    'uchar',
+    'unicode',
     'version',
 ]
 

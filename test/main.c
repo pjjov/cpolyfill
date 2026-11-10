@@ -25,6 +25,7 @@ extern pf_test_t suite_alloc[];
 extern pf_test_t suite_assert[];
 extern pf_test_t suite_attribute[];
 extern pf_test_t suite_bitwise[];
+extern pf_test_t suite_ctype[];
 extern pf_test_t suite_debug[];
 extern pf_test_t suite_endian[];
 extern pf_test_t suite_errno[];
@@ -34,8 +35,11 @@ extern pf_test_t suite_platform[];
 extern pf_test_t suite_std_names[];
 extern pf_test_t suite_std_polyfill[];
 extern pf_test_t suite_stdc[];
+extern pf_test_t suite_stdlib[];
+extern pf_test_t suite_string[];
 extern pf_test_t suite_types[];
-extern pf_test_t suite_utf16[];
+extern pf_test_t suite_uchar[];
+extern pf_test_t suite_unicode[];
 extern pf_test_t suite_version[];
 
 /* clang-format on */
@@ -48,6 +52,7 @@ int main(int argc, char *argv[]) {
         { "assert", 1, suite_assert },
         { "attribute", 1, suite_attribute },
         { "bitwise", 3, suite_bitwise },
+        { "ctype", 1, suite_ctype },
         { "debug", 1, suite_debug },
         { "endian", 3, suite_endian },
         { "errno", 1, suite_errno },
@@ -57,8 +62,11 @@ int main(int argc, char *argv[]) {
         { "std_names", 1, suite_std_names },
         { "std_polyfill", 3, suite_std_polyfill },
         { "stdc", 1, suite_stdc },
+        { "stdlib", 3, suite_stdlib },
+        { "string", 1, suite_string },
         { "types", 1, suite_types },
-        { "utf16", 5, suite_utf16 },
+        { "uchar", 1, suite_uchar },
+        { "unicode", 5, suite_unicode },
         { "version", 1, suite_version },
         { 0 },
     };

@@ -9,13 +9,17 @@
 #include <cpolyfill/assert.h>
 #include <cpolyfill/attribute.h>
 #include <cpolyfill/bitwise.h>
+#include <cpolyfill/ctype.h>
 #include <cpolyfill/debug.h>
 #include <cpolyfill/endian.h>
 #include <cpolyfill/errno.h>
 #include <cpolyfill/macro.h>
 #include <cpolyfill/overflow.h>
 #include <cpolyfill/stdc.h>
+#include <cpolyfill/stdlib.h>
+#include <cpolyfill/string.h>
 #include <cpolyfill/types.h>
+#include <cpolyfill/unicode.h>
 
 #include <stdint.h>
 
@@ -126,6 +130,11 @@ PF_STATIC_ASSERT(pf_pow2ceil8(5) == 8);
 PF_STATIC_ASSERT(pf_rotr16(1, 1) == 0x8000);
 PF_STATIC_ASSERT(PF_POPCOUNT(0xFFull) == 8);
 PF_STATIC_ASSERT(pf_bswap32(0x11223344) == 0x44332211);
+PF_STATIC_ASSERT(pf_isalpha('q') && !pf_isdigit('q'));
+PF_STATIC_ASSERT(pf_toupper('q') == 'Q');
+PF_STATIC_ASSERT(pf_digit_value('f', 16) == 15);
+PF_STATIC_ASSERT(pf_utf8_clen(0xE2) == 3);
+PF_STATIC_ASSERT(!pf_unicode_isvalid(0xD800));
 #endif
 PF_STATIC_ASSERT(PF_BSWAP16(0x1234) == 0x3412);
 
@@ -163,6 +172,21 @@ static void test_integers() {
     PF_ASSERT_ALWAYS_EQ(pf_be32toh(pf_htobe32(7)), 7u);
 }
 
+static void test_text() {
+    char *s = nullptr;
+    char buf[8];
+    uint16_t w[8];
+
+    PF_ASSERT_ALWAYS(pf_isspace('\t') && !pf_isspace('x'));
+    PF_ASSERT_ALWAYS_EQ(pf_strlcpy(buf, "abcdefghij", sizeof(buf)), 10u);
+    PF_ASSERT_ALWAYS_EQ(pf_asprintf(&s, "%s-%d", "a", 1), 3);
+    PF_ASSERT_ALWAYS_STR_EQ(s, "a-1");
+    free(s);
+    PF_ASSERT_ALWAYS_EQ(pf_utf8_to_utf16("\xC3\xA9", PF_NTS, w, 8, 0), 1);
+    PF_ASSERT_ALWAYS_EQ(w[0], 0xE9);
+    PF_ASSERT_ALWAYS_STR_EQ(pf_error_name(PF_ENOENT), "ENOENT");
+}
+
 int main() {
     PF_ASSERT_ALWAYS_EQ(constructed, 1);
     test_types();
@@ -171,5 +195,6 @@ int main() {
     test_assert();
     test_debug();
     test_integers();
+    test_text();
     return 0;
 }
