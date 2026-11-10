@@ -217,8 +217,8 @@ H = header-only (language layer), L = compiled (platform layer).
 | `endian.h` | `pf_endian.h` | H | done in step 3 |
 | `ctype.h` | `pf_ctype.h` | H | mostly unchanged; UTF-8 helpers move to `unicode.h` |
 | `unicode.h` | (new) | L | UTF-8 <-> UTF-16/32, validation, decode/encode, `mbrtoc16` / `c16rtomb` (missing on macOS) |
-| `string.h` | `pf_string.h` | L | + `strndup`, `strlcpy`, `strlcat`, `strcasecmp`, `strncasecmp`, `strtok_r`, `strsep`, `memmem`, `memrchr`, `stpcpy`, `memccpy`, `memset_explicit`, `asprintf`, `vasprintf`, `pf_qsort_r` |
-| `stdlib.h` | (new) | L | `pf_aligned_alloc` / `pf_aligned_free`, `reallocarray`, `setenv`, `unsetenv`, `getline`, `getdelim`, `realpath` |
+| `string.h` | `pf_string.h` | L | + `strndup`, `strlcpy`, `strlcat`, `strcasecmp`, `strncasecmp`, `strtok_r`, `strsep`, `memmem`, `memrchr`, `stpcpy`, `memccpy`, `memset_explicit`, `asprintf`, `vasprintf` |
+| `stdlib.h` | (new) | L | `pf_aligned_alloc` / `pf_aligned_free`, `reallocarray`, `setenv`, `unsetenv`, `getenv`, `getline`, `getdelim`, `pf_qsort_r` |
 | `errno.h` | `pf_errno.h` | L | step 1: `PF_E*` codes, `pf_error_from_errno` / `pf_error_to_errno`; step 4: public Win32/WSA mapping, `pf_strerror` |
 | `version.h` | (new) | L | done in step 1 |
 | `time.h` | (new) | L | `clock_gettime` (monotonic, realtime) on Windows, `pf_time_ns()`, `nanosleep`, `timespec_get`, `gmtime_r`, `localtime_r`, `timegm` |
@@ -274,8 +274,84 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-None pending. Step 4 (`ctype`, `unicode`, `string`, `stdlib`,
-`errno`) needs an API proposal first.
+### Step 4: text
+
+Approved 2026-11-10. Reference: `git show main:include/pf_{ctype,string,errno}.h`.
+
+**`ctype.h`** (header-only, `PF_INLINE`, `constexpr` in C++14)
+- Locale-independent `pf_isalpha` `pf_isdigit` `pf_isxdigit` `pf_isspace`
+  `pf_isblank` `pf_iscntrl` `pf_isgraph` `pf_isprint` `pf_ispunct`
+  `pf_islower` `pf_isupper` `pf_isalnum` returning `bool`, plus
+  `pf_tolower` / `pf_toupper` (`int`). Defined for every `int` (EOF,
+  negative `char`, > 127 are false / returned unchanged).
+- New `pf_isascii`, `pf_isodigit`, `pf_digit_value(c, base)` (value for
+  base 2..36, or -1).
+- `PF_CTYPE_*` strings and `enum pf_ascii_control` stay; add
+  `PF_ASCII_SP` (32) and `PF_ASCII_DEL` (127).
+- UTF-8 helpers and `enum pf_unicode_special` move to `unicode.h`. No
+  standard names.
+
+**`unicode.h`** (L, small inline helpers)
+- Code units are `uint16_t` / `uint32_t`.
+- Inline: `pf_utf8_clen(lead)` (strict: 0 for C0, C1, F5..FF),
+  `pf_utf8_iscont(c)`, `pf_unicode_isvalid(cp)` (scalar values),
+  `pf_unicode_issurrogate(cp)`, `enum pf_unicode_special`
+  (`PF_UNICODE_REPLACEMENT`, ...).
+- `int pf_utf8_decode(const char *s, size_t n, uint32_t *cp)`: bytes
+  consumed 1..4, 0 if `n == 0`, `PF_EILSEQ` (overlong, surrogate,
+  truncated). `int pf_utf8_encode(uint32_t cp, char out[4])`: 1..4 or
+  `PF_EILSEQ`. Same for `pf_utf16_decode` / `pf_utf16_encode`.
+- `size_t pf_utf8_valid_prefix(s, n)`, `ptrdiff_t pf_utf8_count(s, n)`.
+- Conversions `pf_utf8_to_utf16`, `pf_utf16_to_utf8`, `pf_utf8_to_utf32`,
+  `pf_utf32_to_utf8`, `pf_utf8_to_wcs`, `pf_wcs_to_utf8` with the internal
+  contract (`PF_NTS` length, NULL `dst` measures, `PF_ERANGE` when `cap`
+  is too small) and an `unsigned flags` argument: `PF_UNICODE_REPLACE`
+  replaces invalid input with U+FFFD instead of failing. `pf__wstr` stays
+  internal on top of them.
+- `pf_mbrtoc8/16/32`, `pf_c8/16/32rtomb` always exported, through
+  `mbrtowc` / `wcrtomb`. `PF_STD_NAMES_UNICODE` maps the standard names
+  and `char8_t` / `char16_t` / `char32_t` (C only) where `<uchar.h>` or the
+  function is missing.
+
+**`string.h`** (L)
+- `pf_strdup` `pf_strndup` `pf_strnlen` `pf_strlcpy` `pf_strlcat`
+  `pf_strcasecmp` `pf_strncasecmp` `pf_strtok_r` `pf_strsep`
+  `pf_strchrnul` `pf_memmem` `pf_memrchr` `pf_mempcpy` `pf_stpcpy`
+  `pf_stpncpy` `pf_memccpy` `pf_memset_explicit` `pf_asprintf`
+  `pf_vasprintf`.
+- BSD `strlcpy` / `strlcat`; C23 `memset_explicit`; `asprintf` sets
+  `*strp = NULL` on failure; case-insensitive compares fold ASCII only;
+  `pf_strnlen(NULL, n)` is 0; allocating functions use `malloc`.
+- `PF_STD_NAMES_STRING` maps a standard name only when the library found
+  it missing or different at build time (`PF_CONFIG_HAVE_*` in
+  `config.h`).
+- v1's MSVC `locale_t` / `*_l` and `wcscasecmp` mappings are dropped.
+
+**`stdlib.h`** (L)
+- `pf_aligned_alloc` / `pf_aligned_free` (no standard name),
+  `pf_reallocarray`, `pf_getline`, `pf_getdelim`, `pf_setenv`,
+  `pf_unsetenv`, `pf_qsort_r` (POSIX 2024 / GNU order, moved from
+  `string.h`), `ptrdiff_t pf_getenv(name, buf, size)` (UTF-8 on Windows,
+  NULL `buf` measures, `PF_ERANGE`, `PF_ENOENT`), `pf_ssize_t`.
+- `PF_STD_NAMES_STDLIB`: `reallocarray`, `getline`, `getdelim`, `setenv`,
+  `unsetenv` where missing, `qsort_r` where missing or BSD order,
+  `ssize_t` on MSVC.
+- `realpath` moves to `fs.h` (step 6).
+
+**`errno.h`**
+- Public `pf_error_from_win32`, `pf_error_from_wsa`,
+  `pf_error_last_win32` (declared only with `PF_OS_WINDOWS`).
+- `const char *pf_strerror(int code)`, `const char *pf_error_name(int
+  code)`, `int pf_strerror_r(int errnum, char *buf, size_t size)` (XSI);
+  `PF_STD_NAMES_ERRNO` maps `strerror_r` only where it is missing.
+
+**Tests**: ctype -1..255 against `<ctype.h>` in the C locale; unicode
+round trips of every code point, invalid sequence tables in strict and
+replace mode (absorbs the `utf16` suite); string edge cases against the
+system functions; stdlib alignments, `reallocarray` overflow, UTF-8
+environment, `getline` on long lines / no final newline / embedded NUL;
+errno strings and names for every code; `check_headers` standard-name
+cases.
 
 ## Current state and notes
 
@@ -436,6 +512,10 @@ Caveats:
   `platform.h`; the v1 overflow names (`pf_overflow_sadd`, ...) stay.
 - 2026-11-10: Step 3 implemented as specified. The C23 `<stdbit.h>` tier
   is only used in C23 (where `stdc_*` are guaranteed type-generic).
+- 2026-11-10: Step 4 spec approved. `ctype` predicates return `bool`;
+  standard names follow what the library found at build time; `realpath`
+  moves to step 6, `qsort_r` to `stdlib.h`, v1's MSVC locale mappings are
+  dropped; UTF conversions take a `flags` argument.
 
 ## Open questions
 
