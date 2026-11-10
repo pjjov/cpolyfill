@@ -274,8 +274,64 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-None pending. Step 3 (`bitwise`, `overflow`, `endian`) needs an API
-proposal first.
+### Step 3: integers
+
+Approved 2026-11-10. All three headers are header-only (`PF_INLINE`,
+plus `constexpr` in C++14 except on MSVC intrinsic paths). Reference:
+`git show main:include/pf_{bitwise,overflow,endian}.h`.
+
+**`bitwise.h`**
+- v1's operations `clz ctz clo cto flz flo ftz fto popcount zerocount
+  parity ispow2 pow2ceil pow2floor bitreverse rotl rotr`, suffixes
+  (none) `l ll 8 16 32 64 size ptr max`, v1 edge-case semantics
+  (`clz(0)` = width, `pow2ceil(0)` and unrepresentable = 0, 1-based
+  `ftz`/`flo`, rotation counts modulo the width), v1 tiers (stdbit,
+  generic builtins, classic builtins, MSVC intrinsics, portable C).
+- `PF_IMPL_BITWISE(suffix, type, max)` stays for user types.
+- Add `pf_bitwidth*` (C23 `bit_width`).
+- Type-generic `PF_CLZ(x)`, `PF_ROTL(x, n)`, ...: C11 `_Generic`, GNU
+  C99 `__builtin_choose_expr`, C++ overloads; `PF_HAS_BITWISE_GENERIC`.
+  A signed argument fails to compile (add a `check_errors` case).
+- `PF_USE_CLASSIC` / `PF_USE_MSVC` become `PF_BITWISE_PORTABLE` (force
+  portable C, used by tests). `PF_MSVC_POPCNT` stays opt-in, also on
+  with `__AVX__`. `PF_API` / `pf_has_builtin` are no longer hooks.
+- `PF_STD_NAMES_BITWISE`, only without `<stdbit.h>`: all `stdc_*`
+  functions (`_uc _us _ui _ul _ull`), the type-generic `stdc_*`, and
+  `__STDC_ENDIAN_LITTLE__` / `_BIG__` / `_NATIVE__`. Exact C23
+  semantics (`unsigned int` results, `stdc_bit_ceil(0)` = 1).
+
+**`overflow.h`**
+- v1 families `pf_overflow_*` (returns `bool`, stores the wrapped
+  result), `pf_checked_*`, `pf_saturated_*`, GCC-style names (`sadd`,
+  `usub`, `smul`, ...), suffixes (none) `l ll 32 64 max ptr size diff`,
+  plus new `8` and `16`. `ptrdiff_t` takes the `s` prefix
+  (`pf_overflow_sadddiff`).
+- `pf_checked_*` fail through `PF_ASSERT_ALWAYS` (replaces
+  `pf_overflow_assert`).
+- No `<intsafe.h>`; MSVC gets portable C wrapping through unsigned
+  arithmetic. Fix v1's sign-compare in unsigned saturated sub.
+- `PF_CKD_ADD(r, a, b)` / `PF_CKD_SUB` / `PF_CKD_MUL` with C23 mixed-type
+  semantics, only where exact (`<stdckdint.h>` or
+  `__builtin_*_overflow`): `PF_HAS_CKD`. `PF_STD_NAMES_OVERFLOW` maps
+  `ckd_add` / `ckd_sub` / `ckd_mul` when `<stdckdint.h>` is missing.
+
+**`endian.h`**
+- Byte order in `platform.h`: `PF_ENDIAN_LITTLE`, `PF_ENDIAN_BIG`
+  (always 0/1), from `__BYTE_ORDER__`, the MSVC target, else
+  `PF_CONFIG_BIG_ENDIAN` in `config.h` (`host_machine.endian()`).
+- `pf_bswap16/32/64`, constant-expression `PF_BSWAP16/32/64(c)`.
+- `pf_htobe16`, `pf_be16toh`, `pf_htole16`, `pf_le16toh`, for 16, 32, 64.
+- Unaligned `pf_load_le16/32/64`, `pf_load_be*`, `pf_store_le*`,
+  `pf_store_be*`, native `pf_load16/32/64` / `pf_store*`, through
+  `memcpy`. `pf_memreverse(p, n)`. v1's `htobex` family is dropped.
+- `PF_STD_NAMES_ENDIAN`: `htobe16` ... `le64toh` where `<endian.h>` /
+  `<sys/endian.h>` lack them, `bswap_16/32/64` without `<byteswap.h>`.
+
+**Tests**: bitwise exhaustive for 8/16 bits against a reference, random
+32/64 against a `PF_BITWISE_PORTABLE` translation unit; overflow
+boundary tables for every type and family, mixed-type `PF_CKD_*`;
+endian swaps, constant macros, odd-offset load/store, byte order against
+a runtime check.
 
 ## Current state and notes
 
@@ -391,7 +447,7 @@ Caveats:
   (glibc-style) one-line message and aborts, no backtrace.
 - 2026-11-06: `pf_bool` is dropped; use `bool`.
 - 2026-11-09: Step 2 implemented. Departures from the approved spec,
-  pending the maintainer's review (see Open questions):
+  approved by the maintainer on 2026-11-10:
   - `PF_PACKED` became `PF_PACKED_BEGIN` / `PF_PACKED_END` (`#pragma
     pack`): the `packed` attribute cannot be placed at the start of a
     declaration, and MSVC has no attribute for it at all, so a
@@ -408,12 +464,10 @@ Caveats:
     C++20), 1 before.
   - `PF_ALWAYS_INLINE` is empty on MSVC (`__forceinline` together with
     `__inline` is untested).
+- 2026-11-10: Step 3 spec approved. Byte-order macros live in
+  `platform.h`; the v1 overflow names (`pf_overflow_sadd`, ...) stay.
 
 ## Open questions
-
-- Step 2 departures from the spec (decision log, 2026-11-09): confirm
-  `PF_PACKED_BEGIN` / `PF_PACKED_END`, the function-defining
-  `PF_CONSTRUCTOR`, and the rest of that list.
 
 - Minimum platform versions (proposed Windows 10, macOS 11,
   glibc 2.17).
