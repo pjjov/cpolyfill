@@ -45,6 +45,7 @@
 
 #include <cpolyfill/errno.h>
 #include <cpolyfill/platform.h>
+#include <cpolyfill/unicode.h>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -63,22 +64,12 @@ void *pf__default_allocate(void *ptr, size_t old, size_t size, size_t zalign);
 
 /* ---- UTF-8 <-> UTF-16 ------------------------------------------------- */
 
-/* Pass as a length to convert up to the terminating NUL. */
-#define PF__NTS ((size_t)-1)
-
-/* Convert `len` code units of `src` (or up to its NUL with PF__NTS). The
-   output is always NUL-terminated. Returns the number of code units of the
-   converted string without the NUL, or a negative PF_E* code:
-     PF_EILSEQ   the input is not valid UTF-8 / UTF-16 (overlong forms,
-                 surrogates encoded in UTF-8, unpaired surrogates, ...)
-     PF_ERANGE   `cap` is too small; nothing useful was written.
-   With `dst == NULL` only the length is computed. */
-ptrdiff_t pf__utf8_to_utf16(
-    const char *src, size_t len, uint16_t *dst, size_t cap
-);
-ptrdiff_t pf__utf16_to_utf8(
-    const uint16_t *src, size_t len, char *dst, size_t cap
-);
+/* Decodes the UTF-8 sequence at `s[0..n)` (n > 0): returns the bytes it
+   spans and sets `*cp`, or -1 with the length of the maximal invalid
+   subpart. */
+size_t pf__utf8_next(const unsigned char *s, size_t n, long *cp);
+/* Encodes a valid code point, returns the number of bytes (1-4). */
+size_t pf__utf8_put(uint32_t cp, unsigned char *out);
 
 /* A UTF-16 copy of a UTF-8 string, on the stack for short strings (most
    paths) and on the heap for long ones:
@@ -100,12 +91,59 @@ typedef struct pf__wstr {
 int pf__wstr_from_utf8(pf__wstr *out, const char *src);
 void pf__wstr_free(pf__wstr *str);
 
-/* ---- Windows errors --------------------------------------------------- */
+/* ---- uchar fallbacks (uchar.c) ---------------------------------------- */
 
-#if PF_OS_WINDOWS
-int pf__error_from_win32(unsigned long err);
-int pf__error_from_wsa(int err);
-int pf__error_last_win32(void); /* pf__error_from_win32(GetLastError()) */
-#endif
+/* The state of the UTF-8 / UTF-16 layer, kept inside the caller's
+   mbstate_t. All zero is the initial state. */
+enum {
+    PF__MBEXT_NONE = 0,
+    PF__MBEXT_C16_OUT,  /* mbrtoc16: low surrogate `value` still to give */
+    PF__MBEXT_C16_IN,   /* c16rtomb: high surrogate `value` received */
+    PF__MBEXT_C8_OUT,   /* mbrtoc8: byte `count` of `value` still to give */
+    PF__MBEXT_UTF8_IN   /* partial UTF-8 input: `seen` bytes of `lead`,
+                           `count` to go, bits so far in `value` */
+};
+
+typedef struct pf__mbext {
+    uint32_t value;
+    unsigned char kind;
+    unsigned char count;
+    unsigned char lead;
+    unsigned char seen;
+} pf__mbext;
+
+typedef struct pf__mbconv {
+    mbstate_t *inner; /* the mbrtowc / wcrtomb state (wc backend) */
+    pf__mbext ext;
+    int utf8;         /* 1: assume UTF-8, 0: through mbrtowc / wcrtomb */
+} pf__mbconv;
+
+size_t pf__mbrtoc8_with(
+    pf__mbconv *cv, unsigned char *pc8, const char *s, size_t n
+);
+size_t pf__mbrtoc16_with(
+    pf__mbconv *cv, uint16_t *pc16, const char *s, size_t n
+);
+size_t pf__mbrtoc32_with(
+    pf__mbconv *cv, uint32_t *pc32, const char *s, size_t n
+);
+size_t pf__c8rtomb_with(pf__mbconv *cv, char *s, unsigned char c8);
+size_t pf__c16rtomb_with(pf__mbconv *cv, char *s, uint16_t c16);
+size_t pf__c32rtomb_with(pf__mbconv *cv, char *s, uint32_t c32);
+
+/* ---- Portable fallbacks, also run by the tests ------------------------ */
+
+#include <cpolyfill/stdlib.h>
+
+pf_ssize_t pf__getdelim_portable(
+    char **line, size_t *cap, int delim, FILE *f
+);
+void pf__qsort_r_portable(
+    void *base,
+    size_t n,
+    size_t size,
+    int (*cmp)(const void *, const void *, void *),
+    void *arg
+);
 
 #endif /* CPOLYFILL_INTERNAL_H */

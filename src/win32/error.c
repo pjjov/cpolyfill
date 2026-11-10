@@ -8,7 +8,7 @@
 #include <winsock2.h>
 #include <windows.h>
 
-int pf__error_from_win32(unsigned long err) {
+PF_API int pf_error_from_win32(unsigned long err) {
     switch (err) {
     case ERROR_SUCCESS:
         return PF_OK;
@@ -112,7 +112,7 @@ int pf__error_from_win32(unsigned long err) {
     }
 }
 
-int pf__error_from_wsa(int err) {
+PF_API int pf_error_from_wsa(int err) {
     switch (err) {
     case 0:
         return PF_OK;
@@ -209,4 +209,4 @@ int pf__error_from_wsa(int err) {
     }
 }
 
-int pf__error_last_win32(void) { return pf__error_from_win32(GetLastError()); }
+PF_API int pf_error_last_win32(void) { return pf_error_from_win32(GetLastError()); }

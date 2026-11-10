@@ -195,7 +195,7 @@ static void pf__print_frame(FILE *out, int i, void *addr) {
             &module
         )
         && (n = GetModuleFileNameW(module, wide, MAX_PATH)) > 0 && n < MAX_PATH
-        && pf__utf16_to_utf8((const uint16_t *)wide, n, name, sizeof(name))
+        && pf_utf16_to_utf8((const uint16_t *)wide, n, name, sizeof(name), 0)
             >= 0) {
         for (p = name; *p; p++)
             if (*p == '\\' || *p == '/')

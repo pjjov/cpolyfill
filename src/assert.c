@@ -32,7 +32,7 @@ static const char *pf__progname(char *buf, size_t size) {
     const char *base = buf;
     char *p;
     if (n == 0 || n >= MAX_PATH
-        || pf__utf16_to_utf8((const uint16_t *)wide, n, buf, size) < 0)
+        || pf_utf16_to_utf8((const uint16_t *)wide, n, buf, size, 0) < 0)
         return "";
     for (p = buf; *p; p++)
         if (*p == '\\' || *p == '/')

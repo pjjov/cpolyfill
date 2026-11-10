@@ -16,6 +16,31 @@
         int pf_error_to_errno(int code);    PF_E* code -> errno value, or 0
                                             for PF_OK, or EINVAL if the
                                             system has no such errno value
+        const char *pf_strerror(int code);  English description of a PF_E*
+                                            code: "Success" for PF_OK,
+                                            "Unknown error" for anything
+                                            else not in the list. Static,
+                                            thread-safe, ignores the locale.
+        const char *pf_error_name(int code); "ENOENT" for PF_ENOENT, "OK"
+                                            for PF_OK, "EUNKNOWN" for codes
+                                            not in the list.
+        int pf_strerror_r(int errnum, char *buf, size_t size);
+                                            The system's message for the
+                                            errno value `errnum`, with the
+                                            XSI semantics: 0, or ERANGE if
+                                            `size` is too small (the
+                                            message is truncated), or
+                                            EINVAL if `size` is 0.
+
+    On Windows:
+
+        int pf_error_from_win32(unsigned long err);  GetLastError() value
+        int pf_error_from_wsa(int err);              WSAGetLastError() value
+        int pf_error_last_win32(void);   pf_error_from_win32(GetLastError())
+
+    Standard names, with PF_STD_NAMES or PF_STD_NAMES_ERRNO, only where the
+    library found it missing (Windows): `strerror_r`. Where the system has
+    it, glibc's GNU variant (returning `char *`) is left alone.
 
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
@@ -39,6 +64,8 @@
 #define CPOLYFILL_ERRNO_H
 
 #include <cpolyfill/platform.h>
+
+#include <stddef.h>
 
 PF_BEGIN_DECLS
 
@@ -140,6 +167,27 @@ enum pf_error {
 PF_API int pf_error_from_errno(int err);
 PF_API int pf_error_to_errno(int code);
 
+PF_API const char *pf_strerror(int code);
+PF_API const char *pf_error_name(int code);
+PF_API int pf_strerror_r(int errnum, char *buf, size_t size);
+
+#if PF_OS_WINDOWS
+PF_API int pf_error_from_win32(unsigned long err);
+PF_API int pf_error_from_wsa(int err);
+PF_API int pf_error_last_win32(void);
+#endif
+
 PF_END_DECLS
 
 #endif /* CPOLYFILL_ERRNO_H */
+
+#if !defined(PF__ERRNO_STD_NAMES)                                    \
+    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_ERRNO))   \
+        || defined(PF_STD_NAMES_ERRNO))
+    #define PF__ERRNO_STD_NAMES
+    #if !PF_CONFIG_HAVE_STRERROR_R || defined(PF__FORCE_STD_NAMES_POLYFILL)
+        #include <string.h>
+        #undef strerror_r
+        #define strerror_r pf_strerror_r
+    #endif
+#endif

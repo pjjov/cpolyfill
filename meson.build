@@ -29,7 +29,10 @@ sources = files(
     'src/assert.c',
     'src/debug.c',
     'src/errno.c',
-    'src/utf16.c',
+    'src/stdlib.c',
+    'src/string.c',
+    'src/uchar.c',
+    'src/unicode.c',
     'src/version.c',
 )
 if is_windows
@@ -40,6 +43,61 @@ lib_args = ['-DPF__BUILDING']
 if is_msvc
     lib_args += ['-D_CRT_SECURE_NO_WARNINGS']
 endif
+
+# Internal facts about the C library (string.c, stdlib.c, errno.c).
+lib_args += [
+    '-DPF__HAVE_QSORT_R_BSD=@0@'.format(qsort_r_bsd ? 1 : 0),
+    '-DPF__HAVE_GETC_UNLOCKED=@0@'.format(
+        cc.links(
+            libc_prefix + '''
+int main(void) {
+    flockfile(stdin);
+    int c = getc_unlocked(stdin);
+    funlockfile(stdin);
+    return c;
+}
+''',
+            name: 'getc_unlocked',
+        ) ? 1 : 0,
+    ),
+    '-DPF__HAVE_EXPLICIT_BZERO=@0@'.format(
+        cc.links(
+            libc_prefix + '''
+int main(void) {
+    char b[4];
+    explicit_bzero(b, sizeof(b));
+    return b[0];
+}
+''',
+            name: 'explicit_bzero',
+        ) ? 1 : 0,
+    ),
+    '-DPF__HAVE_MEMSET_S=@0@'.format(
+        cc.links(
+            libc_prefix + '''
+int main(void) {
+    char b[4];
+    memset_s(b, sizeof(b), 0, sizeof(b));
+    return b[0];
+}
+''',
+            name: 'memset_s',
+        ) ? 1 : 0,
+    ),
+    '-DPF__STRERROR_R_GNU=@0@'.format(
+        libc_have['strerror_r'] and cc.compiles(
+            libc_prefix + '''
+int main(void) {
+    char buf[8];
+    char *p = strerror_r(1, buf, sizeof(buf));
+    return p == 0;
+}
+''',
+            args: strict_types,
+            name: 'GNU strerror_r',
+        ) ? 1 : 0,
+    ),
+]
 
 # Backtraces (debug.c): execinfo (glibc, macOS, BSDs with libexecinfo),
 # else the unwinder of libgcc / LLVM (musl), and dladdr for symbol names.

@@ -6,6 +6,8 @@
 #include "internal.h"
 
 #include <errno.h>
+#include <stdio.h>
+#include <string.h>
 
 /* System errno value -> PF_E* code. The first entry for a code is its
    canonical errno value; aliases (EWOULDBLOCK, ENOTSUP, EDEADLOCK) come
@@ -292,4 +294,75 @@ PF_API int pf_error_to_errno(int code) {
             return pf__errno_table[i].sys;
     }
     return EINVAL;
+}
+
+/* ---- Descriptions ----------------------------------------------------- */
+
+static const struct {
+    int code;
+    const char *name;
+    const char *desc;
+} pf__error_info[] = {
+#define PF__ERROR_INFO(name, value, desc) { -(value), #name, desc },
+    PF__ERROR_LIST(PF__ERROR_INFO)
+#undef PF__ERROR_INFO
+};
+
+#define PF__INFO_COUNT (sizeof(pf__error_info) / sizeof(pf__error_info[0]))
+
+static size_t pf__error_index(int code) {
+    size_t i;
+    for (i = 0; i < PF__INFO_COUNT; i++) {
+        if (pf__error_info[i].code == code)
+            return i;
+    }
+    return PF__INFO_COUNT;
+}
+
+PF_API const char *pf_strerror(int code) {
+    size_t i;
+
+    if (code == PF_OK)
+        return "Success";
+    i = pf__error_index(code);
+    return i < PF__INFO_COUNT ? pf__error_info[i].desc : "Unknown error";
+}
+
+PF_API const char *pf_error_name(int code) {
+    size_t i;
+
+    if (code == PF_OK)
+        return "OK";
+    i = pf__error_index(code);
+    return i < PF__INFO_COUNT ? pf__error_info[i].name : "EUNKNOWN";
+}
+
+PF_API int pf_strerror_r(int errnum, char *buf, size_t size) {
+    char tmp[256];
+    const char *msg;
+    size_t len;
+
+    if (!buf || size == 0)
+        return EINVAL;
+
+#if PF_OS_WINDOWS
+    if (strerror_s(tmp, sizeof(tmp), errnum) != 0)
+        snprintf(tmp, sizeof(tmp), "Unknown error %d", errnum);
+    msg = tmp;
+#elif PF__STRERROR_R_GNU
+    msg = strerror_r(errnum, tmp, sizeof(tmp));
+#else
+    if (strerror_r(errnum, tmp, sizeof(tmp)) != 0)
+        snprintf(tmp, sizeof(tmp), "Unknown error %d", errnum);
+    msg = tmp;
+#endif
+
+    len = strlen(msg);
+    if (len >= size) {
+        memcpy(buf, msg, size - 1);
+        buf[size - 1] = '\0';
+        return ERANGE;
+    }
+    memcpy(buf, msg, len + 1);
+    return 0;
 }
