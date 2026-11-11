@@ -28,8 +28,11 @@ extern pf_test_t suite_attribute[];
 extern pf_test_t suite_bitwise[];
 extern pf_test_t suite_ctype[];
 extern pf_test_t suite_debug[];
+extern pf_test_t suite_dirent[];
 extern pf_test_t suite_endian[];
 extern pf_test_t suite_errno[];
+extern pf_test_t suite_fs[];
+extern pf_test_t suite_io[];
 extern pf_test_t suite_macro[];
 extern pf_test_t suite_overflow[];
 extern pf_test_t suite_platform[];
@@ -59,8 +62,11 @@ int main(int argc, char *argv[]) {
         { "bitwise", 3, suite_bitwise },
         { "ctype", 1, suite_ctype },
         { "debug", 1, suite_debug },
+        { "dirent", 1, suite_dirent },
         { "endian", 3, suite_endian },
         { "errno", 1, suite_errno },
+        { "fs", 1, suite_fs },
+        { "io", 1, suite_io },
         { "macro", 1, suite_macro },
         { "overflow", 3, suite_overflow },
         { "platform", 1, suite_platform },

@@ -8,8 +8,11 @@ public_headers = files(
     'bitwise.h',
     'ctype.h',
     'debug.h',
+    'dirent.h',
     'endian.h',
     'errno.h',
+    'fs.h',
+    'io.h',
     'macro.h',
     'overflow.h',
     'platform.h',
@@ -101,6 +104,52 @@ int main(void) {
     libc_have += {fn: found}
     conf.set10('PF_CONFIG_HAVE_' + fn.to_upper(), found)
 endforeach
+
+# POSIX functions, with the headers that declare them where they exist.
+posix_prefix = libc_prefix
+foreach h : ['unistd.h', 'fcntl.h', 'sys/stat.h', 'sys/types.h']
+    if cc.has_header(h)
+        posix_prefix += '#include <@0@>\n'.format(h)
+    endif
+endforeach
+posix_functions = [
+    # io.h
+    'fseeko', 'ftello', 'pread', 'pwrite', 'fsync', 'ftruncate', 'fmemopen',
+    'open_memstream',
+    # fs.h
+    'realpath', 'mkstemp', 'mkdtemp', 'symlink', 'readlink', 'link',
+    'truncate',
+]
+foreach fn : posix_functions
+    found = cc.links(
+        posix_prefix + '''
+int main(void) {
+    void (*volatile p)(void) = (void (*)(void))&@0@;
+    return p == 0;
+}
+'''.format(fn),
+        name: fn,
+    )
+    libc_have += {fn: found}
+    conf.set10('PF_CONFIG_HAVE_' + fn.to_upper(), found)
+endforeach
+
+foreach h : ['dirent.h', 'dlfcn.h', 'sys/mman.h']
+    conf.set10(
+        'PF_CONFIG_HAVE_' + h.underscorify().to_upper(),
+        cc.has_header(h),
+    )
+endforeach
+
+# The value of O_CLOEXEC, which strict C99 hides (PF_O_CLOEXEC).
+o_cloexec = 0
+if not is_windows
+    o_cloexec = cc.compute_int(
+        'O_CLOEXEC',
+        prefix: '#define _GNU_SOURCE 1\n#include <fcntl.h>',
+    )
+endif
+conf.set('PF_CONFIG_O_CLOEXEC', o_cloexec)
 
 # qsort_r exists with two argument orders: POSIX 2024 / glibc (the one
 # pf_qsort_r has) and the older BSD / macOS one.

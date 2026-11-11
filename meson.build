@@ -29,7 +29,9 @@ sources = files(
     'src/atomic.c',
     'src/assert.c',
     'src/debug.c',
+    'src/dirent.c',
     'src/errno.c',
+    'src/fs.c',
     'src/semaphore.c',
     'src/stdlib.c',
     'src/string.c',
@@ -40,9 +42,21 @@ sources = files(
     'src/version.c',
 )
 if is_windows
-    sources += files('src/win32/error.c', 'src/win32/threads.c')
+    sources += files(
+        'src/win32/dirent.c',
+        'src/win32/error.c',
+        'src/win32/fs.c',
+        'src/win32/io.c',
+        'src/win32/path.c',
+        'src/win32/threads.c',
+    )
 else
-    sources += files('src/posix/threads.c')
+    sources += files(
+        'src/posix/dirent.c',
+        'src/posix/fs.c',
+        'src/posix/io.c',
+        'src/posix/threads.c',
+    )
 endif
 
 lib_args = ['-DPF__BUILDING']
@@ -105,6 +119,24 @@ int main(void) {
     ),
 ]
 
+# Files (posix/fs.c): statx for the creation time, copy_file_range.
+if not is_windows
+    lib_args += [
+        '-DPF__HAVE_STATX=@0@'.format(
+            cc.has_function(
+                'statx',
+                prefix: '#define _GNU_SOURCE\n#include <fcntl.h>\n#include <sys/stat.h>',
+            ) ? 1 : 0,
+        ),
+        '-DPF__HAVE_COPY_FILE_RANGE=@0@'.format(
+            cc.has_function(
+                'copy_file_range',
+                prefix: '#define _GNU_SOURCE\n#include <unistd.h>',
+            ) ? 1 : 0,
+        ),
+    ]
+endif
+
 # Threads (threads.c, atomic.c).
 if have_threads
     sys_deps += threads_dep
@@ -112,6 +144,11 @@ endif
 if is_windows
     # WaitOnAddress (atomic.c).
     sys_deps += cc.find_library('synchronization')
+    # Known folders (shell32, ole32), accounts and the registry (advapi32)
+    # in win32/fs.c.
+    foreach name : ['shell32', 'ole32', 'advapi32']
+        sys_deps += cc.find_library(name)
+    endforeach
 elif have_threads
     lib_args += [
         '-DPF__HAVE_PTHREAD_MUTEX_TIMEDLOCK=@0@'.format(

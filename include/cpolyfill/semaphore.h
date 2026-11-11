@@ -62,21 +62,12 @@
 #ifndef CPOLYFILL_SEMAPHORE_H
 #define CPOLYFILL_SEMAPHORE_H
 
+#include <cpolyfill/io.h>
 #include <cpolyfill/platform.h>
 #include <cpolyfill/threads.h>
 #include <cpolyfill/time.h>
 
-#include <fcntl.h>
-
 #define PF_SEM_VALUE_MAX 2147483647
-
-#if PF_OS_WINDOWS
-    #define PF_O_CREAT _O_CREAT
-    #define PF_O_EXCL _O_EXCL
-#else
-    #define PF_O_CREAT O_CREAT
-    #define PF_O_EXCL O_EXCL
-#endif
 
 /* The library's own semaphore (also built where it is not used, for the
    tests). */

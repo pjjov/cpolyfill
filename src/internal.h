@@ -34,6 +34,10 @@
     #ifndef _GNU_SOURCE
         #define _GNU_SOURCE
     #endif
+    /* 64-bit off_t on 32-bit systems (pf_off_t is always 64 bits). */
+    #ifndef _FILE_OFFSET_BITS
+        #define _FILE_OFFSET_BITS 64
+    #endif
     #ifndef _DARWIN_C_SOURCE
         #define _DARWIN_C_SOURCE
     #endif
@@ -90,6 +94,18 @@ typedef struct pf__wstr {
 
 int pf__wstr_from_utf8(pf__wstr *out, const char *src);
 void pf__wstr_free(pf__wstr *str);
+
+/* WTF-8 (paths on Windows): UTF-8 that also carries unpaired surrogates,
+   so every Windows file name converts to bytes and back. The conversions
+   behave like pf_utf8_to_utf16 / pf_utf16_to_utf8 with flags 0 otherwise. */
+#define PF__UNICODE_WTF8 0x80000000u
+ptrdiff_t pf__wtf8_to_utf16(
+    const char *src, size_t len, uint16_t *dst, size_t cap
+);
+ptrdiff_t pf__utf16_to_wtf8(
+    const uint16_t *src, size_t len, char *dst, size_t cap
+);
+int pf__wstr_from_wtf8(pf__wstr *out, const char *src);
 
 /* ---- uchar fallbacks (uchar.c) ---------------------------------------- */
 
@@ -193,6 +209,36 @@ int pf__sem_local_getvalue(struct pf__sem_local *s, int *value);
 size_t pf__utf8_truncate(const char *s, size_t max);
 /* Copies a thread name into `buf`: 0, or PF_ERANGE if truncated. */
 int pf__copy_name(char *buf, size_t size, const char *name);
+
+/* ---- Files (fs, dirent, io, dlfcn, mman) ----------------------------- */
+
+/* Sets errno to the errno value of the PF_E* `code` and returns -1, for
+   the stand-ins that follow the POSIX convention. */
+int pf__errno_fail(int code);
+
+/* Copies `len` bytes of `s` and a NUL into `buf`, for the functions
+   returning a length (fs.c): `len`, or PF_ERANGE if `size` is too small;
+   with `buf == NULL` just `len`. */
+ptrdiff_t pf__copy_out(char *buf, size_t size, const char *s, size_t len);
+
+/* mkstemp (`dir` false: returns the descriptor) and mkdtemp (returns 0)
+   on pf_open / pf_mkdir: -1 with errno on failure (fs.c). */
+int pf__mktemp(char *tmpl, bool dir);
+
+#if PF_OS_WINDOWS
+/* A path for the W APIs (win32/path.c): WTF-8 to UTF-16, '/' to '\', and
+   the \\?\ prefix (on the absolute path) when it is too long for the
+   classic limit. 0 or a PF_E* code. */
+int pf__wpath(pf__wstr *out, const char *path);
+/* The UTF-16 path `w` (`len` units or PF_NTS) as WTF-8 in `buf`, with a
+   \\?\ or \\?\UNC\ prefix removed: the length, or PF_ERANGE (with
+   `buf == NULL` only the length). */
+ptrdiff_t pf__path_from_wide(
+    const uint16_t *w, size_t len, char *buf, size_t size
+);
+/* errno from GetLastError(), returns -1. */
+int pf__errno_win32(void);
+#endif
 
 /* timegm on every platform, without the system's (time.c). */
 #include <time.h>

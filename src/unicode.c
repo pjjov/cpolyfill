@@ -116,6 +116,25 @@ PF_API int pf_utf16_decode(const uint16_t *s, size_t n, uint32_t *cp) {
     return (int)len;
 }
 
+/* WTF-8: UTF-8 that also encodes the surrogates U+D800..U+DFFF as three
+   bytes (ED A0..BF 80..BF), as long as they are unpaired: a high
+   surrogate followed by a low one must be written as the four-byte form of
+   the pair, so the encoded pair is invalid. */
+static size_t pf__wtf8_next(const unsigned char *s, size_t n, long *cp) {
+    if (n >= 3 && s[0] == 0xED && s[1] >= 0xA0 && s[2] >= 0x80
+        && s[2] <= 0xBF) {
+        long v = (long)(0xD000 | ((s[1] & 0x3Fu) << 6) | (s[2] & 0x3Fu));
+        if (v <= 0xDBFF && n >= 6 && s[3] == 0xED && s[4] >= 0xB0
+            && s[4] <= 0xBF && s[5] >= 0x80 && s[5] <= 0xBF) {
+            *cp = -1;
+            return 3;
+        }
+        *cp = v;
+        return 3;
+    }
+    return pf__utf8_next(s, n, cp);
+}
+
 /* ---- Encoding --------------------------------------------------------- */
 
 /* Encodes a valid code point. Returns the number of bytes. */
@@ -239,13 +258,25 @@ static size_t pf__strlen_units(enum pf__enc enc, const void *src) {
 /* Decodes the code point at unit `i` of `src`, sets `*cp` (-1 if
    invalid) and returns the number of units it spans. */
 static size_t pf__next(
-    enum pf__enc enc, const void *src, size_t i, size_t n, long *cp
+    enum pf__enc enc,
+    const void *src,
+    size_t i,
+    size_t n,
+    long *cp,
+    unsigned flags
 ) {
     switch (enc) {
     case PF__ENC_UTF8:
+        if (flags & PF__UNICODE_WTF8)
+            return pf__wtf8_next((const unsigned char *)src + i, n - i, cp);
         return pf__utf8_next((const unsigned char *)src + i, n - i, cp);
-    case PF__ENC_UTF16:
-        return pf__utf16_next((const uint16_t *)src + i, n - i, cp);
+    case PF__ENC_UTF16: {
+        size_t len = pf__utf16_next((const uint16_t *)src + i, n - i, cp);
+        /* WTF-8 keeps an unpaired surrogate as its own code point. */
+        if (*cp < 0 && (flags & PF__UNICODE_WTF8))
+            *cp = (long)((const uint16_t *)src)[i];
+        return len;
+    }
     case PF__ENC_UTF32: {
         uint32_t c = ((const uint32_t *)src)[i];
         *cp = pf_unicode_isvalid(c) ? (long)c : -1;
@@ -289,6 +320,10 @@ static size_t pf__encode(enum pf__enc enc, uint32_t cp, uint32_t units[4]) {
 #endif
         /* fall through */
     case PF__ENC_UTF16:
+        if (pf_unicode_issurrogate(cp)) { /* only from WTF-8 */
+            units[0] = cp;
+            return 1;
+        }
         len = (size_t)pf_utf16_encode(cp, w);
         units[0] = w[0];
         units[1] = w[1];
@@ -336,7 +371,7 @@ static ptrdiff_t pf__convert(
         size_t count, k;
         long cp;
 
-        i += pf__next(from, src, i, len, &cp);
+        i += pf__next(from, src, i, len, &cp, flags);
         if (cp < 0) {
             if (!(flags & PF_UNICODE_REPLACE))
                 return PF_EILSEQ;
@@ -400,17 +435,36 @@ PF_API ptrdiff_t pf_wcs_to_utf8(
 
 /* ---- Internal UTF-16 strings ------------------------------------------ */
 
-int pf__wstr_from_utf8(pf__wstr *out, const char *src) {
+ptrdiff_t pf__wtf8_to_utf16(
+    const char *src, size_t len, uint16_t *dst, size_t cap
+) {
+    return pf__convert(
+        PF__ENC_UTF8, src, len, PF__ENC_UTF16, dst, cap, PF__UNICODE_WTF8
+    );
+}
+
+ptrdiff_t pf__utf16_to_wtf8(
+    const uint16_t *src, size_t len, char *dst, size_t cap
+) {
+    return pf__convert(
+        PF__ENC_UTF16, src, len, PF__ENC_UTF8, dst, cap, PF__UNICODE_WTF8
+    );
+}
+
+static int pf__wstr_convert(pf__wstr *out, const char *src, unsigned flags) {
     ptrdiff_t n;
 
     out->ptr = out->small;
     out->heap_size = 0;
 
-    n = pf_utf8_to_utf16(src, PF_NTS, out->small, PF__WSTR_SMALL, 0);
+    n = pf__convert(
+        PF__ENC_UTF8, src, PF_NTS, PF__ENC_UTF16, out->small, PF__WSTR_SMALL,
+        flags
+    );
     if (n != PF_ERANGE)
         return n < 0 ? (int)n : PF_OK;
 
-    n = pf_utf8_to_utf16(src, PF_NTS, NULL, 0, 0);
+    n = pf__convert(PF__ENC_UTF8, src, PF_NTS, PF__ENC_UTF16, NULL, 0, flags);
     if (n < 0)
         return (int)n;
 
@@ -422,8 +476,19 @@ int pf__wstr_from_utf8(pf__wstr *out, const char *src) {
         out->small[0] = 0;
         return PF_ENOMEM;
     }
-    n = pf_utf8_to_utf16(src, PF_NTS, out->ptr, (size_t)n + 1, 0);
+    n = pf__convert(
+        PF__ENC_UTF8, src, PF_NTS, PF__ENC_UTF16, out->ptr, (size_t)n + 1,
+        flags
+    );
     return n < 0 ? (int)n : PF_OK;
+}
+
+int pf__wstr_from_utf8(pf__wstr *out, const char *src) {
+    return pf__wstr_convert(out, src, 0);
+}
+
+int pf__wstr_from_wtf8(pf__wstr *out, const char *src) {
+    return pf__wstr_convert(out, src, PF__UNICODE_WTF8);
 }
 
 void pf__wstr_free(pf__wstr *str) {

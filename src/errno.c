@@ -366,3 +366,8 @@ PF_API int pf_strerror_r(int errnum, char *buf, size_t size) {
     memcpy(buf, msg, len + 1);
     return 0;
 }
+
+int pf__errno_fail(int code) {
+    errno = pf_error_to_errno(code);
+    return -1;
+}
