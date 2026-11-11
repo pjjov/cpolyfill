@@ -275,8 +275,84 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-None pending. Step 6 (`fs`, `dirent`, `dlfcn`, `mman`, `io`) needs an
-API proposal first.
+### Step 6: `fs`, `dirent`, `dlfcn`, `mman`, `io` (approved 2026-11-11)
+
+Whole step:
+
+- Paths are UTF-8; on Windows they become UTF-16 (`W` APIs, `\\?\`
+  prefix past `MAX_PATH`, `/` and `\` both accepted). Paths are **WTF-8**
+  on Windows: unpaired surrogates in file names round-trip (other strings
+  stay strict UTF-8). Returned paths use the OS separator; `PF_PATH_SEP`,
+  `PF_PATH_SEP_STR`, `pf_path_is_sep(c)`.
+- Stand-ins keep the standard convention (-1 / NULL + errno), additions
+  return `0` / `-PF_E*`. Buffer-filling functions are
+  `ptrdiff_t f(char *buf, size_t size, ...)` like `pf_getenv` (length,
+  `PF_ERANGE`, `buf == NULL` for the length only).
+- `pf_off_t` is `int64_t`; `pf_mode_t` is `mode_t`, `unsigned` on MSVC.
+- Standard names only where meson found them missing, plus on Windows
+  where they behave differently (`rename` does not replace, MinGW's
+  one-argument `mkdir`).
+
+`fs.h`: stand-ins `pf_mkdir(path, mode)`, `pf_rmdir`, `pf_unlink`,
+`pf_rename` (replaces on Windows), `pf_chdir`, `pf_getcwd` (NULL buf
+mallocs), `pf_access` + `PF_F_OK/R_OK/W_OK/X_OK`, `pf_realpath`,
+`pf_mkstemp`, `pf_mkdtemp`, `pf_symlink`, `pf_readlink`, `pf_link`,
+`pf_truncate`, `pf_chmod` (read-only bit on Windows). `pf_stat_t` (`type`
+`PF_FILE_REGULAR/DIR/SYMLINK/FIFO/SOCKET/CHAR/BLOCK/OTHER`, `perm`,
+`size`, `dev`, `ino`, `nlink`, `uid`, `gid`, `atime`, `mtime`, `ctime`
+(status change), `btime` (0 if unknown)) via `pf_stat`, `pf_lstat`,
+`pf_fstat(fd)`; reparse points are symlinks. `bool pf_exists`,
+`pf_is_dir`, `pf_is_file`, `pf_is_symlink`; `int64_t pf_file_size`.
+`pf_mkdirs`, `pf_remove_all` (no symlink following), `pf_copy_file(src,
+dst, PF_COPY_OVERWRITE)`, `pf_lock_file(fd, PF_LOCK_SH/EX/UN | NB)`
+(flock / LockFileEx). `pf_known_dir(kind, buf, size)` with `PF_DIR_HOME,
+TEMP, DATA, CONFIG, STATE, CACHE, RUNTIME, DESKTOP, DOCUMENTS, DOWNLOAD,
+MUSIC, PICTURES, PUBLICSHARE, TEMPLATES, VIDEOS, PROJECTS` (XDG on Unix,
+Apple's `~/Library/...` on macOS, known folders on Windows, CACHE is
+LocalAppData), `pf_home_dir_of(user, ...)`. Path strings: `pf_path_join`,
+`pf_path_normalize` (lexical), `pf_path_basename` / `pf_path_dirname`
+(pointer + length into the path), `pf_path_extension`,
+`pf_path_is_absolute`, `pf_path_root_len`.
+
+`dirent.h`: the library's own `pf_dir_t` (opaque) and `struct pf_dirent
+{ uint64_t d_ino; unsigned char d_type; char d_name[PF_NAME_MAX + 1]; }`
+everywhere, `PF_NAME_MAX` 1023, `PF_DT_*` (BSD values), `d_type` always
+filled (lstat fallback). `pf_opendir`, `pf_readdir`, `pf_closedir`,
+`pf_rewinddir`; no `readdir_r`, `seekdir`, `telldir`. `pf_dir_walk(path,
+max_depth, flags, fn, user)` (`PF_WALK_SKIP`, `PF_WALK_POSTORDER`,
+`PF_WALK_FOLLOW`) replaces `pf_iterdir`. Standard names only without
+`<dirent.h>`.
+
+`dlfcn.h`: `pf_dlopen` (UTF-8, NULL = main program), `pf_dlsym`
+(`PF_RTLD_DEFAULT` searches all modules on Windows), `pf_dlclose`,
+`pf_dlerror` (thread-local, cleared on read), `PF_RTLD_LAZY/NOW/GLOBAL/
+LOCAL`, `PF_DL_EXT`, `pf_dladdr` + `pf_dl_info_t`. Standard names only
+without `<dlfcn.h>`.
+
+`mman.h`: `pf_mmap`, `pf_munmap`, `pf_mprotect`, `pf_msync`, `pf_mlock`,
+`pf_munlock`, `PF_MAP_FAILED`, `PF_PROT_*`, `PF_MAP_SHARED/PRIVATE/
+ANONYMOUS`, `PF_MS_*`; Windows only unmaps / protects whole mappings,
+`off` a multiple of `pf_map_granularity()`. `pf_page_size()`.
+`pf_map_file(pf_mapped_file_t *, path, PF_MAP_FILE_WRITE)` /
+`pf_unmap_file`. Standard names only without `<sys/mman.h>`.
+
+`io.h`: `pf_open` (+ `PF_O_CLOEXEC`, binary on Windows), `pf_close`,
+`pf_read`, `pf_write`, `pf_pread`, `pf_pwrite`, `pf_lseek`, `pf_fsync`,
+`pf_ftruncate`, `pf_dup`, `pf_dup2`, `pf_fopen` (`e` mode everywhere),
+`pf_fseeko`, `pf_ftello`, `pf_fileno`; `pf_fmemopen` /
+`pf_open_memstream` (system's; on Windows fmemopen read modes through a
+delete-on-close temporary file, the rest ENOSYS). `pf_read_file(path,
+&data, &size, allocator)` (NUL-terminated), `pf_write_file(path, data,
+size, PF_WRITE_ATOMIC)`. Streams: public `pf_stream_t { vt, ctx }`, vtable
+`read`, `write`, `seek` (NULL when unsupported), `flush`, `close`
+(optional), all `-PF_E*`; `pf_stream_init`, `read`, `read_full`, `write`,
+`write_all`, `seek`, `tell`, `flush`, `close`, `putc`, `puts`, `printf`,
+`vprintf` (no length limit), `copy`; `pf_stream_from_file(FILE *, own)`,
+`pf_stream_fopen`, `pf_stream_from_fd(fd, own)`, `pf_stream_memory(buf,
+size, writable, alloc)`, `pf_stream_buffer(alloc)` +
+`pf_stream_buffer_data`, `pf_stream_null`. Standard names: `fseeko`,
+`ftello`, `pread`, `pwrite`, `fsync`, `ftruncate`, `fmemopen`,
+`open_memstream` only.
 
 ## Current state and notes
 
@@ -556,6 +632,11 @@ Caveats:
   `PF_TIME_THREAD_ACTIVE`; the MSVC atomic tier takes every type (other
   sizes go to the lock table); without threads, semaphores are the
   library's own and named ones fail with ENOSYS.
+
+- 2026-11-11: Step 6 spec approved: Apple's directories for the known
+  directories on macOS; WTF-8 for Windows paths; `fmemopen` on Windows
+  only in read modes (temporary file); streams are a public `{vt, ctx}`
+  struct.
 
 ## Open questions
 
