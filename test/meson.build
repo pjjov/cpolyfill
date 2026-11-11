@@ -16,6 +16,7 @@ suites = [
     'fs',
     'io',
     'macro',
+    'mman',
     'overflow',
     'platform',
     'semaphore',

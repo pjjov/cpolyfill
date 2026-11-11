@@ -35,6 +35,7 @@ extern pf_test_t suite_errno[];
 extern pf_test_t suite_fs[];
 extern pf_test_t suite_io[];
 extern pf_test_t suite_macro[];
+extern pf_test_t suite_mman[];
 extern pf_test_t suite_overflow[];
 extern pf_test_t suite_platform[];
 extern pf_test_t suite_semaphore[];
@@ -70,6 +71,7 @@ int main(int argc, char *argv[]) {
         { "fs", 1, suite_fs },
         { "io", 1, suite_io },
         { "macro", 1, suite_macro },
+        { "mman", 1, suite_mman },
         { "overflow", 3, suite_overflow },
         { "platform", 1, suite_platform },
         { "semaphore", 1, suite_semaphore },

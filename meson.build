@@ -33,6 +33,7 @@ sources = files(
     'src/dlfcn.c',
     'src/errno.c',
     'src/fs.c',
+    'src/mman.c',
     'src/semaphore.c',
     'src/stdlib.c',
     'src/string.c',

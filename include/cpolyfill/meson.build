@@ -15,6 +15,7 @@ public_headers = files(
     'fs.h',
     'io.h',
     'macro.h',
+    'mman.h',
     'overflow.h',
     'platform.h',
     'semaphore.h',
