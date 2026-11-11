@@ -442,7 +442,7 @@ static int test_temp(int seed, int i) {
     /* The system's and the library's own (Windows) */
     for (k = 0; k < 2; k++) {
         strcpy(a, test_path(0, dir, "fXXXXXX"));
-        fd = k ? pf__mktemp(a, false) : pf_mkstemp(a);
+        fd = k ? pf__mktemp(a, false, 0600) : pf_mkstemp(a);
         PF_ASSERT_ALWAYS(fd >= 0);
         PF_ASSERT_ALWAYS(strstr(a, "XXXXXX") == NULL);
         PF_ASSERT_ALWAYS(pf_is_file(a));
@@ -452,7 +452,7 @@ static int test_temp(int seed, int i) {
 
         strcpy(b, test_path(1, dir, "dXXXXXX"));
         if (k)
-            PF_ASSERT_ALWAYS_EQ(pf__mktemp(b, true), 0);
+            PF_ASSERT_ALWAYS_EQ(pf__mktemp(b, true, 0700), 0);
         else
             PF_ASSERT_ALWAYS(pf_mkdtemp(b) == b);
         PF_ASSERT_ALWAYS(strstr(b, "XXXXXX") == NULL);
@@ -467,7 +467,7 @@ static int test_temp(int seed, int i) {
         }
 #endif
         strcpy(a, "bad-template");
-        PF_ASSERT_ALWAYS_EQ(k ? pf__mktemp(a, false) : pf_mkstemp(a), -1);
+        PF_ASSERT_ALWAYS_EQ(k ? pf__mktemp(a, false, 0600) : pf_mkstemp(a), -1);
         PF_ASSERT_ALWAYS_EQ(errno, EINVAL);
     }
     PF_ASSERT_ALWAYS_EQ(pf_remove_all(dir), 0);

@@ -101,7 +101,7 @@ PF_API int pf_mkstemp(char *tmpl) {
 #if PF_CONFIG_HAVE_MKSTEMP
     return mkstemp(tmpl);
 #else
-    return pf__mktemp(tmpl, false);
+    return pf__mktemp(tmpl, false, 0600);
 #endif
 }
 
@@ -109,7 +109,7 @@ PF_API char *pf_mkdtemp(char *tmpl) {
 #if PF_CONFIG_HAVE_MKDTEMP
     return mkdtemp(tmpl);
 #else
-    return pf__mktemp(tmpl, true) == 0 ? tmpl : NULL;
+    return pf__mktemp(tmpl, true, 0700) == 0 ? tmpl : NULL;
 #endif
 }
 

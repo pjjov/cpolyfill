@@ -75,6 +75,30 @@ STD_NAMES_AFTER = '''\
 #if __has_include(<sys/types.h>)
 #include <sys/types.h>
 #endif
+#if __has_include(<sys/stat.h>)
+#include <sys/stat.h>
+#endif
+#if __has_include(<fcntl.h>)
+#include <fcntl.h>
+#endif
+#if __has_include(<unistd.h>)
+#include <unistd.h>
+#endif
+#if __has_include(<dirent.h>)
+#include <dirent.h>
+#endif
+#if __has_include(<dlfcn.h>)
+#include <dlfcn.h>
+#endif
+#if __has_include(<sys/mman.h>)
+#include <sys/mman.h>
+#endif
+#if __has_include(<direct.h>)
+#include <direct.h>
+#endif
+#if __has_include(<io.h>)
+#include <io.h>
+#endif
 #endif
 '''
 

@@ -1,8 +1,9 @@
 /** cpolyfill - Filling the gaps between C standards and compilers
 
-    File descriptors and stdio files, the same on every platform: paths
-    are UTF-8 (WTF-8 on Windows, see <cpolyfill/fs.h>), offsets are 64-bit
-    and files are binary on Windows.
+    File descriptors, stdio files, whole files and byte streams, the same
+    on every platform: paths are UTF-8 (WTF-8 on Windows, see
+    <cpolyfill/fs.h>), offsets are 64-bit and files are binary on
+    Windows.
 
         pf_off_t                File offsets and sizes: int64_t everywhere.
         pf_mode_t               Permission bits: mode_t, `unsigned` on
@@ -55,6 +56,94 @@
                 pf_open_memstream fails with ENOSYS. Elsewhere without
                 them, both fail with ENOSYS.
 
+    Whole files (0, or a negative PF_E* code):
+
+        int pf_read_file(const char *path, void **data, size_t *size,
+                         struct allocator_t *alloc)
+                Reads a whole file into new memory from `alloc` (NULL: the
+                library's default), followed by a NUL that `*size` does not
+                count, so text can be used as a string. Works for files
+                whose size is not known in advance (pipes, /proc). Release
+                the memory with pf_read_file_free.
+        void pf_read_file_free(void *data, size_t size,
+                               struct allocator_t *alloc)
+        int pf_write_file(const char *path, const void *data, size_t size,
+                          unsigned flags)
+                Creates or replaces a file with `data`. With
+                PF_WRITE_ATOMIC the data goes to a temporary file in the
+                same directory, which is flushed to the device and renamed
+                over `path`: readers see the old content or the new one,
+                never a part, even after a crash. The file keeps the
+                permissions of the one it replaces.
+
+    Streams: a byte stream is a table of functions and their state.
+
+        struct pf_stream_vt {
+            pf_ssize_t (*read)(void *ctx, void *buf, size_t n);
+            pf_ssize_t (*write)(void *ctx, const void *buf, size_t n);
+            int64_t (*seek)(void *ctx, int64_t off, int whence);
+            int (*flush)(void *ctx);
+            int (*close)(void *ctx);
+        };
+        pf_stream_t             { const struct pf_stream_vt *vt; void *ctx; }
+
+    Every function returns a negative PF_E* code on failure. `read` returns
+    the bytes read (fewer than `n` is fine, 0 only at the end), `write` the
+    bytes written (at least 1 unless `n` is 0), `seek` (SEEK_SET, SEEK_CUR,
+    SEEK_END) the new position. A NULL `read`, `write` or `seek` means the
+    stream cannot do it (PF_EBADF, PF_EBADF, PF_ESPIPE); `flush` and
+    `close` may be NULL when there is nothing to do.
+
+        int pf_stream_init(pf_stream_t *s, const struct pf_stream_vt *vt,
+                           void *ctx)
+        pf_ssize_t pf_stream_read(pf_stream_t *s, void *buf, size_t n)
+        pf_ssize_t pf_stream_read_full(pf_stream_t *s, void *buf, size_t n)
+                Reads until `n` bytes or the end: fewer only at the end.
+        pf_ssize_t pf_stream_write(pf_stream_t *s, const void *buf, size_t n)
+        int pf_stream_write_all(pf_stream_t *s, const void *buf, size_t n)
+                Writes all `n` bytes: 0 or an error.
+        int64_t pf_stream_seek(pf_stream_t *s, int64_t off, int whence)
+        int64_t pf_stream_tell(pf_stream_t *s)
+        int pf_stream_flush(pf_stream_t *s)
+        int pf_stream_close(pf_stream_t *s)
+                Releases the stream (its `close`), which cannot be used
+                afterwards.
+        int pf_stream_putc(pf_stream_t *s, int c)
+        int pf_stream_puts(pf_stream_t *s, const char *str)
+                0 or an error; puts adds no newline.
+        int pf_stream_printf(pf_stream_t *s, const char *fmt, ...)
+        int pf_stream_vprintf(pf_stream_t *s, const char *fmt, va_list ap)
+                The number of bytes written, or an error. No length limit.
+        int64_t pf_stream_copy(pf_stream_t *dst, pf_stream_t *src)
+                Copies the rest of `src` to `dst`: the number of bytes.
+
+    Streams of the library (0, or an error):
+
+        int pf_stream_from_file(pf_stream_t *s, FILE *f, bool own)
+                On a stdio file, closed with the stream if `own`.
+        int pf_stream_fopen(pf_stream_t *s, const char *path,
+                            const char *mode)
+                pf_fopen, owned by the stream.
+        int pf_stream_from_fd(pf_stream_t *s, int fd, bool own)
+                On a file descriptor, closed with the stream if `own`.
+        int pf_stream_memory(pf_stream_t *s, void *buf, size_t size,
+                             bool writable, struct allocator_t *alloc)
+                On a fixed buffer: reads and writes stop at `size` (a write
+                there fails with PF_ENOSPC). Writes fail with PF_EBADF
+                unless `writable`.
+        int pf_stream_buffer(pf_stream_t *s, struct allocator_t *alloc)
+                On memory that grows as it is written (seeking past the
+                end and writing fills the gap with zeros).
+        const void *pf_stream_buffer_data(const pf_stream_t *s,
+                                          size_t *size)
+                The content of a pf_stream_buffer, NUL-terminated (the NUL
+                is not counted), valid until the next write or close; NULL
+                for other streams.
+        int pf_stream_null(pf_stream_t *s)
+                Reads nothing, discards what is written.
+        The memory streams allocate their state from `alloc` (NULL: the
+        library's default).
+
     Standard names, with PF_STD_NAMES or PF_STD_NAMES_IO, always on Windows
     and elsewhere where the library found them missing when it was built:
     `fseeko`, `ftello`, `pread`, `pwrite`, `fsync`, `ftruncate`,
@@ -82,16 +171,21 @@
 #ifndef CPOLYFILL_IO_H
 #define CPOLYFILL_IO_H
 
+#include <cpolyfill/attribute.h>
 #include <cpolyfill/config.h>
 #include <cpolyfill/platform.h>
 #include <cpolyfill/stdlib.h>
 
 #include <fcntl.h>
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #if !PF_OS_WINDOWS
     #include <sys/types.h>
+#endif
+#ifndef __cplusplus
+    #include <stdbool.h>
 #endif
 
 typedef int64_t pf_off_t;
@@ -123,6 +217,23 @@ typedef mode_t pf_mode_t;
     #define PF_O_CLOEXEC PF_CONFIG_O_CLOEXEC
 #endif
 
+#define PF_WRITE_ATOMIC 1u
+
+struct allocator_t;
+
+struct pf_stream_vt {
+    pf_ssize_t (*read)(void *ctx, void *buf, size_t n);
+    pf_ssize_t (*write)(void *ctx, const void *buf, size_t n);
+    int64_t (*seek)(void *ctx, int64_t off, int whence);
+    int (*flush)(void *ctx);
+    int (*close)(void *ctx);
+};
+
+typedef struct pf_stream_t {
+    const struct pf_stream_vt *vt;
+    void *ctx;
+} pf_stream_t;
+
 PF_BEGIN_DECLS
 
 PF_API int pf_open(const char *path, int flags, pf_mode_t mode);
@@ -143,6 +254,49 @@ PF_API pf_off_t pf_ftello(FILE *f);
 PF_API int pf_fileno(FILE *f);
 PF_API FILE *pf_fmemopen(void *buf, size_t size, const char *mode);
 PF_API FILE *pf_open_memstream(char **ptr, size_t *size);
+
+PF_API int pf_read_file(
+    const char *path, void **data, size_t *size, struct allocator_t *alloc
+);
+PF_API void pf_read_file_free(
+    void *data, size_t size, struct allocator_t *alloc
+);
+PF_API int pf_write_file(
+    const char *path, const void *data, size_t size, unsigned flags
+);
+
+PF_API int pf_stream_init(
+    pf_stream_t *s, const struct pf_stream_vt *vt, void *ctx
+);
+PF_API pf_ssize_t pf_stream_read(pf_stream_t *s, void *buf, size_t n);
+PF_API pf_ssize_t pf_stream_read_full(pf_stream_t *s, void *buf, size_t n);
+PF_API pf_ssize_t pf_stream_write(pf_stream_t *s, const void *buf, size_t n);
+PF_API int pf_stream_write_all(pf_stream_t *s, const void *buf, size_t n);
+PF_API int64_t pf_stream_seek(pf_stream_t *s, int64_t off, int whence);
+PF_API int64_t pf_stream_tell(pf_stream_t *s);
+PF_API int pf_stream_flush(pf_stream_t *s);
+PF_API int pf_stream_close(pf_stream_t *s);
+PF_API int pf_stream_putc(pf_stream_t *s, int c);
+PF_API int pf_stream_puts(pf_stream_t *s, const char *str);
+PF_PRINTF(2, 3)
+PF_API int pf_stream_printf(pf_stream_t *s, const char *fmt, ...);
+PF_PRINTF(2, 0)
+PF_API int pf_stream_vprintf(pf_stream_t *s, const char *fmt, va_list ap);
+PF_API int64_t pf_stream_copy(pf_stream_t *dst, pf_stream_t *src);
+
+PF_API int pf_stream_from_file(pf_stream_t *s, FILE *f, bool own);
+PF_API int pf_stream_fopen(pf_stream_t *s, const char *path, const char *mode);
+PF_API int pf_stream_from_fd(pf_stream_t *s, int fd, bool own);
+PF_API int pf_stream_memory(
+    pf_stream_t *s,
+    void *buf,
+    size_t size,
+    bool writable,
+    struct allocator_t *alloc
+);
+PF_API int pf_stream_buffer(pf_stream_t *s, struct allocator_t *alloc);
+PF_API const void *pf_stream_buffer_data(const pf_stream_t *s, size_t *size);
+PF_API int pf_stream_null(pf_stream_t *s);
 
 PF_END_DECLS
 

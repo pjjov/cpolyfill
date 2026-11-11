@@ -389,7 +389,7 @@ PF_API int pf_remove_all(const char *path) {
 /* mkstemp and mkdtemp where the system has none (Windows) and for the
    tests. The names need not be unpredictable: creation is exclusive
    (O_EXCL, which on POSIX also refuses symbolic links). */
-int pf__mktemp(char *tmpl, bool dir) {
+int pf__mktemp(char *tmpl, bool dir, unsigned mode) {
     static const char chars[] =
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     static unsigned long long counter;
@@ -415,11 +415,12 @@ int pf__mktemp(char *tmpl, bool dir) {
             x[k] = chars[(v >> 32) % (sizeof(chars) - 1)];
         }
         if (dir) {
-            if (pf_mkdir(tmpl, 0700) == 0)
+            if (pf_mkdir(tmpl, (pf_mode_t)mode) == 0)
                 return 0;
         } else {
             fd = pf_open(
-                tmpl, PF_O_RDWR | PF_O_CREAT | PF_O_EXCL | PF_O_CLOEXEC, 0600
+                tmpl, PF_O_RDWR | PF_O_CREAT | PF_O_EXCL | PF_O_CLOEXEC,
+                (pf_mode_t)mode
             );
             if (fd >= 0)
                 return fd;

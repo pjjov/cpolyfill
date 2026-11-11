@@ -311,10 +311,10 @@ PF_API char *pf_realpath(const char *path, char *resolved) {
     return res;
 }
 
-PF_API int pf_mkstemp(char *tmpl) { return pf__mktemp(tmpl, false); }
+PF_API int pf_mkstemp(char *tmpl) { return pf__mktemp(tmpl, false, 0600); }
 
 PF_API char *pf_mkdtemp(char *tmpl) {
-    return pf__mktemp(tmpl, true) == 0 ? tmpl : NULL;
+    return pf__mktemp(tmpl, true, 0700) == 0 ? tmpl : NULL;
 }
 
 PF_API int pf_symlink(const char *target, const char *linkpath) {

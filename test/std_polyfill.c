@@ -36,6 +36,8 @@
 #include <cpolyfill/overflow.h>
 
 #include <cpolyfill/errno.h>
+#include <cpolyfill/fs.h>
+#include <cpolyfill/io.h>
 #include <cpolyfill/stdlib.h>
 #include <cpolyfill/string.h>
 #include <cpolyfill/threads.h>
@@ -235,6 +237,37 @@ static int test_text(int seed, int i) {
     return 0;
 }
 
+/* The file names: fs.h and io.h. */
+static int test_files(int seed, int i) {
+    char tmp[PF_PATH_MAX], dir[PF_PATH_MAX], *real;
+    FILE *f;
+    (void)seed, (void)i;
+
+    PF_ASSERT_ALWAYS(pf_known_dir(PF_DIR_TEMP, tmp, sizeof(tmp)) > 0);
+    PF_ASSERT_ALWAYS(pf_path_join(dir, sizeof(dir), tmp, "pf-std-XXXXXX") > 0);
+    PF_ASSERT_ALWAYS(mkdtemp(dir) == dir);
+    real = realpath(dir, NULL);
+    PF_ASSERT_ALWAYS(real != NULL);
+    free(real);
+
+    f = tmpfile();
+    PF_ASSERT_ALWAYS(f != NULL);
+    PF_ASSERT_ALWAYS(fputs("abc", f) >= 0);
+    PF_ASSERT_ALWAYS_EQ(fseeko(f, 1, SEEK_SET), 0);
+    PF_ASSERT_ALWAYS_EQ(ftello(f), 1);
+    PF_ASSERT_ALWAYS_EQ(fflush(f), 0);
+    PF_ASSERT_ALWAYS_EQ(fsync(pf_fileno(f)), 0);
+    PF_ASSERT_ALWAYS_EQ(ftruncate(pf_fileno(f), 2), 0);
+    {
+        char c[2];
+        PF_ASSERT_ALWAYS_EQ(pread(pf_fileno(f), c, 2, 0), 2);
+        PF_ASSERT_ALWAYS_EQ(c[1], 'b');
+    }
+    fclose(f);
+    PF_ASSERT_ALWAYS_EQ(pf_remove_all(dir), 0);
+    return 0;
+}
+
 static int test_time(int seed, int i) {
     static const char *const mapped[][2] = {
         { XSTR(clock_gettime), "pf_clock_gettime" },
@@ -310,5 +343,6 @@ pf_test_t suite_std_polyfill[] = {
     { test_text, "text" },
     { test_time, "time" },
     { test_threads, "threads" },
+    { test_files, "files" },
     { 0 },
 };

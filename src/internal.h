@@ -222,8 +222,9 @@ int pf__errno_fail(int code);
 ptrdiff_t pf__copy_out(char *buf, size_t size, const char *s, size_t len);
 
 /* mkstemp (`dir` false: returns the descriptor) and mkdtemp (returns 0)
-   on pf_open / pf_mkdir: -1 with errno on failure (fs.c). */
-int pf__mktemp(char *tmpl, bool dir);
+   on pf_open / pf_mkdir, creating with `mode` (less the umask): -1 with
+   errno on failure (fs.c). */
+int pf__mktemp(char *tmpl, bool dir, unsigned mode);
 
 #if PF_OS_WINDOWS
 /* A path for the W APIs (win32/path.c): WTF-8 to UTF-16, '/' to '\', and

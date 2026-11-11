@@ -162,9 +162,259 @@ static int test_memfile(int seed, int i) {
     return 0;
 }
 
+/* ---- Whole files ------------------------------------------------------ */
+
+/* An allocator that counts what is outstanding, to check the sizes the
+   library frees with. */
+typedef struct {
+    allocator_t base;
+    size_t bytes, blocks;
+} counting_alloc;
+
+static void *counting_fn(
+    allocator_t *self, void *ptr, size_t old, size_t size, size_t zalign
+) {
+    counting_alloc *a = (counting_alloc *)self;
+    void *p = pf__default_allocate(ptr, old, size, zalign);
+    if (size == 0 || p) {
+        if (ptr) {
+            a->bytes -= old;
+            a->blocks--;
+        }
+        if (size) {
+            a->bytes += size;
+            a->blocks++;
+        }
+    }
+    return p;
+}
+
+static int test_whole_files(int seed, int i) {
+    counting_alloc alloc = { { counting_fn }, 0, 0 };
+    char dir[PF_PATH_MAX], big[20000];
+    const char *f, *g;
+    void *data;
+    size_t size, k;
+    (void)seed, (void)i;
+
+    test_tmpdir(dir, sizeof(dir));
+    f = test_path(0, dir, "file");
+    g = test_path(1, dir, "atomic");
+
+    PF_ASSERT_ALWAYS_EQ(pf_write_file(f, "text\n", 5, 0), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_read_file(f, &data, &size, &alloc.base), 0);
+    PF_ASSERT_ALWAYS_EQ(size, 5u);
+    PF_ASSERT_ALWAYS_STR_EQ((const char *)data, "text\n");
+    PF_ASSERT_ALWAYS_EQ(alloc.bytes, 6u); /* exactly size + 1 */
+    pf_read_file_free(data, size, &alloc.base);
+    PF_ASSERT_ALWAYS_EQ(alloc.blocks, 0u);
+
+    /* larger than the first guess of a file of unknown size */
+    for (k = 0; k < sizeof(big); k++)
+        big[k] = (char)('a' + k % 26);
+    PF_ASSERT_ALWAYS_EQ(pf_write_file(f, big, sizeof(big), 0), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_read_file(f, &data, &size, NULL), 0);
+    PF_ASSERT_ALWAYS_EQ(size, sizeof(big));
+    PF_ASSERT_ALWAYS_MEM_EQ(data, big, sizeof(big));
+    pf_read_file_free(data, size, NULL);
+#if PF_OS_LINUX
+    /* /proc files report size 0 */
+    PF_ASSERT_ALWAYS_EQ(pf_read_file("/proc/self/status", &data, &size, &alloc.base), 0);
+    PF_ASSERT_ALWAYS(size > 0);
+    PF_ASSERT_ALWAYS(strstr((const char *)data, "Name:") != NULL);
+    PF_ASSERT_ALWAYS_EQ(alloc.bytes, size + 1);
+    pf_read_file_free(data, size, &alloc.base);
+#endif
+
+    /* empty */
+    PF_ASSERT_ALWAYS_EQ(pf_write_file(f, NULL, 0, 0), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_read_file(f, &data, &size, NULL), 0);
+    PF_ASSERT_ALWAYS_EQ(size, 0u);
+    PF_ASSERT_ALWAYS_EQ(*(const char *)data, 0);
+    pf_read_file_free(data, size, NULL);
+
+    /* atomic: replaces, keeps the permissions, leaves nothing behind */
+    PF_ASSERT_ALWAYS_EQ(pf_write_file(g, "one", 3, PF_WRITE_ATOMIC), 0);
+    PF_ASSERT_ALWAYS_STR_EQ(test_read(g), "one");
+    PF_ASSERT_ALWAYS_EQ(pf_chmod(g, 0640), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_write_file(g, "two!", 4, PF_WRITE_ATOMIC), 0);
+    PF_ASSERT_ALWAYS_STR_EQ(test_read(g), "two!");
+#if !PF_OS_WINDOWS
+    {
+        pf_stat_t st;
+        PF_ASSERT_ALWAYS_EQ(pf_stat(g, &st), 0);
+        PF_ASSERT_ALWAYS_EQ(st.perm, 0640u);
+    }
+#endif
+    PF_ASSERT_ALWAYS_EQ(pf_unlink(f), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_unlink(g), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_rmdir(dir), 0); /* no temporary file left */
+
+    PF_ASSERT_ALWAYS_EQ(pf_read_file(f, &data, &size, NULL), PF_ENOENT);
+    PF_ASSERT_ALWAYS(data == NULL);
+    PF_ASSERT_ALWAYS_EQ(pf_write_file(f, "x", 1, 0), PF_ENOENT);
+    PF_ASSERT_ALWAYS_EQ(pf_write_file(f, "x", 1, PF_WRITE_ATOMIC), PF_ENOENT);
+    PF_ASSERT_ALWAYS_EQ(pf_write_file(f, NULL, 1, 0), PF_EINVAL);
+    return 0;
+}
+
+/* ---- Streams ---------------------------------------------------------- */
+
+/* Writes and reads back through a seekable stream. */
+static void check_rw(pf_stream_t *s) {
+    char buf[64];
+
+    PF_ASSERT_ALWAYS_EQ(pf_stream_puts(s, "hello "), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_printf(s, "%s %d", "world", 42), 8);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_putc(s, '!'), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_tell(s), 15);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_flush(s), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_seek(s, 6, SEEK_SET), 6);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_read_full(s, buf, 5), 5);
+    PF_ASSERT_ALWAYS_MEM_EQ(buf, "world", 5);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_seek(s, -3, SEEK_END), 12);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_read_full(s, buf, sizeof(buf)), 3);
+    PF_ASSERT_ALWAYS_MEM_EQ(buf, "42!", 3);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_read(s, buf, sizeof(buf)), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_seek(s, 0, 99), PF_EINVAL);
+}
+
+static int test_streams(int seed, int i) {
+    char dir[PF_PATH_MAX], fixed[8];
+    const char *f;
+    pf_stream_t s, t;
+    const char *data;
+    size_t size;
+    int fd;
+    (void)seed, (void)i;
+
+    test_tmpdir(dir, sizeof(dir));
+    f = test_path(0, dir, "file");
+
+    /* stdio */
+    PF_ASSERT_ALWAYS_EQ(pf_stream_fopen(&s, f, "w+b"), 0);
+    check_rw(&s);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_close(&s), 0);
+    PF_ASSERT_ALWAYS(s.vt == NULL);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_close(&s), PF_EINVAL);
+    PF_ASSERT_ALWAYS_STR_EQ(test_read(f), "hello world 42!");
+    PF_ASSERT_ALWAYS_EQ(pf_stream_fopen(&s, test_path(1, dir, "none/x"), "r"), PF_ENOENT);
+
+    /* a FILE that stays open */
+    {
+        FILE *fp = pf_fopen(f, "rb");
+        char c;
+        PF_ASSERT_ALWAYS_EQ(pf_stream_from_file(&s, fp, false), 0);
+        PF_ASSERT_ALWAYS_EQ(pf_stream_read(&s, &c, 1), 1);
+        PF_ASSERT_ALWAYS_EQ(pf_stream_close(&s), 0);
+        PF_ASSERT_ALWAYS_EQ(fgetc(fp), 'e');
+        fclose(fp);
+    }
+
+    /* descriptor */
+    fd = pf_open(f, PF_O_RDWR | PF_O_TRUNC, 0);
+    PF_ASSERT_ALWAYS(fd >= 0);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_from_fd(&s, fd, true), 0);
+    check_rw(&s);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_close(&s), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_close(fd), -1); /* closed by the stream */
+    PF_ASSERT_ALWAYS_EQ(pf_stream_from_fd(&s, -1, false), PF_EBADF);
+
+    /* growing buffer */
+    PF_ASSERT_ALWAYS_EQ(pf_stream_buffer(&s, NULL), 0);
+    data = (const char *)pf_stream_buffer_data(&s, &size);
+    PF_ASSERT_ALWAYS_EQ(size, 0u);
+    PF_ASSERT_ALWAYS_STR_EQ(data, "");
+    check_rw(&s);
+    data = (const char *)pf_stream_buffer_data(&s, &size);
+    PF_ASSERT_ALWAYS_EQ(size, 15u);
+    PF_ASSERT_ALWAYS_STR_EQ(data, "hello world 42!");
+    /* a gap is zeros */
+    PF_ASSERT_ALWAYS_EQ(pf_stream_seek(&s, 20, SEEK_SET), 20);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_putc(&s, 'z'), 0);
+    data = (const char *)pf_stream_buffer_data(&s, &size);
+    PF_ASSERT_ALWAYS_EQ(size, 21u);
+    PF_ASSERT_ALWAYS_MEM_EQ(data + 15, "\0\0\0\0\0z", 7);
+    /* a long printf */
+    PF_ASSERT_ALWAYS_EQ(pf_stream_printf(&s, "%0500d", 7), 500);
+    pf_stream_buffer_data(&s, &size);
+    PF_ASSERT_ALWAYS_EQ(size, 521u);
+
+    /* copy into another buffer */
+    PF_ASSERT_ALWAYS_EQ(pf_stream_buffer(&t, NULL), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_seek(&s, 0, SEEK_SET), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_copy(&t, &s), 521);
+    data = (const char *)pf_stream_buffer_data(&t, &size);
+    PF_ASSERT_ALWAYS_EQ(size, 521u);
+    PF_ASSERT_ALWAYS_MEM_EQ(data, "hello world 42!", 15);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_close(&t), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_close(&s), 0);
+
+    /* fixed buffer */
+    memset(fixed, '.', sizeof(fixed));
+    PF_ASSERT_ALWAYS_EQ(pf_stream_memory(&s, fixed, sizeof(fixed), true, NULL), 0);
+    PF_ASSERT_ALWAYS(pf_stream_buffer_data(&s, &size) == NULL);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_write(&s, "0123456789", 10), 8);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_write(&s, "x", 1), PF_ENOSPC);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_puts(&s, "x"), PF_ENOSPC);
+    PF_ASSERT_ALWAYS_MEM_EQ(fixed, "01234567", 8);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_seek(&s, 9, SEEK_SET), PF_EINVAL);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_seek(&s, -1, SEEK_SET), PF_EINVAL);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_seek(&s, 2, SEEK_SET), 2);
+    {
+        char buf[16];
+        PF_ASSERT_ALWAYS_EQ(pf_stream_read(&s, buf, sizeof(buf)), 6);
+        PF_ASSERT_ALWAYS_MEM_EQ(buf, "234567", 6);
+    }
+    PF_ASSERT_ALWAYS_EQ(pf_stream_close(&s), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_memory(&s, fixed, sizeof(fixed), false, NULL), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_write(&s, "x", 1), PF_EBADF);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_close(&s), 0);
+
+    /* null */
+    PF_ASSERT_ALWAYS_EQ(pf_stream_null(&s), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_printf(&s, "%d", 123), 3);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_read(&s, fixed, 1), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_close(&s), 0);
+
+    PF_ASSERT_ALWAYS_EQ(pf_remove_all(dir), 0);
+    return 0;
+}
+
+/* A custom stream: write only, counting, no seek. */
+static pf_ssize_t count_write(void *ctx, const void *buf, size_t n) {
+    (void)buf;
+    *(size_t *)ctx += n > 3 ? 3 : n; /* short writes */
+    return (pf_ssize_t)(n > 3 ? 3 : n);
+}
+
+static int test_custom_stream(int seed, int i) {
+    static const struct pf_stream_vt vt = { NULL, count_write, NULL, NULL, NULL };
+    pf_stream_t s;
+    size_t count = 0;
+    char c;
+    (void)seed, (void)i;
+
+    PF_ASSERT_ALWAYS_EQ(pf_stream_init(&s, NULL, NULL), PF_EINVAL);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_init(&s, &vt, &count), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_write_all(&s, "0123456789", 10), 0);
+    PF_ASSERT_ALWAYS_EQ(count, 10u);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_printf(&s, "%s", "abcdefg"), 7);
+    PF_ASSERT_ALWAYS_EQ(count, 17u);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_read(&s, &c, 1), PF_EBADF);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_seek(&s, 0, SEEK_SET), PF_ESPIPE);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_tell(&s), PF_ESPIPE);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_flush(&s), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_stream_close(&s), 0);
+    return 0;
+}
+
 pf_test_t suite_io[] = {
     { test_fd, "fd" },
     { test_fopen, "fopen" },
     { test_memfile, "memfile" },
+    { test_whole_files, "whole_files" },
+    { test_streams, "streams" },
+    { test_custom_stream, "custom_stream" },
     { 0 },
 };
