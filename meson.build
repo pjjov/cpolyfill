@@ -30,6 +30,7 @@ sources = files(
     'src/assert.c',
     'src/debug.c',
     'src/dirent.c',
+    'src/dlfcn.c',
     'src/errno.c',
     'src/fs.c',
     'src/semaphore.c',
@@ -234,6 +235,7 @@ if not is_windows
     dl_dep = cc.find_library('dl', required: false)
     dladdr_prefix = '#define _GNU_SOURCE\n#include <dlfcn.h>'
     have_dladdr = cc.has_function('dladdr', prefix: dladdr_prefix)
+    dl_added = false
     if not have_dladdr and dl_dep.found()
         have_dladdr = cc.has_function(
             'dladdr',
@@ -242,7 +244,16 @@ if not is_windows
         )
         if have_dladdr
             sys_deps += dl_dep
+            dl_added = true
         endif
+    endif
+
+    # dlopen is in libdl before glibc 2.34 (dlfcn.c).
+    if not dl_added and dl_dep.found() and not cc.has_function(
+        'dlopen',
+        prefix: '#include <dlfcn.h>',
+    )
+        sys_deps += dl_dep
     endif
 
     lib_args += [

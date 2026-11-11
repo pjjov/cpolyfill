@@ -29,6 +29,7 @@ extern pf_test_t suite_bitwise[];
 extern pf_test_t suite_ctype[];
 extern pf_test_t suite_debug[];
 extern pf_test_t suite_dirent[];
+extern pf_test_t suite_dlfcn[];
 extern pf_test_t suite_endian[];
 extern pf_test_t suite_errno[];
 extern pf_test_t suite_fs[];
@@ -63,6 +64,7 @@ int main(int argc, char *argv[]) {
         { "ctype", 1, suite_ctype },
         { "debug", 1, suite_debug },
         { "dirent", 1, suite_dirent },
+        { "dlfcn", 1, suite_dlfcn },
         { "endian", 3, suite_endian },
         { "errno", 1, suite_errno },
         { "fs", 1, suite_fs },

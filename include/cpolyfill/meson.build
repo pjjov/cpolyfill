@@ -9,6 +9,7 @@ public_headers = files(
     'ctype.h',
     'debug.h',
     'dirent.h',
+    'dlfcn.h',
     'endian.h',
     'errno.h',
     'fs.h',

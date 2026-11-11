@@ -10,6 +10,7 @@ suites = [
     'ctype',
     'debug',
     'dirent',
+    'dlfcn',
     'endian',
     'errno',
     'fs',
@@ -51,6 +52,16 @@ if not is_msvc
     test_args += '-Werror=undef'
 endif
 
+# A shared module for the dlfcn suite.
+dl_module = shared_module(
+    'cpolyfill-test-dl',
+    'dl_module.c',
+    include_directories: inc,
+    install: false,
+)
+test_env = environment()
+test_env.set('PF_TEST_DL_MODULE', dl_module.full_path())
+
 # The tests link the library's objects directly, so they can also test the
 # internal helpers (which are not exported from the shared library).
 lib_objects = lib.extract_all_objects(recursive: true)
@@ -89,6 +100,8 @@ foreach name, options : variants
             args: ['--tap', suite],
             protocol: 'tap',
             suite: [name, suite],
+            env: test_env,
+            depends: dl_module,
             timeout: 120,
         )
     endforeach
