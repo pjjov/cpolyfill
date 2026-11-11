@@ -274,8 +274,77 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-None pending. Step 5 (`time`, `threads`, `atomic`, `semaphore`) needs
-an API proposal first.
+### Step 5: `time`, `threads`, `atomic`, `semaphore` (approved 2026-11-11)
+
+Whole step:
+
+- Types keep one layout: the pthread / `sem_t` types on POSIX, structs of
+  plain fields on Windows (SRWLOCK, CONDITION_VARIABLE and INIT_ONCE are a
+  pointer each; `src/` static-asserts the sizes). Public headers never
+  include `<windows.h>`.
+- Stand-ins for standard functions keep the standard's convention
+  (`thrd_*` codes, `-1` + errno for `sem_*` / `clock_*`); additions return
+  `0` / `-PF_E*`.
+- Standard names map only where meson found them missing:
+  `PF_CONFIG_HAVE_THREADS_H`, `CLOCK_GETTIME`, `CLOCK_GETRES`,
+  `NANOSLEEP`, `TIMESPEC_GET`, `TIMESPEC_GETRES`, `GMTIME_R`,
+  `LOCALTIME_R`, `TIMEGM`.
+- No-threads build: meson option `threads` (feature). `PF_CONFIG_THREADS`
+  0 means thread creation fails at run time (`thrd_error` /
+  `PF_ENOSYS`); mutexes, once and tss work for the single thread.
+
+`time.h`: `pf_clockid_t` + `PF_CLOCK_REALTIME`, `_MONOTONIC`,
+`_PROCESS_CPUTIME_ID`, `_THREAD_CPUTIME_ID`; `pf_clock_gettime`,
+`pf_clock_getres`, `pf_nanosleep` (-1/errno); `pf_timespec_get`,
+`pf_timespec_getres` with `PF_TIME_UTC`, `PF_TIME_MONOTONIC`;
+`pf_gmtime_r`, `pf_localtime_r`, `pf_timegm`; `uint64_t pf_time_ns(void)`
+(monotonic), `int pf_sleep_ns(uint64_t)`; header-only
+`pf_timespec_to_ns`, `_from_ns`, `_add`, `_sub`, `_cmp`; `int
+pf_deadline_ns(struct timespec *, int64_t ns)` (UTC now + ns, for the C11
+timed waits). Windows: QPC, Get{Process,Thread}Times, high-resolution
+waitable timer, `gmtime_s` / `localtime_s` / `_mkgmtime`.
+
+`threads.h`: the C11 API with a `pf_` prefix (`pf_thrd_t`, `pf_mtx_t`,
+`pf_cnd_t`, `pf_tss_t`, `pf_once_flag`, `PF_ONCE_FLAG_INIT`,
+`PF_TSS_DTOR_ITERATIONS`, `pf_mtx_plain/_timed/_recursive`,
+`pf_thrd_success/_busy/_error/_nomem/_timedout`), always the library's own
+implementation on pthreads or Win32. Windows: `pf_thrd_t` points to a
+control block (`pf_thrd_current` equals what `pf_thrd_create` gave, blocks
+of foreign threads freed at their exit); `pf_mtx_t` on SRWLOCK (+ owner and
+count for recursive, a flag and a condition variable for timed) so `cnd`
+works with every type; tss destructors from one FLS callback, no
+`pf_tss_cleanup`. Additions (`0` / `-PF_E*`): `pf_thrd_attr_t { size_t
+stack_size; const char *name; }` + `pf_thrd_create_ex`,
+`pf_thrd_set_name` / `pf_thrd_get_name` (current thread), `pf_thrd_id`,
+`pf_thrd_set_affinity(const uint64_t *mask, size_t ncpus)` (bitmask, current
+thread, `PF_ENOTSUP` on macOS), `pf_thrd_set_priority` (LOWEST..HIGHEST);
+`pf_rwlock_t` (`_init/_free/_rdlock/_wrlock/_tryrdlock/_trywrlock/
+_timedrdlock/_timedwrlock/_rdunlock/_wrunlock`), `pf_spin_t`
+(`_init/_free/_lock/_trylock/_unlock`), `pf_barrier_t`
+(`_init/_free/_wait`, `PF_BARRIER_SERIAL` in one thread).
+
+`atomic.h`: `PF_ATOMIC(T)`, `pf_memory_order`, `PF_MEMORY_ORDER_*`,
+`pf_atomic_flag_t`, `PF_ATOMIC_FLAG_INIT`, `PF_ATOMIC_INIT/LOAD/STORE/
+EXCHANGE/COMPARE_EXCHANGE_STRONG/WEAK/FETCH_ADD/SUB/OR/XOR/AND` (+
+`_EXPLICIT`), `PF_ATOMIC_FLAG_TEST_AND_SET/CLEAR`, fences,
+`PF_KILL_DEPENDENCY`, `PF_ATOMIC_IS_LOCK_FREE`, `PF_ATOMIC_*_LOCK_FREE`.
+Tiers by the consumer's compiler: `<stdatomic.h>` (C11), `std::atomic`
+(C++), `__atomic` builtins (GNU C99, libatomic for large types),
+`Interlocked*` (MSVC C, integer and pointer types, needs `__typeof__`),
+library calls with a striped lock table (others;
+`PF__ATOMIC_FORCE_LOCKED` for the test variant). No `ATOMIC_VAR_INIT`, no
+`pf_atomic_flag_init`. `pf_atomic_wait(addr, expected, rel_timeout)`,
+`pf_atomic_wake_one`, `pf_atomic_wake_all` on 32-bit atomics (futex,
+WaitOnAddress, `__ulock`, `_umtx_op`, OpenBSD futex, else a hashed table of
+condition variables). Standard names only without `<stdatomic.h>`.
+
+`semaphore.h`: `pf_sem_t`, `PF_SEM_FAILED`, `PF_SEM_VALUE_MAX`,
+`pf_sem_init/destroy/wait/trywait/timedwait/post/getvalue`,
+`pf_sem_clockwait`, `pf_sem_open/close/unlink` (-1/errno). `sem_t` on
+Linux and BSDs; on macOS and Windows unnamed semaphores are the library's
+own (pshared fails with ENOTSUP), named ones wrap `sem_open` /
+`CreateSemaphoreW` (`/name` -> `Local\name`, unlink is a no-op on
+Windows).
 
 ## Current state and notes
 
@@ -481,6 +550,11 @@ Caveats:
 - 2026-11-10: Step 4 implemented as specified, plus: the unicode standard
   names are C only; `pf_c32rtomb` rejects values above U+10FFFF on every
   platform; `pf_strerror_r` returns EINVAL for a zero `size`.
+
+- 2026-11-11: Step 5 spec approved: additions in `threads.h` return
+  `PF_E*` while the C11 functions keep `thrd_*`; affinity is a `uint64_t`
+  bitmask; `atomic.h` gets wait / wake; a no-threads build is kept, so
+  unsupported platforms fail at run time.
 
 ## Open questions
 
