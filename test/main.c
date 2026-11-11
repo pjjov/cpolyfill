@@ -37,6 +37,7 @@ extern pf_test_t suite_std_polyfill[];
 extern pf_test_t suite_stdc[];
 extern pf_test_t suite_stdlib[];
 extern pf_test_t suite_string[];
+extern pf_test_t suite_time[];
 extern pf_test_t suite_types[];
 extern pf_test_t suite_uchar[];
 extern pf_test_t suite_unicode[];
@@ -64,6 +65,7 @@ int main(int argc, char *argv[]) {
         { "stdc", 1, suite_stdc },
         { "stdlib", 3, suite_stdlib },
         { "string", 1, suite_string },
+        { "time", 3, suite_time },
         { "types", 1, suite_types },
         { "uchar", 1, suite_uchar },
         { "unicode", 5, suite_unicode },

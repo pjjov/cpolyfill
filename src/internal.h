@@ -146,4 +146,8 @@ void pf__qsort_r_portable(
     void *arg
 );
 
+/* timegm on every platform, without the system's (time.c). */
+#include <time.h>
+time_t pf__timegm_portable(struct tm *tm);
+
 #endif /* CPOLYFILL_INTERNAL_H */

@@ -38,6 +38,7 @@
 #include <cpolyfill/errno.h>
 #include <cpolyfill/stdlib.h>
 #include <cpolyfill/string.h>
+#include <cpolyfill/time.h>
 #include <cpolyfill/unicode.h>
 
 #include <errno.h>
@@ -233,10 +234,43 @@ static int test_text(int seed, int i) {
     return 0;
 }
 
+static int test_time(int seed, int i) {
+    static const char *const mapped[][2] = {
+        { XSTR(clock_gettime), "pf_clock_gettime" },
+        { XSTR(clock_getres), "pf_clock_getres" },
+        { XSTR(nanosleep), "pf_nanosleep" },
+        { XSTR(timespec_get), "pf_timespec_get" },
+        { XSTR(timespec_getres), "pf_timespec_getres" },
+        { XSTR(gmtime_r), "pf_gmtime_r" },
+        { XSTR(localtime_r), "pf_localtime_r" },
+        { XSTR(timegm), "pf_timegm" },
+    };
+    struct timespec ts;
+    struct tm tm;
+    time_t t = 86400;
+    size_t k;
+    (void)seed, (void)i;
+
+    for (k = 0; k < sizeof(mapped) / sizeof(mapped[0]); k++)
+        PF_ASSERT_ALWAYS_STR_EQ(mapped[k][0], mapped[k][1]);
+    PF_ASSERT_ALWAYS_EQ(CLOCK_MONOTONIC, PF_CLOCK_MONOTONIC);
+    PF_ASSERT_ALWAYS_EQ(TIME_MONOTONIC, PF_TIME_MONOTONIC);
+
+    PF_ASSERT_ALWAYS_EQ(clock_gettime(CLOCK_MONOTONIC, &ts), 0);
+    PF_ASSERT_ALWAYS_EQ(timespec_get(&ts, TIME_UTC), TIME_UTC);
+    PF_ASSERT_ALWAYS(gmtime_r(&t, &tm) == &tm);
+    PF_ASSERT_ALWAYS_EQ(timegm(&tm), 86400);
+    ts.tv_sec = 0;
+    ts.tv_nsec = 1000;
+    PF_ASSERT_ALWAYS_EQ(nanosleep(&ts, NULL), 0);
+    return 0;
+}
+
 pf_test_t suite_std_polyfill[] = {
     { test_stdbit, "stdbit" },
     { test_ckdint, "ckdint" },
     { test_endian, "endian" },
     { test_text, "text" },
+    { test_time, "time" },
     { 0 },
 };

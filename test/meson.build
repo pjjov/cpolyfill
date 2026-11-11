@@ -18,6 +18,7 @@ suites = [
     'stdc',
     'stdlib',
     'string',
+    'time',
     'types',
     'uchar',
     'unicode',

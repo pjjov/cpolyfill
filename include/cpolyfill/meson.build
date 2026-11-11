@@ -15,6 +15,7 @@ public_headers = files(
     'stdc.h',
     'stdlib.h',
     'string.h',
+    'time.h',
     'types.h',
     'unicode.h',
     'version.h',
@@ -50,6 +51,7 @@ libc_prefix = '''
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <wchar.h>
 '''
 if have_strings_h
@@ -75,6 +77,9 @@ libc_functions = [
     'strerror_r',
     # unicode.h
     'mbrtoc8', 'mbrtoc16', 'mbrtoc32', 'c8rtomb', 'c16rtomb', 'c32rtomb',
+    # time.h
+    'clock_gettime', 'clock_getres', 'nanosleep', 'timespec_get',
+    'timespec_getres', 'gmtime_r', 'localtime_r', 'timegm',
 ]
 libc_have = {}
 foreach fn : libc_functions

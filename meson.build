@@ -31,6 +31,7 @@ sources = files(
     'src/errno.c',
     'src/stdlib.c',
     'src/string.c',
+    'src/time.c',
     'src/uchar.c',
     'src/unicode.c',
     'src/version.c',
