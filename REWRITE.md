@@ -189,9 +189,10 @@ not portable).
   linking.
 - Modules with heavier code (`cli`, `argparse`, `daemon`, `test`) are
   meson `feature` options.
-- Test variants: default standard, `gnu99`, `c23`, atomic fallback, and
-  a header self-check (each header compiles alone in C99, C11, C23 and
-  C++).
+- Test variants: default standard, `gnu99`, `c23`, and a header
+  self-check (each header compiles alone in C99, C11, C23 and C++). The
+  atomic fallback is a translation unit of every variant
+  (`test/atomic_lib.c`), not a build of its own.
 
 ### Platform support
 
@@ -221,10 +222,10 @@ H = header-only (language layer), L = compiled (platform layer).
 | `stdlib.h` | (new) | L | done in step 4 |
 | `errno.h` | `pf_errno.h` | L | done in steps 1 and 4 |
 | `version.h` | (new) | L | done in step 1 |
-| `time.h` | (new) | L | `clock_gettime` (monotonic, realtime) on Windows, `pf_time_ns()`, `nanosleep`, `timespec_get`, `gmtime_r`, `localtime_r`, `timegm` |
-| `threads.h` | `pf_threads.h` | L | C11 API; thread name, id, affinity, priority; Windows tss destructors via `FlsAlloc` (drops `pf_tss_cleanup`); rwlock, spinlock, barrier stay |
-| `atomic.h` | `pf_atomic.h` | H+L | fallback uses a global striped lock table (like libatomic) instead of a mutex per object, so no `atomic_init` requirement and `_Atomic(T)` keeps the size of `T` |
-| `semaphore.h` | `pf_semaphore.h` | L | + working unnamed semaphores on macOS |
+| `time.h` | (new) | L | done in step 5 |
+| `threads.h` | `pf_threads.h` | L | done in step 5 |
+| `atomic.h` | `pf_atomic.h` | H+L | done in step 5 |
+| `semaphore.h` | `pf_semaphore.h` | L | done in step 5 |
 | `fs.h` | `pf_filesystem.h` | L | unified `pf_stat` (64-bit size, ns times), `pf_mkdirs`, `pf_remove_all`, replacing `rename` on Windows, `realpath` (moved from `stdlib.h`), `mkstemp`, `mkdtemp`, file locks, symlinks, path join / normalize / basename / dirname; known directories stay |
 | `dirent.h` | `pf_dirent.h` | L | UTF-8, `d_type` on Windows |
 | `dlfcn.h` | `pf_dlsym.h` | L | renamed after the POSIX header; + `PF_DL_EXT` |
@@ -262,7 +263,7 @@ committed.
       `assert`, `debug`
 - [x] 3. Integers: `bitwise`, `overflow`, `endian`
 - [x] 4. Text: `ctype`, `unicode`, `string`, `stdlib`, `errno`
-- [ ] 5. Concurrency: `time`, `threads`, `atomic`, `semaphore`
+- [x] 5. Concurrency: `time`, `threads`, `atomic`, `semaphore`
 - [ ] 6. Files: `fs`, `dirent`, `dlfcn`, `mman`, `io`
 - [ ] 7. OS: `process`, `signal`, `random`, `sysinfo`, `cpuid`, `term`
 - [ ] 8. Network: `socket`, `pipe`
@@ -274,93 +275,26 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-### Step 5: `time`, `threads`, `atomic`, `semaphore` (approved 2026-11-11)
-
-Whole step:
-
-- Types keep one layout: the pthread / `sem_t` types on POSIX, structs of
-  plain fields on Windows (SRWLOCK, CONDITION_VARIABLE and INIT_ONCE are a
-  pointer each; `src/` static-asserts the sizes). Public headers never
-  include `<windows.h>`.
-- Stand-ins for standard functions keep the standard's convention
-  (`thrd_*` codes, `-1` + errno for `sem_*` / `clock_*`); additions return
-  `0` / `-PF_E*`.
-- Standard names map only where meson found them missing:
-  `PF_CONFIG_HAVE_THREADS_H`, `CLOCK_GETTIME`, `CLOCK_GETRES`,
-  `NANOSLEEP`, `TIMESPEC_GET`, `TIMESPEC_GETRES`, `GMTIME_R`,
-  `LOCALTIME_R`, `TIMEGM`.
-- No-threads build: meson option `threads` (feature). `PF_CONFIG_THREADS`
-  0 means thread creation fails at run time (`thrd_error` /
-  `PF_ENOSYS`); mutexes, once and tss work for the single thread.
-
-`time.h`: `pf_clockid_t` + `PF_CLOCK_REALTIME`, `_MONOTONIC`,
-`_PROCESS_CPUTIME_ID`, `_THREAD_CPUTIME_ID`; `pf_clock_gettime`,
-`pf_clock_getres`, `pf_nanosleep` (-1/errno); `pf_timespec_get`,
-`pf_timespec_getres` with `PF_TIME_UTC`, `PF_TIME_MONOTONIC`;
-`pf_gmtime_r`, `pf_localtime_r`, `pf_timegm`; `uint64_t pf_time_ns(void)`
-(monotonic), `int pf_sleep_ns(uint64_t)`; header-only
-`pf_timespec_to_ns`, `_from_ns`, `_add`, `_sub`, `_cmp`; `int
-pf_deadline_ns(struct timespec *, int64_t ns)` (UTC now + ns, for the C11
-timed waits). Windows: QPC, Get{Process,Thread}Times, high-resolution
-waitable timer, `gmtime_s` / `localtime_s` / `_mkgmtime`.
-
-`threads.h`: the C11 API with a `pf_` prefix (`pf_thrd_t`, `pf_mtx_t`,
-`pf_cnd_t`, `pf_tss_t`, `pf_once_flag`, `PF_ONCE_FLAG_INIT`,
-`PF_TSS_DTOR_ITERATIONS`, `pf_mtx_plain/_timed/_recursive`,
-`pf_thrd_success/_busy/_error/_nomem/_timedout`), always the library's own
-implementation on pthreads or Win32. Windows: `pf_thrd_t` points to a
-control block (`pf_thrd_current` equals what `pf_thrd_create` gave, blocks
-of foreign threads freed at their exit); `pf_mtx_t` on SRWLOCK (+ owner and
-count for recursive, a flag and a condition variable for timed) so `cnd`
-works with every type; tss destructors from one FLS callback, no
-`pf_tss_cleanup`. Additions (`0` / `-PF_E*`): `pf_thrd_attr_t { size_t
-stack_size; const char *name; }` + `pf_thrd_create_ex`,
-`pf_thrd_set_name` / `pf_thrd_get_name` (current thread), `pf_thrd_id`,
-`pf_thrd_set_affinity(const uint64_t *mask, size_t ncpus)` (bitmask, current
-thread, `PF_ENOTSUP` on macOS), `pf_thrd_set_priority` (LOWEST..HIGHEST);
-`pf_rwlock_t` (`_init/_free/_rdlock/_wrlock/_tryrdlock/_trywrlock/
-_timedrdlock/_timedwrlock/_rdunlock/_wrunlock`), `pf_spin_t`
-(`_init/_free/_lock/_trylock/_unlock`), `pf_barrier_t`
-(`_init/_free/_wait`, `PF_BARRIER_SERIAL` in one thread).
-
-`atomic.h`: `PF_ATOMIC(T)`, `pf_memory_order`, `PF_MEMORY_ORDER_*`,
-`pf_atomic_flag_t`, `PF_ATOMIC_FLAG_INIT`, `PF_ATOMIC_INIT/LOAD/STORE/
-EXCHANGE/COMPARE_EXCHANGE_STRONG/WEAK/FETCH_ADD/SUB/OR/XOR/AND` (+
-`_EXPLICIT`), `PF_ATOMIC_FLAG_TEST_AND_SET/CLEAR`, fences,
-`PF_KILL_DEPENDENCY`, `PF_ATOMIC_IS_LOCK_FREE`, `PF_ATOMIC_*_LOCK_FREE`.
-Tiers by the consumer's compiler: `<stdatomic.h>` (C11), `std::atomic`
-(C++), `__atomic` builtins (GNU C99, libatomic for large types),
-`Interlocked*` (MSVC C, integer and pointer types, needs `__typeof__`),
-library calls with a striped lock table (others;
-`PF__ATOMIC_FORCE_LOCKED` for the test variant). No `ATOMIC_VAR_INIT`, no
-`pf_atomic_flag_init`. `pf_atomic_wait(addr, expected, rel_timeout)`,
-`pf_atomic_wake_one`, `pf_atomic_wake_all` on 32-bit atomics (futex,
-WaitOnAddress, `__ulock`, `_umtx_op`, OpenBSD futex, else a hashed table of
-condition variables). Standard names only without `<stdatomic.h>`.
-
-`semaphore.h`: `pf_sem_t`, `PF_SEM_FAILED`, `PF_SEM_VALUE_MAX`,
-`pf_sem_init/destroy/wait/trywait/timedwait/post/getvalue`,
-`pf_sem_clockwait`, `pf_sem_open/close/unlink` (-1/errno). `sem_t` on
-Linux and BSDs; on macOS and Windows unnamed semaphores are the library's
-own (pshared fails with ENOTSUP), named ones wrap `sem_open` /
-`CreateSemaphoreW` (`/name` -> `Local\name`, unlink is a no-op on
-Windows).
+None pending. Step 6 (`fs`, `dirent`, `dlfcn`, `mman`, `io`) needs an
+API proposal first.
 
 ## Current state and notes
 
-What exists after step 4:
+What exists after step 5:
 
 - `include/cpolyfill/`: `platform.h`, `config.h.in` (+ `meson.build`
   listing `public_headers`; add new headers there), `version.h`,
   `errno.h`, the language layer: `attribute.h`, `stdc.h`, `types.h`,
   `macro.h`, `assert.h`, `debug.h`, the integer headers `bitwise.h`,
-  `overflow.h`, `endian.h` (header-only), and the text headers
-  `ctype.h`, `unicode.h`, `string.h`, `stdlib.h`. Each header documents
+  `overflow.h`, `endian.h` (header-only), the text headers `ctype.h`,
+  `unicode.h`, `string.h`, `stdlib.h`, and the concurrency headers
+  `time.h`, `threads.h`, `atomic.h`, `semaphore.h`. Each header documents
   its API in its top comment.
 - `src/`: `internal.h` (include first in every source), `allocator.h`
   (vendored), `alloc.c`, `assert.c`, `debug.c`, `errno.c`, `stdlib.c`,
-  `string.c`, `uchar.c`, `unicode.c`, `version.c`, `win32/error.c`
-  (Win32/WSA -> `PF_E*`, public since step 4).
+  `string.c`, `uchar.c`, `unicode.c`, `version.c`, `time.c`, `atomic.c`,
+  `threads.c`, `semaphore.c`, `posix/threads.c`, `win32/threads.c`,
+  `win32/error.c` (Win32/WSA -> `PF_E*`, public since step 4).
   `debug.c` uses execinfo, else `_Unwind_Backtrace`, plus `dladdr`;
   meson detects them and passes `PF__HAVE_EXECINFO` / `PF__HAVE_UNWIND`
   / `PF__HAVE_DLADDR` as library arguments (not in `config.h`).
@@ -382,6 +316,10 @@ What exists after step 4:
     C11, C23 and C++. Add a case there for every new static check.
   - `cxx.cpp`: the macros used from C++11 and C++20, where several have
     template implementations.
+- Builds to check before committing: default, Clang with ASan/UBSan,
+  static, and `-Dthreads=disabled` (the no-threads backend). Since step 5
+  a Clang `-Db_sanitize=thread` build of the `threads`, `atomic` and
+  `semaphore` suites is worth running too.
 - Verified on Linux with GCC 16 (shared and static) and Clang 23 with
   ASan/UBSan. `nm -D` shows only `pf_*` functions exported (including the
   internal `pf__assert_fail_*` the assert macros call). The
@@ -445,6 +383,55 @@ Text headers (step 4):
   passes the suites (the forced XSI `strerror_r` branch cannot run on
   glibc, which only declares the GNU variant with `_GNU_SOURCE`).
 
+Concurrency (step 5):
+
+- `config.h`: `PF_CONFIG_THREADS` (meson option `threads`, a feature),
+  `PF_CONFIG_HAVE_THREADS_H` and the time functions in `libc_functions`.
+  Library-only facts: `PF__HAVE_PTHREAD_MUTEX_TIMEDLOCK`,
+  `PF__HAVE_SEM_CLOCKWAIT`, `PF__HAVE_PTHREAD_SETNAME_NP` /
+  `_GETNAME_NP`. The dependency carries `threads`, libatomic when GCC needs
+  it for large atomics, and `synchronization` on Windows (WaitOnAddress).
+- `time.h`: struct timespec in strict C99 comes from `<sched.h>` on Linux
+  (glibc and musl define it there whatever the feature macros),
+  `<sys/select.h>` elsewhere. `pf_timegm` uses the system's except on
+  Windows; `pf__timegm_portable` (days-from-civil, any year) is tested
+  against it. Also has `PF_TIME_ACTIVE` / `PF_TIME_THREAD_ACTIVE`.
+- `threads.h`: three backends, `posix/threads.c`, `win32/threads.c` and
+  the no-threads one at the end of `threads.c`. `pf_rwlock_t`,
+  `pf_barrier_t` and `pf_spin_t` are the library's own on every platform
+  (`threads.c`, on `pf_mtx_t` / `pf_cnd_t` and the spin primitives of
+  `atomic.c`), so they are tested everywhere and timed rwlock waits need
+  no polling. Linux thread names use `prctl(PR_SET_NAME)`. Added
+  `pf_thrd_get_affinity` (needed to test the setter). The std names leave
+  `once_flag` / `call_once` alone if `<stdlib.h>` declares them (C23,
+  glibc 2.34).
+- `atomic.h` tiers are picked by internal 0/1 macros `PF__ATOMIC_STD`,
+  `_CXX`, `_GNU`, `_MSVC`, `_LIB`. The MSVC and library tiers pass values
+  by pointer through compound literals (`PF__ATOMIC_VAL`, and a union for
+  results, `PF__ATOMIC_TMP`), so every type works, structures included;
+  MSVC sends sizes other than 1/2/4/8 to the library's lock table. GCC's
+  `<stdatomic.h>` does not scale `atomic_fetch_add` on pointers (GCC bug
+  64843), so the C11 tier on GCC multiplies by the element size itself
+  (`PF__ATOMIC_GNU_STEP`, via `__builtin_classify_type`). In the library
+  tier a discarded fetch result warns under GCC (`-Wunused-value`); only
+  the forced test tier is affected.
+- `atomic.c`: everything reduces to compare-exchange on 1/2/4/8 bytes,
+  else the 64-entry spin-lock table (`pf__atomic_*_locked`, tested
+  directly). Wait/wake: Linux futex (`futex_time64` on 32-bit with 64-bit
+  time_t), macOS `__ulock_*`, FreeBSD `_umtx_op`, OpenBSD `futex`,
+  Windows `WaitOnAddress`, else `pf__atomic_wait_fallback` (a table of
+  mutex + condition variable, tested on Linux as well).
+- `semaphore.h`: `sem_t` where `PF__SEM_NATIVE` (pthreads, not Apple).
+  Elsewhere `pf_sem_t` holds `struct pf__sem_local` (mutex, condition
+  variable, count) and a pointer for named semaphores; the
+  `pf__sem_local_*` functions are built and tested everywhere.
+- Checked on Linux: GCC and Clang (ASan/UBSan, and TSan on the
+  concurrency suites), static, no-threads, and a 32-bit `-m32` build (all
+  suites pass; `check_headers.py` and `check_errors.py` cannot take a
+  compiler command with flags, `--cc "gcc -m32"`).
+- The runner's timings are CPU time in the gnu99 variant (they read
+  near zero for sleeping tests); the tests measure time themselves.
+
 Language layer notes, for later steps:
 
 - Attribute placement: `PF_*` attribute macros go first in a
@@ -484,6 +471,12 @@ Caveats:
   headers (`__declspec` attributes, `.CRT$XCU` constructors,
   `__pragma(pack)`, `__alignof`, `__debugbreak`). Needs a Windows or
   MinGW build (or CI) before relying on it.
+- Step 5's Windows code (`win32/threads.c`, the Windows parts of
+  `time.c`, `atomic.c` and `semaphore.c`, and the MSVC tier of
+  `atomic.h`) is not compiled either. Neither are the macOS, BSD
+  branches of the thread names, ids, affinity and priority, `__ulock`,
+  `_umtx_op`, OpenBSD `futex`, or the macOS polling of
+  `pf_mtx_timedlock` / named `pf_sem_timedwait`.
 - The BSD and macOS branches of `pf_debugger_attached` (sysctl) are not
   compiled here either, nor the BSD `qsort_r` trampoline, the Windows
   environment functions (`_wgetenv` / `_wputenv_s`; on Windows an empty
@@ -555,6 +548,14 @@ Caveats:
   `PF_E*` while the C11 functions keep `thrd_*`; affinity is a `uint64_t`
   bitmask; `atomic.h` gets wait / wake; a no-threads build is kept, so
   unsupported platforms fail at run time.
+
+- 2026-11-11: Step 5 implemented. Changes from the spec: reader-writer
+  locks are the library's own everywhere (`pthread_rwlock_t` is hidden in
+  strict C99, and timed waits then work on Windows and macOS without
+  polling); added `pf_thrd_get_affinity`, `PF_TIME_ACTIVE` and
+  `PF_TIME_THREAD_ACTIVE`; the MSVC atomic tier takes every type (other
+  sizes go to the lock table); without threads, semaphores are the
+  library's own and named ones fail with ENOSYS.
 
 ## Open questions
 
