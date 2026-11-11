@@ -30,6 +30,7 @@ sources = files(
     'src/assert.c',
     'src/debug.c',
     'src/errno.c',
+    'src/semaphore.c',
     'src/stdlib.c',
     'src/string.c',
     'src/threads.c',
@@ -117,6 +118,13 @@ elif have_threads
             cc.has_function(
                 'pthread_mutex_timedlock',
                 prefix: '#include <pthread.h>',
+                dependencies: threads_dep,
+            ) ? 1 : 0,
+        ),
+        '-DPF__HAVE_SEM_CLOCKWAIT=@0@'.format(
+            cc.has_function(
+                'sem_clockwait',
+                prefix: '#define _GNU_SOURCE\n#include <semaphore.h>',
                 dependencies: threads_dep,
             ) ? 1 : 0,
         ),

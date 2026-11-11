@@ -14,6 +14,7 @@ suites = [
     'macro',
     'overflow',
     'platform',
+    'semaphore',
     'std_names',
     'std_polyfill',
     'stdc',

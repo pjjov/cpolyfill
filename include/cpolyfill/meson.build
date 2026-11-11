@@ -13,6 +13,7 @@ public_headers = files(
     'macro.h',
     'overflow.h',
     'platform.h',
+    'semaphore.h',
     'stdc.h',
     'stdlib.h',
     'string.h',

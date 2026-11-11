@@ -178,6 +178,16 @@ int pf__atomic_wait_fallback(
 );
 void pf__atomic_wake_fallback(const volatile void *addr, bool all);
 
+/* The library's own semaphore (semaphore.c), used on macOS and Windows,
+   and tested everywhere. -1 with errno, like the sem_* functions. */
+struct pf__sem_local;
+int pf__sem_local_init(struct pf__sem_local *s, unsigned value);
+int pf__sem_local_destroy(struct pf__sem_local *s);
+int pf__sem_local_wait(struct pf__sem_local *s, const struct timespec *deadline);
+int pf__sem_local_trywait(struct pf__sem_local *s);
+int pf__sem_local_post(struct pf__sem_local *s);
+int pf__sem_local_getvalue(struct pf__sem_local *s, int *value);
+
 /* The length of the longest prefix of `s` of at most `max` bytes that ends
    at a character boundary. */
 size_t pf__utf8_truncate(const char *s, size_t max);
