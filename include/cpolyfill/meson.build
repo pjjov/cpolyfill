@@ -3,6 +3,7 @@
 
 public_headers = files(
     'assert.h',
+    'atomic.h',
     'attribute.h',
     'bitwise.h',
     'ctype.h',
@@ -15,6 +16,7 @@ public_headers = files(
     'stdc.h',
     'stdlib.h',
     'string.h',
+    'threads.h',
     'time.h',
     'types.h',
     'unicode.h',
@@ -128,6 +130,37 @@ int main(void) {
     name: 'qsort_r (BSD order)',
 )
 conf.set10('PF_CONFIG_HAVE_QSORT_R', qsort_r_gnu)
+
+# ---- Threads -----------------------------------------------------------
+
+threads_opt = get_option('threads')
+have_threads = false
+threads_dep = dependency('', required: false)
+if is_windows
+    have_threads = not threads_opt.disabled()
+elif not threads_opt.disabled()
+    threads_dep = dependency('threads', required: threads_opt)
+    have_threads = threads_dep.found() and cc.has_header('pthread.h')
+    if threads_opt.enabled() and not have_threads
+        error('threads enabled but pthreads were not found')
+    endif
+endif
+conf.set10('PF_CONFIG_THREADS', have_threads)
+conf.set10(
+    'PF_CONFIG_HAVE_THREADS_H',
+    cc.has_header('threads.h') and cc.links(
+        '''
+#include <threads.h>
+static int run(void *arg) { return arg != 0; }
+int main(void) {
+    thrd_t t;
+    return thrd_create(&t, run, 0);
+}
+''',
+        dependencies: threads_dep,
+        name: 'C11 threads',
+    ),
+)
 
 config_h = configure_file(
     input: 'config.h.in',

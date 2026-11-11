@@ -38,6 +38,7 @@
 #include <cpolyfill/errno.h>
 #include <cpolyfill/stdlib.h>
 #include <cpolyfill/string.h>
+#include <cpolyfill/threads.h>
 #include <cpolyfill/time.h>
 #include <cpolyfill/unicode.h>
 
@@ -266,11 +267,48 @@ static int test_time(int seed, int i) {
     return 0;
 }
 
+static int test_threads(int seed, int i) {
+    static const char *const mapped[][2] = {
+        { XSTR(thrd_create), "pf_thrd_create" },
+        { XSTR(thrd_join), "pf_thrd_join" },
+        { XSTR(mtx_timedlock), "pf_mtx_timedlock" },
+        { XSTR(cnd_wait), "pf_cnd_wait" },
+        { XSTR(tss_create), "pf_tss_create" },
+        { XSTR(thrd_success), "pf_thrd_success" },
+        { XSTR(mtx_recursive), "pf_mtx_recursive" },
+    };
+    mtx_t m;
+    cnd_t c;
+    tss_t key;
+    thrd_t self = thrd_current();
+    size_t k;
+    (void)seed, (void)i;
+
+    for (k = 0; k < sizeof(mapped) / sizeof(mapped[0]); k++)
+        PF_ASSERT_ALWAYS_STR_EQ(mapped[k][0], mapped[k][1]);
+
+    PF_ASSERT_ALWAYS(thrd_equal(self, thrd_current()));
+    PF_ASSERT_ALWAYS_EQ(mtx_init(&m, mtx_timed), thrd_success);
+    PF_ASSERT_ALWAYS_EQ(cnd_init(&c), thrd_success);
+    PF_ASSERT_ALWAYS_EQ(mtx_lock(&m), thrd_success);
+    PF_ASSERT_ALWAYS_EQ(cnd_signal(&c), thrd_success);
+    PF_ASSERT_ALWAYS_EQ(mtx_unlock(&m), thrd_success);
+    cnd_destroy(&c);
+    mtx_destroy(&m);
+    PF_ASSERT_ALWAYS_EQ(tss_create(&key, NULL), thrd_success);
+    PF_ASSERT_ALWAYS_EQ(tss_set(key, &key), thrd_success);
+    PF_ASSERT_ALWAYS(tss_get(key) == &key);
+    tss_delete(key);
+    PF_ASSERT_ALWAYS_EQ(TSS_DTOR_ITERATIONS, PF_TSS_DTOR_ITERATIONS);
+    return 0;
+}
+
 pf_test_t suite_std_polyfill[] = {
     { test_stdbit, "stdbit" },
     { test_ckdint, "ckdint" },
     { test_endian, "endian" },
     { test_text, "text" },
     { test_time, "time" },
+    { test_threads, "threads" },
     { 0 },
 };

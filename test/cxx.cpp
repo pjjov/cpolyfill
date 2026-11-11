@@ -7,6 +7,7 @@
    implementation (templates instead of GNU C builtins). Failures abort. */
 
 #include <cpolyfill/assert.h>
+#include <cpolyfill/atomic.h>
 #include <cpolyfill/attribute.h>
 #include <cpolyfill/bitwise.h>
 #include <cpolyfill/ctype.h>
@@ -18,6 +19,8 @@
 #include <cpolyfill/stdc.h>
 #include <cpolyfill/stdlib.h>
 #include <cpolyfill/string.h>
+#include <cpolyfill/threads.h>
+#include <cpolyfill/time.h>
 #include <cpolyfill/types.h>
 #include <cpolyfill/unicode.h>
 
@@ -187,6 +190,52 @@ static void test_text() {
     PF_ASSERT_ALWAYS_STR_EQ(pf_error_name(PF_ENOENT), "ENOENT");
 }
 
+static PF_ATOMIC(int) shared_count(0);
+
+#if PF_HAS_THREADS
+static int add_some(void *arg) {
+    for (int k = 0; k < 1000; k++)
+        PF_ATOMIC_FETCH_ADD(&shared_count, 1);
+    return *static_cast<int *>(arg);
+}
+#endif
+
+static void test_concurrency() {
+    PF_ATOMIC(long *) p(nullptr);
+    long longs[4];
+    pf_atomic_flag_t flag = PF_ATOMIC_FLAG_INIT;
+    int expected = 0, seven = 7;
+    struct timespec ts = pf_timespec_from_ns(1500000000LL);
+
+    PF_ASSERT_ALWAYS_EQ(pf_timespec_to_ns(ts), 1500000000LL);
+    PF_ASSERT_ALWAYS(pf_time_ns() > 0);
+
+    PF_ATOMIC_STORE(&p, longs);
+    PF_ASSERT_ALWAYS(PF_ATOMIC_FETCH_ADD(&p, 2) == longs);
+    PF_ASSERT_ALWAYS(PF_ATOMIC_LOAD(&p) == longs + 2);
+    PF_ASSERT_ALWAYS(!PF_ATOMIC_FLAG_TEST_AND_SET(&flag));
+    PF_ASSERT_ALWAYS(PF_ATOMIC_COMPARE_EXCHANGE_STRONG(&shared_count, &expected, 0));
+
+#if PF_HAS_THREADS
+    pf_thrd_t t[4];
+    int res = 0;
+    for (int k = 0; k < 4; k++)
+        PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&t[k], add_some, &seven), pf_thrd_success);
+    for (int k = 0; k < 4; k++) {
+        PF_ASSERT_ALWAYS_EQ(pf_thrd_join(t[k], &res), pf_thrd_success);
+        PF_ASSERT_ALWAYS_EQ(res, 7);
+    }
+    PF_ASSERT_ALWAYS_EQ(PF_ATOMIC_LOAD(&shared_count), 4000);
+#else
+    (void)seven;
+#endif
+    pf_mtx_t m;
+    PF_ASSERT_ALWAYS_EQ(pf_mtx_init(&m, pf_mtx_plain), pf_thrd_success);
+    PF_ASSERT_ALWAYS_EQ(pf_mtx_lock(&m), pf_thrd_success);
+    PF_ASSERT_ALWAYS_EQ(pf_mtx_unlock(&m), pf_thrd_success);
+    pf_mtx_destroy(&m);
+}
+
 int main() {
     PF_ASSERT_ALWAYS_EQ(constructed, 1);
     test_types();
@@ -196,5 +245,6 @@ int main() {
     test_debug();
     test_integers();
     test_text();
+    test_concurrency();
     return 0;
 }

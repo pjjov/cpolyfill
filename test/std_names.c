@@ -10,12 +10,18 @@
 #define PF_STD_NAMES
 
 #include <cpolyfill/assert.h>
+#include <cpolyfill/atomic.h>
 #include <cpolyfill/bitwise.h>
 #include <cpolyfill/endian.h>
 #include <cpolyfill/overflow.h>
 #include <cpolyfill/stdc.h>
+#include <cpolyfill/threads.h>
+#include <cpolyfill/time.h>
 
 #include <setjmp.h>
+#if PF_CONFIG_HAVE_THREADS_H
+    #include <threads.h>
+#endif
 #include <stdint.h>
 
 #include "check.h"
@@ -130,9 +136,50 @@ static int test_integers(int seed, int i) {
     return 0;
 }
 
+/* From <stdatomic.h> in C11, from the polyfill before. */
+static int test_atomic(int seed, int i) {
+    atomic_int n = 1;
+    atomic_flag f = ATOMIC_FLAG_INIT;
+    int e = 2;
+    (void)seed, (void)i;
+
+    PF_ASSERT_ALWAYS_EQ(atomic_fetch_add(&n, 1), 1);
+    PF_ASSERT_ALWAYS(atomic_compare_exchange_strong(&n, &e, 5));
+    PF_ASSERT_ALWAYS_EQ(atomic_load_explicit(&n, memory_order_acquire), 5);
+    PF_ASSERT_ALWAYS(!atomic_flag_test_and_set(&f));
+    atomic_thread_fence(memory_order_seq_cst);
+    return 0;
+}
+
+static int once_calls;
+
+static void once_fn(void) {
+    once_calls++;
+}
+
+/* From <threads.h> where the system has it, else from the polyfill. */
+static int test_threads(int seed, int i) {
+    static once_flag once = ONCE_FLAG_INIT;
+    mtx_t m;
+    (void)seed, (void)i;
+
+    call_once(&once, once_fn);
+    call_once(&once, once_fn);
+    PF_ASSERT_ALWAYS_EQ(once_calls, 1);
+    PF_ASSERT_ALWAYS_EQ(mtx_init(&m, mtx_plain | mtx_recursive), thrd_success);
+    PF_ASSERT_ALWAYS_EQ(mtx_lock(&m), thrd_success);
+    PF_ASSERT_ALWAYS_EQ(mtx_trylock(&m), thrd_success);
+    PF_ASSERT_ALWAYS_EQ(mtx_unlock(&m), thrd_success);
+    PF_ASSERT_ALWAYS_EQ(mtx_unlock(&m), thrd_success);
+    mtx_destroy(&m);
+    return 0;
+}
+
 pf_test_t suite_std_names[] = {
     { test_keywords, "keywords" },
     { test_assert, "assert" },
     { test_integers, "integers" },
+    { test_atomic, "atomic" },
+    { test_threads, "threads" },
     { 0 },
 };

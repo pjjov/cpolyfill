@@ -23,6 +23,7 @@
 
 extern pf_test_t suite_alloc[];
 extern pf_test_t suite_assert[];
+extern pf_test_t suite_atomic[];
 extern pf_test_t suite_attribute[];
 extern pf_test_t suite_bitwise[];
 extern pf_test_t suite_ctype[];
@@ -37,6 +38,7 @@ extern pf_test_t suite_std_polyfill[];
 extern pf_test_t suite_stdc[];
 extern pf_test_t suite_stdlib[];
 extern pf_test_t suite_string[];
+extern pf_test_t suite_threads[];
 extern pf_test_t suite_time[];
 extern pf_test_t suite_types[];
 extern pf_test_t suite_uchar[];
@@ -51,6 +53,7 @@ int main(int argc, char *argv[]) {
     static const pf_suite_t suites[] = {
         { "alloc", 5, suite_alloc },
         { "assert", 1, suite_assert },
+        { "atomic", 1, suite_atomic },
         { "attribute", 1, suite_attribute },
         { "bitwise", 3, suite_bitwise },
         { "ctype", 1, suite_ctype },
@@ -65,6 +68,7 @@ int main(int argc, char *argv[]) {
         { "stdc", 1, suite_stdc },
         { "stdlib", 3, suite_stdlib },
         { "string", 1, suite_string },
+        { "threads", 1, suite_threads },
         { "time", 3, suite_time },
         { "types", 1, suite_types },
         { "uchar", 1, suite_uchar },

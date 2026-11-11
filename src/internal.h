@@ -146,6 +146,44 @@ void pf__qsort_r_portable(
     void *arg
 );
 
+/* ---- Threads and atomics (threads.c, atomic.c) ------------------------ */
+
+#include <stdbool.h>
+
+/* Spin locks on a 32-bit word, 0 when free. */
+bool pf__spin_trylock(volatile uint32_t *lock);
+void pf__spin_lock(volatile uint32_t *lock);
+void pf__spin_unlock(volatile uint32_t *lock);
+void pf__cpu_relax(void);
+void pf__thread_yield(void);
+
+/* The lock-table paths of the atomic backend, for any size. */
+void *pf__atomic_load_locked(const volatile void *obj, size_t size, void *ret);
+void pf__atomic_store_locked(volatile void *obj, size_t size, const void *val);
+void *pf__atomic_exchange_locked(
+    volatile void *obj, size_t size, const void *val, void *ret
+);
+bool pf__atomic_cas_locked(
+    volatile void *obj, size_t size, void *expected, const void *desired
+);
+void *pf__atomic_fetch_locked(
+    volatile void *obj, size_t size, int op, unsigned long long arg, void *ret
+);
+
+/* pf_atomic_wait / wake on a table of condition variables, used where the
+   system has no futex-like call. */
+struct timespec;
+int pf__atomic_wait_fallback(
+    const volatile void *addr, uint32_t expected, const struct timespec *timeout
+);
+void pf__atomic_wake_fallback(const volatile void *addr, bool all);
+
+/* The length of the longest prefix of `s` of at most `max` bytes that ends
+   at a character boundary. */
+size_t pf__utf8_truncate(const char *s, size_t max);
+/* Copies a thread name into `buf`: 0, or PF_ERANGE if truncated. */
+int pf__copy_name(char *buf, size_t size, const char *name);
+
 /* timegm on every platform, without the system's (time.c). */
 #include <time.h>
 time_t pf__timegm_portable(struct tm *tm);

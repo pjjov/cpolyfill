@@ -14,3 +14,10 @@ option(
     value: false,
     description: 'Run the tests that fail because of known defects in the library, instead of reporting them as TODO.',
 )
+
+option(
+    'threads',
+    type: 'feature',
+    value: 'auto',
+    description: 'Thread support. Without it, creating a thread fails at run time.',
+)

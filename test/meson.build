@@ -4,6 +4,7 @@
 suites = [
     'alloc',
     'assert',
+    'atomic',
     'attribute',
     'bitwise',
     'ctype',
@@ -18,6 +19,7 @@ suites = [
     'stdc',
     'stdlib',
     'string',
+    'threads',
     'time',
     'types',
     'uchar',
@@ -26,7 +28,12 @@ suites = [
 ]
 
 # The portable implementations, compared with the builtins.
-test_sources = files('main.c', 'bitwise_portable.c', 'overflow_portable.c')
+test_sources = files(
+    'main.c',
+    'atomic_lib.c',
+    'bitwise_portable.c',
+    'overflow_portable.c',
+)
 foreach suite : suites
     test_sources += files(suite + '.c')
 endforeach

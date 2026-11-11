@@ -26,18 +26,22 @@ inc = include_directories('include')
 
 sources = files(
     'src/alloc.c',
+    'src/atomic.c',
     'src/assert.c',
     'src/debug.c',
     'src/errno.c',
     'src/stdlib.c',
     'src/string.c',
+    'src/threads.c',
     'src/time.c',
     'src/uchar.c',
     'src/unicode.c',
     'src/version.c',
 )
 if is_windows
-    sources += files('src/win32/error.c')
+    sources += files('src/win32/error.c', 'src/win32/threads.c')
+else
+    sources += files('src/posix/threads.c')
 endif
 
 lib_args = ['-DPF__BUILDING']
@@ -99,6 +103,63 @@ int main(void) {
         ) ? 1 : 0,
     ),
 ]
+
+# Threads (threads.c, atomic.c).
+if have_threads
+    sys_deps += threads_dep
+endif
+if is_windows
+    # WaitOnAddress (atomic.c).
+    sys_deps += cc.find_library('synchronization')
+elif have_threads
+    lib_args += [
+        '-DPF__HAVE_PTHREAD_MUTEX_TIMEDLOCK=@0@'.format(
+            cc.has_function(
+                'pthread_mutex_timedlock',
+                prefix: '#include <pthread.h>',
+                dependencies: threads_dep,
+            ) ? 1 : 0,
+        ),
+        '-DPF__HAVE_PTHREAD_SETNAME_NP=@0@'.format(
+            cc.has_function(
+                'pthread_setname_np',
+                prefix: '#define _GNU_SOURCE\n#include <pthread.h>',
+                dependencies: threads_dep,
+            ) ? 1 : 0,
+        ),
+        '-DPF__HAVE_PTHREAD_GETNAME_NP=@0@'.format(
+            cc.has_function(
+                'pthread_getname_np',
+                prefix: '#define _GNU_SOURCE\n#include <pthread.h>',
+                dependencies: threads_dep,
+            ) ? 1 : 0,
+        ),
+    ]
+endif
+# GCC calls libatomic for atomics that are not lock-free (<cpolyfill/atomic.h>
+# before C11, with __atomic builtins).
+if not is_msvc
+    atomic_test = '''
+#include <stdint.h>
+struct big { char c[24]; };
+int main(void) {
+    static struct big a, b;
+    static uint64_t w;
+    __atomic_load(&a, &b, __ATOMIC_SEQ_CST);
+    return (int)__atomic_fetch_add(&w, 1, __ATOMIC_SEQ_CST) + b.c[0];
+}
+'''
+    if not cc.links(atomic_test, name: 'atomics without libatomic')
+        atomic_dep = cc.find_library('atomic', required: false)
+        if atomic_dep.found() and cc.links(
+            atomic_test,
+            dependencies: atomic_dep,
+            name: 'atomics with libatomic',
+        )
+            sys_deps += atomic_dep
+        endif
+    endif
+endif
 
 # Backtraces (debug.c): execinfo (glibc, macOS, BSDs with libexecinfo),
 # else the unwinder of libgcc / LLVM (musl), and dladdr for symbol names.

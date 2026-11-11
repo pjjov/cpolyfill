@@ -21,9 +21,13 @@
 /* 1 if the target is big-endian (fallback for <cpolyfill/platform.h>). */
 #define PF_CONFIG_BIG_ENDIAN @PF_CONFIG_BIG_ENDIAN@
 
+/* 1 if the library was built with threads (pthreads or Win32). */
+#define PF_CONFIG_THREADS @PF_CONFIG_THREADS@
+
 /* What the C library had when cpolyfill was built: 1 if present. The
    standard-name polyfills (PF_STD_NAMES) map only the missing names.
    PF_CONFIG_HAVE_QSORT_R means qsort_r with the POSIX argument order. */
+#define PF_CONFIG_HAVE_THREADS_H @PF_CONFIG_HAVE_THREADS_H@
 #define PF_CONFIG_HAVE_STRINGS_H @PF_CONFIG_HAVE_STRINGS_H@
 #define PF_CONFIG_HAVE_UCHAR_H @PF_CONFIG_HAVE_UCHAR_H@
 #define PF_CONFIG_HAVE_STRDUP @PF_CONFIG_HAVE_STRDUP@
