@@ -47,6 +47,7 @@ extern pf_test_t suite_stdc[];
 extern pf_test_t suite_stdlib[];
 extern pf_test_t suite_string[];
 extern pf_test_t suite_sysinfo[];
+extern pf_test_t suite_term[];
 extern pf_test_t suite_threads[];
 extern pf_test_t suite_time[];
 extern pf_test_t suite_types[];
@@ -86,6 +87,7 @@ int main(int argc, char *argv[]) {
         { "stdlib", 3, suite_stdlib },
         { "string", 1, suite_string },
         { "sysinfo", 1, suite_sysinfo },
+        { "term", 1, suite_term },
         { "threads", 1, suite_threads },
         { "time", 3, suite_time },
         { "types", 1, suite_types },

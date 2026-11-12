@@ -41,6 +41,7 @@ sources = files(
     'src/stdlib.c',
     'src/string.c',
     'src/sysinfo.c',
+    'src/term.c',
     'src/threads.c',
     'src/time.c',
     'src/uchar.c',

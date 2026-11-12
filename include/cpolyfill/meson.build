@@ -25,6 +25,7 @@ public_headers = files(
     'stdlib.h',
     'string.h',
     'sysinfo.h',
+    'term.h',
     'threads.h',
     'time.h',
     'types.h',
