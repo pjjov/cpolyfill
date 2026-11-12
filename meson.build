@@ -40,6 +40,7 @@ sources = files(
     'src/semaphore.c',
     'src/stdlib.c',
     'src/string.c',
+    'src/sysinfo.c',
     'src/threads.c',
     'src/time.c',
     'src/uchar.c',

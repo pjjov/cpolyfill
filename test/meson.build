@@ -27,6 +27,7 @@ suites = [
     'stdc',
     'stdlib',
     'string',
+    'sysinfo',
     'threads',
     'time',
     'types',
