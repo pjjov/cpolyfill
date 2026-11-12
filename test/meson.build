@@ -6,6 +6,7 @@ suites = [
     'assert',
     'atomic',
     'attribute',
+    'cpuid',
     'bitwise',
     'ctype',
     'debug',

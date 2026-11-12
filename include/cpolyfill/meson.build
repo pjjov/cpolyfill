@@ -6,6 +6,7 @@ public_headers = files(
     'atomic.h',
     'attribute.h',
     'bitwise.h',
+    'cpuid.h',
     'ctype.h',
     'debug.h',
     'dirent.h',

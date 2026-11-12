@@ -26,6 +26,7 @@ inc = include_directories('include')
 
 sources = files(
     'src/alloc.c',
+    'src/cpuid.c',
     'src/atomic.c',
     'src/assert.c',
     'src/debug.c',
