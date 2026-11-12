@@ -231,12 +231,12 @@ H = header-only (language layer), L = compiled (platform layer).
 | `dlfcn.h` | `pf_dlsym.h` | L | done in step 6 |
 | `mman.h` | (new) | L | done in step 6 |
 | `io.h` | `pf_io.h` | L | done in step 6 |
-| `process.h` | `pf_process.h` | L | + `pf_spawn` with stdio pipes, wait with timeout, kill, `pf_exe_path`, environment, hostname |
-| `signal.h` | (new) | L | portable shutdown handling (SIGINT/SIGTERM and `SetConsoleCtrlHandler`) |
-| `random.h` | (new) | L | `pf_getrandom` (getrandom / arc4random_buf / BCryptGenRandom) |
-| `sysinfo.h` | `pf_cpuinfo.h` (part) | L | logical and physical CPU count on all architectures, page size, cache line size, total memory, OS name and version |
-| `cpuid.h` | `pf_cpuinfo.h` | H | x86 CPUID / xgetbv; + ARM feature detection |
-| `term.h` | `pf_cli.h` (part) | L | isatty, terminal size, raw mode, Windows VT and UTF-8 console setup |
+| `process.h` | `pf_process.h` | L | done in step 7 |
+| `signal.h` | (new) | L | done in step 7 |
+| `random.h` | (new) | L | done in step 7 |
+| `sysinfo.h` | `pf_cpuinfo.h` (part) | L | done in step 7 |
+| `cpuid.h` | `pf_cpuinfo.h` | H+L | done in step 7 |
+| `term.h` | `pf_cli.h` (part) | L | done in step 7 |
 | `socket.h` | `pf_socket.h` | L | + `socketpair`, AF_UNIX on Windows |
 | `pipe.h` | `pf_pipe.h` | L | port |
 | `cli.h` | `pf_cli.h` | L | port onto `term.h`, naming cleanup |
@@ -265,7 +265,7 @@ committed.
 - [x] 4. Text: `ctype`, `unicode`, `string`, `stdlib`, `errno`
 - [x] 5. Concurrency: `time`, `threads`, `atomic`, `semaphore`
 - [x] 6. Files: `fs`, `dirent`, `dlfcn`, `mman`, `io`
-- [ ] 7. OS: `process`, `signal`, `random`, `sysinfo`, `cpuid`, `term`
+- [x] 7. OS: `process`, `signal`, `random`, `sysinfo`, `cpuid`, `term`
 - [ ] 8. Network: `socket`, `pipe`
 - [ ] 9. Apps: `cli`, `argparse`, `daemon`, `test`, `exception`,
       `array`, `typeid`
@@ -275,68 +275,11 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-### Step 7: `process`, `signal`, `random`, `sysinfo`, `cpuid`, `term` (approved 2026-11-12)
-
-Whole step: new functions return `0` / `-PF_E*`; string results use the
-`pf_getenv` form (`ptrdiff_t f(char *buf, size_t size)`); waits take an
-absolute UTC deadline (NULL: forever). Data flowing in and out of the
-library goes through `pf_stream_t` where it can.
-
-`process.h`: `pf_pid_t` (`pid_t`, `unsigned long` on Windows),
-`pf_getpid`, `pf_getppid`, `pf_popen` / `pf_pclose` (UTF-8). `pf_spawn(p,
-argv, opts)` with `pf_spawn_opts_t { cwd, env ("K=V", NULL: inherit),
-stdio[3] { mode, fd }, flags }`, modes `PF_STDIO_INHERIT/PIPE/NULL/FD`,
-flags `PF_SPAWN_SEARCH_PATH`, `PF_SPAWN_STDERR_TO_STDOUT`,
-`PF_SPAWN_NEW_GROUP`, `PF_SPAWN_HIDE_WINDOW`. `pf_process_t` has `pid` and
-the pipes as streams `in`, `out`, `err` (`vt == NULL` without a pipe).
-`pf_process_wait(p, deadline, pf_exit_status_t *)` (`{ exited, code,
-signal }`, PF_ETIMEDOUT), `pf_process_try_wait`, `pf_process_kill(p,
-force)`, `pf_process_free`. `pf_process_communicate(p, in, out, err)`
-pumps streams without deadlock; `pf_process_run(argv, opts, in, out, err,
-status)` does spawn + communicate + wait. `pf_exe_path(buf, size)`.
-Standard names `getpid`, `getppid`, `popen`, `pclose` on Windows.
-
-`stdlib.h`: `pf_env_foreach(fn, user)`. `time.h`: `pf_sleep`, `pf_usleep`
-(standard names where missing).
-
-`signal.h`: `pf_shutdown_init(flags)` (`PF_SHUTDOWN_HUP`,
-`PF_SHUTDOWN_FORCE_SECOND`, off by default), `pf_shutdown_requested`,
-`pf_shutdown_signal`, `pf_shutdown_wait(deadline)`,
-`pf_shutdown_request(sig)`, `pf_shutdown_reset`, `pf_shutdown_fd` (POSIX
-self-pipe, readable once requested) / `pf_shutdown_handle` (Windows
-event), `pf_shutdown_done` (lets the Windows close / logoff handler
-return). `PF_SIGHUP`, `PF_SIGINT`, `PF_SIGTERM`, `PF_SIGBREAK`,
-`pf_signal_name`.
-
-`random.h`: `pf_getrandom(buf, n)`, `pf_random_u32`, `pf_random_u64`,
-`pf_random_uniform(bound)` (abort if the OS fails). Stand-ins
-`pf_getentropy`, `pf_arc4random`, `pf_arc4random_buf`,
-`pf_arc4random_uniform`, standard names where missing. Non-crypto
-`pf_rng_t` (xoshiro256**): `pf_rng_seed`, `pf_rng_seed_random`,
-`pf_rng_u32`, `pf_rng_u64`, `pf_rng_uniform`, `pf_rng_double`.
-
-`sysinfo.h`: `pf_cpu_count`, `pf_cpu_count_physical`,
-`pf_cpu_count_available` (affinity, cgroup v2 `cpu.max`),
-`pf_cache_line_size` + `PF_CACHE_LINE_SIZE`, `pf_memory_total`,
-`pf_memory_available`, `pf_os_info(pf_os_info_t *)` (`name`, `version`,
-`pretty`, `machine`), `pf_cpu_name`, `pf_gethostname`.
-
-`cpuid.h` (H+L): inline `pf_cpuid`, `pf_cpuidex`, `pf_xgetbv`,
-`pf_cpuid_max_leaf`; library `pf_cpuid_reg`, `pf_cpu_vendor`, `bool
-pf_cpu_has(pf_cpu_feature)` (usable: includes the XCR0 check). x86
-features keep v1's names (`PF_CPU_AVX2`), ARM ones `PF_CPU_ARM_*`.
-Compile-time `PF_TARGET_*` always 0 or 1. v1's `PF_HAS_*`,
-`PF_SUPPORTS_*`, `PF_CAN_USE_*` and `pf_cpu_logical_cores` are gone.
-
-`term.h`: `pf_isatty` (`isatty` on Windows), `pf_term_is_terminal` (also
-mintty pipes), `pf_term_size`, `pf_term_raw(fd, flags, saved)` /
-`pf_term_restore` (`PF_TERM_KEEP_SIGNALS`, `pf_term_state_t` fixed size),
-`pf_term_echo`, `pf_term_enable_vt`, `pf_term_set_utf8` (restored at
-exit), `pf_term_colors`.
+None pending. Step 8 (`socket`, `pipe`) needs an API proposal first.
 
 ## Current state and notes
 
-What exists after step 6:
+What exists after step 7:
 
 - `include/cpolyfill/`: `platform.h`, `config.h.in` (+ `meson.build`
   listing `public_headers`; add new headers there), `version.h`,
@@ -344,15 +287,17 @@ What exists after step 6:
   `macro.h`, `assert.h`, `debug.h`, the integer headers `bitwise.h`,
   `overflow.h`, `endian.h` (header-only), the text headers `ctype.h`,
   `unicode.h`, `string.h`, `stdlib.h`, the concurrency headers
-  `time.h`, `threads.h`, `atomic.h`, `semaphore.h`, and the file headers
-  `fs.h`, `dirent.h`, `dlfcn.h`, `mman.h`, `io.h`. Each header documents
+  `time.h`, `threads.h`, `atomic.h`, `semaphore.h`, the file headers
+  `fs.h`, `dirent.h`, `dlfcn.h`, `mman.h`, `io.h`, and the OS headers
+  `process.h`, `signal.h`, `random.h`, `sysinfo.h`, `cpuid.h`, `term.h`. Each header documents
   its API in its top comment.
 - `src/`: `internal.h` (include first in every source), `allocator.h`
   (vendored), `alloc.c`, `assert.c`, `debug.c`, `errno.c`, `stdlib.c`,
   `string.c`, `uchar.c`, `unicode.c`, `version.c`, `time.c`, `atomic.c`,
   `threads.c`, `semaphore.c`, `fs.c`, `dirent.c`, `dlfcn.c`, `mman.c`,
-  `io.c`, `posix/{threads,fs,dirent,io}.c`,
-  `win32/{threads,fs,dirent,io,path}.c`, `win32/error.c` (Win32/WSA ->
+  `io.c`, `process.c`, `signal.c`, `random.c`, `sysinfo.c`, `cpuid.c`,
+  `term.c`, `posix/{threads,fs,dirent,io,process}.c`,
+  `win32/{threads,fs,dirent,io,path,process}.c`, `win32/error.c` (Win32/WSA ->
   `PF_E*`, public since step 4).
   `debug.c` uses execinfo, else `_Unwind_Backtrace`, plus `dladdr`;
   meson detects them and passes `PF__HAVE_EXECINFO` / `PF__HAVE_UNWIND`
@@ -378,7 +323,8 @@ What exists after step 6:
 - Builds to check before committing: default, Clang with ASan/UBSan,
   static, and `-Dthreads=disabled` (the no-threads backend). Since step 5
   a Clang `-Db_sanitize=thread` build of the `threads`, `atomic` and
-  `semaphore` suites is worth running too, and since step 6 a `-m32`
+  `semaphore` suites (since step 7 also `signal` and `process`) is worth
+  running too, and since step 6 a `-m32`
   build (`-Dc_args=-m32 -Dc_link_args=-m32`, same for cpp) for the 64-bit
   offsets.
 - Verified on Linux with GCC 16 (shared and static) and Clang 23 with
@@ -537,6 +483,53 @@ Files (step 6):
 - `check_headers.py` now includes the POSIX file headers (and `direct.h`,
   `io.h`) after each header in its standard-names pass.
 
+OS (step 7):
+
+- `process.h`: POSIX spawns with fork + execve, not posix_spawn: the
+  program is looked up in PATH and made absolute in the parent (relative
+  paths are relative to the caller's directory even with `cwd`), the child
+  only makes async-signal-safe calls, resets SIGPIPE and its signal mask,
+  and reports exec failures through a close-on-exec pipe. Pipes are made
+  at fd 3 or above, close-on-exec (pipe2 where it exists). Timed waits
+  use a pidfd on Linux (`pf__handle`), kqueue `EVFILT_PROC` on macOS and
+  the BSDs, else polling waitpid (1 to 50 ms); the test closes the pidfd
+  to run the polling path. `pf_process_communicate` polls the pipes and
+  blocks SIGPIPE around writes (consuming the one it raised). Windows:
+  CreateProcessW with `PROC_THREAD_ATTRIBUTE_HANDLE_LIST` (only the three
+  stdio handles are inherited), MSVCRT quoting, batch files refused, a
+  thread per pipe to communicate (PF_ENOSYS for more than one pipe
+  without threads).
+- The process suite starts `test/child.c` (`cpolyfill-test-child`), found
+  through `PF_TEST_CHILD`, set by `meson test` like the dlfcn module.
+- `stdlib.h` gained `pf_env_foreach` (on a copy of the environment);
+  `time.h` gained `pf_sleep` / `pf_usleep` (standard names where missing:
+  `sleep` and `usleep` are in the POSIX `libc` checks now).
+- `signal.h`: the state is a `PF_ATOMIC(int)` and a self-pipe (POSIX) or
+  manual-reset event (Windows), both made lazily with `pf_call_once`, so
+  every function but `pf_shutdown_init` works without it. Handlers use
+  SA_RESTART. `pf_shutdown_reset` re-arms the pipe if a request raced it.
+- `random.h`: getrandom on Linux (`PF__HAVE_GETRANDOM`, else the syscall,
+  /dev/urandom on ENOSYS / EPERM), arc4random_buf on macOS and the BSDs,
+  BCryptGenRandom (bcrypt is in the dependency on Windows). `pf_rng_t` is
+  xoshiro256** seeded through splitmix64; the suite checks reference
+  values. The tests' `test_rand` was not moved onto it.
+- `cpuid.h`: the feature enum is `word * 32 + bit` over ten cached CPUID
+  words (x86) or `0x400 + index` (ARM); `pf_cpu_has` adds the XCR0 check
+  (`pf__cpu_state`) and, on macOS, the `hw.optional.avx512f` sysctl
+  (macOS enables the AVX-512 state lazily). The enum and the
+  `PF_TARGET_*` blocks were generated once and are edited by hand now;
+  the suite checks every `PF_TARGET_*` against `pf_cpu_has` and, on
+  Linux, the runtime flags against /proc/cpuinfo. Checked by hand with
+  `-march=native`.
+- `sysinfo.h`: Linux reads sysfs topology (physical cores), the affinity
+  mask and every cgroup v2 `cpu.max` up the hierarchy, /proc/meminfo and
+  os-release. Checked by hand with `taskset` and a systemd CPUQuota scope.
+- `term.h`: `pf_term_state_t` is 256 opaque bytes (a magic and the
+  termios / console mode; a static assert checks the size). Raw mode
+  leaves output processing alone. The suite drives a real pseudo-terminal
+  (posix_openpt). `pf_term_enable_vt` / `pf_term_set_utf8` restore the
+  Windows console at exit (atexit, spin lock).
+
 Language layer notes, for later steps:
 
 - Attribute placement: `PF_*` attribute macros go first in a
@@ -594,6 +587,15 @@ Caveats:
   `pf_readlink`'s reparse-data layout, symbolic links without developer
   mode (the tests skip), `pf_lock_file`, and `pf_fmemopen`'s temporary
   file.
+- Step 7's Windows code (`win32/process.c`, the Windows halves of
+  `term.c`, `signal.c`, `sysinfo.c`, `random.c`, `pf_exe_path` and
+  `pf_env_foreach`) is not compiled either, nor the macOS / BSD branches
+  (kqueue waits, sysctl queries, `_NSGetExecutablePath`, `elf_aux_info`)
+  or any ARM feature detection (no ARM machine). To check first on
+  Windows: argument quoting (the `args` test), the handle list of
+  pf_spawn, mintty detection, and the console close handler.
+- The `-m32` build passes every suite but the header check, which runs
+  plain `cc` against the 32-bit library (as noted for step 5).
 - `README.md` still describes v1. Rewrite it once the steps are done.
 - `PF_E*` keeps only the portable POSIX/C errno set; v1's Linux-only
   codes (STREAMS, Xenix, `EL2HLT`, ...) were dropped. Codes are the
@@ -685,6 +687,13 @@ Caveats:
   non-crypto `pf_rng_t`; process I/O prefers `pf_stream_t`. Chosen for
   the maintainer: the shutdown state is exposed as an fd / event handle,
   and forcing exit on a second signal is an opt-in flag.
+
+- 2026-11-12: Step 7 implemented. Changes from the spec: all ARM
+  features are `PF_CPU_ARM_*` (`PF_CPU_ARM_NEON` too); `pf_spawn_opts_t`
+  holds `pf_spawn_stdio_t stdio[3]`; `pf_cpu_name` returns PF_ENOENT when
+  unknown; `pf_process_t` has private fields; Windows refuses batch files
+  in `pf_spawn`; POSIX spawns with fork + execve rather than posix_spawn;
+  `pf_process_communicate` closes each pipe once it reaches its end.
 
 ## Open questions
 
