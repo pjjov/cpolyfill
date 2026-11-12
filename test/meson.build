@@ -22,6 +22,7 @@ suites = [
     'platform',
     'random',
     'semaphore',
+    'signal',
     'std_names',
     'std_polyfill',
     'stdc',

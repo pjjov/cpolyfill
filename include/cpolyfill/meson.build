@@ -21,6 +21,7 @@ public_headers = files(
     'platform.h',
     'random.h',
     'semaphore.h',
+    'signal.h',
     'stdc.h',
     'stdlib.h',
     'string.h',

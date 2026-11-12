@@ -38,6 +38,7 @@ sources = files(
     'src/mman.c',
     'src/random.c',
     'src/semaphore.c',
+    'src/signal.c',
     'src/stdlib.c',
     'src/string.c',
     'src/sysinfo.c',
