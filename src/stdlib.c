@@ -15,6 +15,7 @@
 #if PF_OS_WINDOWS
     #include <malloc.h>
     #include <wchar.h>
+    #include <windows.h>
 #endif
 
 #ifndef PF__HAVE_QSORT_R_BSD
@@ -245,6 +246,99 @@ PF_API int pf_unsetenv(const char *name) {
 #else
     return unsetenv(name);
 #endif
+}
+
+#if PF_OS_APPLE
+    #include <crt_externs.h>
+    #define PF__ENVIRON (*_NSGetEnviron())
+#elif !PF_OS_WINDOWS
+extern char **environ;
+    #define PF__ENVIRON environ
+#endif
+
+/* Calls `fn` on each "NAME=VALUE" entry of `block` (entries separated by
+   NULs, `n` bytes), splitting it in place. */
+static int pf__env_each(
+    char *block,
+    size_t n,
+    int (*fn)(const char *name, const char *value, void *user),
+    void *user
+) {
+    char *p = block, *end = block + n;
+    while (p < end) {
+        size_t len = strlen(p);
+        /* Windows keeps per-drive directories as "=C:=C:\..." */
+        char *eq = strchr(p + (*p == '='), '=');
+        if (eq && eq != p) {
+            int rc;
+            *eq = '\0';
+            rc = fn(p, eq + 1, user);
+            if (rc)
+                return rc;
+        }
+        p += len + 1;
+    }
+    return 0;
+}
+
+PF_API int pf_env_foreach(
+    int (*fn)(const char *name, const char *value, void *user), void *user
+) {
+    char *block;
+    size_t n = 0;
+    int rc;
+
+    if (!fn)
+        return PF_EINVAL;
+    /* A copy, so `fn` may change the environment. */
+#if PF_OS_WINDOWS
+    {
+        wchar_t *env = GetEnvironmentStringsW(), *w;
+        size_t units;
+        ptrdiff_t len;
+        if (!env)
+            return pf_error_last_win32();
+        for (w = env; *w; w += wcslen(w) + 1)
+            ;
+        units = (size_t)(w - env);
+        len = pf_utf16_to_utf8(
+            (const uint16_t *)env, units, NULL, 0, PF_UNICODE_REPLACE
+        );
+        block = len >= 0 ? (char *)malloc((size_t)len + 1) : NULL;
+        if (block)
+            len = pf_utf16_to_utf8(
+                (const uint16_t *)env, units, block, (size_t)len + 1,
+                PF_UNICODE_REPLACE
+            );
+        FreeEnvironmentStringsW(env);
+        if (!block)
+            return len < 0 ? (int)len : PF_ENOMEM;
+        if (len < 0) {
+            free(block);
+            return (int)len;
+        }
+        n = (size_t)len;
+    }
+#else
+    {
+        char **e = PF__ENVIRON;
+        size_t k;
+        for (k = 0; e && e[k]; k++)
+            n += strlen(e[k]) + 1;
+        block = (char *)malloc(n + 1);
+        if (!block)
+            return PF_ENOMEM;
+        n = 0;
+        for (k = 0; e && e[k]; k++) {
+            size_t len = strlen(e[k]) + 1;
+            memcpy(block + n, e[k], len);
+            n += len;
+        }
+    }
+#endif
+    rc = pf__env_each(block, n, fn, user);
+    free(block);
+    return rc;
 }
 
 /* ---- qsort_r ---------------------------------------------------------- */

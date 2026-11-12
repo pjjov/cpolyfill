@@ -256,6 +256,54 @@ static void check_qsort_r(qsort_r_fn fn, int seed, int i) {
     }
 }
 
+struct env_seen {
+    const char *name;
+    const char *value;
+    int found, count;
+};
+
+static int env_visit(const char *name, const char *value, void *user) {
+    struct env_seen *s = (struct env_seen *)user;
+    PF_ASSERT_ALWAYS(*name != '\0' && strchr(name, '=') == NULL);
+    s->count++;
+    if (strcmp(name, s->name) == 0) {
+        PF_ASSERT_ALWAYS_STR_EQ(value, s->value);
+        s->found++;
+        /* changing the environment meanwhile is allowed */
+        PF_ASSERT_ALWAYS_EQ(pf_unsetenv(name), 0);
+    }
+    return 0;
+}
+
+static int env_stop(const char *name, const char *value, void *user) {
+    (void)name, (void)value;
+    return ++*(int *)user == 2 ? 77 : 0;
+}
+
+static int test_env_foreach(int seed, int i) {
+    struct env_seen s;
+    char name[64];
+    int calls = 0;
+    (void)seed, (void)i;
+
+    snprintf(name, sizeof(name), "PF_TEST_EACH_%ld", test_pid());
+    PF_ASSERT_ALWAYS_EQ(pf_setenv(name, "a=b \xC3\xA9", 1), 0);
+    memset(&s, 0, sizeof(s));
+    s.name = name;
+    s.value = "a=b \xC3\xA9";
+    PF_ASSERT_ALWAYS_EQ(pf_env_foreach(env_visit, &s), 0);
+    PF_ASSERT_ALWAYS_EQ(s.found, 1);
+    PF_ASSERT_ALWAYS_GE(s.count, 1);
+    PF_ASSERT_ALWAYS_EQ(pf_getenv(name, NULL, 0), PF_ENOENT);
+
+    PF_ASSERT_ALWAYS_EQ(pf_setenv(name, "1", 1), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_env_foreach(env_stop, &calls), 77);
+    PF_ASSERT_ALWAYS_EQ(calls, 2);
+    PF_ASSERT_ALWAYS_EQ(pf_env_foreach(NULL, NULL), PF_EINVAL);
+    PF_ASSERT_ALWAYS_EQ(pf_unsetenv(name), 0);
+    return 0;
+}
+
 static int test_qsort_r(int seed, int i) {
     check_qsort_r(pf__qsort_r_portable, seed, i);
     check_qsort_r(pf_qsort_r, seed, i);
@@ -267,6 +315,7 @@ pf_test_t suite_stdlib[] = {
     { test_reallocarray, "reallocarray" },
     { test_getline, "getline" },
     { test_environment, "environment" },
+    { test_env_foreach, "env_foreach" },
     { test_qsort_r, "qsort_r" },
     { 0 },
 };

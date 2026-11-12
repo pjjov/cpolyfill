@@ -19,6 +19,7 @@ public_headers = files(
     'mman.h',
     'overflow.h',
     'platform.h',
+    'process.h',
     'random.h',
     'semaphore.h',
     'signal.h',

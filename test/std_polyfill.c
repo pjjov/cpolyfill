@@ -34,6 +34,7 @@
 #include <cpolyfill/bitwise.h>
 #include <cpolyfill/endian.h>
 #include <cpolyfill/overflow.h>
+#include <cpolyfill/random.h>
 
 #include <cpolyfill/errno.h>
 #include <cpolyfill/fs.h>
@@ -278,6 +279,8 @@ static int test_time(int seed, int i) {
         { XSTR(gmtime_r), "pf_gmtime_r" },
         { XSTR(localtime_r), "pf_localtime_r" },
         { XSTR(timegm), "pf_timegm" },
+        { XSTR(sleep), "pf_sleep" },
+        { XSTR(usleep), "pf_usleep" },
     };
     struct timespec ts;
     struct tm tm;
@@ -297,6 +300,28 @@ static int test_time(int seed, int i) {
     ts.tv_sec = 0;
     ts.tv_nsec = 1000;
     PF_ASSERT_ALWAYS_EQ(nanosleep(&ts, NULL), 0);
+    PF_ASSERT_ALWAYS_EQ(usleep(10), 0);
+    PF_ASSERT_ALWAYS_EQ(sleep(0), 0u);
+    return 0;
+}
+
+static int test_random(int seed, int i) {
+    static const char *const mapped[][2] = {
+        { XSTR(getentropy), "pf_getentropy" },
+        { XSTR(arc4random), "pf_arc4random" },
+        { XSTR(arc4random_buf), "pf_arc4random_buf" },
+        { XSTR(arc4random_uniform), "pf_arc4random_uniform" },
+    };
+    unsigned char buf[16];
+    size_t k;
+    (void)seed, (void)i;
+
+    for (k = 0; k < sizeof(mapped) / sizeof(mapped[0]); k++)
+        PF_ASSERT_ALWAYS_STR_EQ(mapped[k][0], mapped[k][1]);
+    PF_ASSERT_ALWAYS_EQ(getentropy(buf, sizeof(buf)), 0);
+    arc4random_buf(buf, sizeof(buf));
+    PF_ASSERT_ALWAYS_LT(arc4random_uniform(3), 3);
+    (void)arc4random();
     return 0;
 }
 
@@ -342,6 +367,7 @@ pf_test_t suite_std_polyfill[] = {
     { test_endian, "endian" },
     { test_text, "text" },
     { test_time, "time" },
+    { test_random, "random" },
     { test_threads, "threads" },
     { test_files, "files" },
     { 0 },

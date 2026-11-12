@@ -347,6 +347,16 @@ PF_API int pf_sleep_ns(uint64_t ns) {
     return 0;
 }
 
+PF_API unsigned pf_sleep(unsigned seconds) {
+    (void)pf_sleep_ns((uint64_t)seconds * (uint64_t)NS_PER_SEC);
+    return 0;
+}
+
+PF_API int pf_usleep(unsigned long usec) {
+    (void)pf_sleep_ns((uint64_t)usec * 1000u);
+    return 0;
+}
+
 PF_API int pf_deadline_ns(struct timespec *ts, int64_t ns) {
     if (!ts)
         return PF_EINVAL;

@@ -89,6 +89,12 @@ static int test_sleep(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_nanosleep(&req, NULL), 0);
     PF_ASSERT_ALWAYS_EQ(pf_sleep_ns(0), 0);
 
+    start = pf_time_ns();
+    PF_ASSERT_ALWAYS_EQ(pf_usleep(3000), 0);
+    PF_ASSERT_ALWAYS_GE(pf_time_ns() - start, 3000000u);
+    PF_ASSERT_ALWAYS_EQ(pf_usleep(0), 0);
+    PF_ASSERT_ALWAYS_EQ(pf_sleep(0), 0u);
+
     errno = 0;
     req.tv_nsec = 1000000000L;
     PF_ASSERT_ALWAYS_EQ(pf_nanosleep(&req, NULL), -1);

@@ -39,6 +39,12 @@
         int pf_sleep_ns(uint64_t ns)
                 Sleeps at least `ns` nanoseconds, resuming after signals:
                 0 or a negative PF_E* code.
+        unsigned pf_sleep(unsigned seconds)
+                POSIX sleep: sleeps `seconds`, resuming after signals, and
+                returns 0.
+        int pf_usleep(unsigned long usec)
+                usleep (removed from POSIX, still common): sleeps at least
+                `usec` microseconds; 0.
         int pf_deadline_ns(struct timespec *ts, int64_t ns)
                 Sets `ts` to the current UTC time plus `ns`: the absolute
                 deadline the C11 timed waits (pf_mtx_timedlock,
@@ -58,7 +64,7 @@
     `CLOCK_*` (with `clock_gettime`), `clock_gettime`, `clock_getres`,
     `nanosleep`, `timespec_get` (and `TIME_UTC`, `TIME_MONOTONIC`,
     `TIME_ACTIVE`, `TIME_THREAD_ACTIVE`), `timespec_getres`, `gmtime_r`,
-    `localtime_r`, `timegm`.
+    `localtime_r`, `timegm`, `sleep`, `usleep`.
 
     SPDX-FileCopyrightText: 2025-2026 Предраг Јовановић
     SPDX-License-Identifier: Apache-2.0
@@ -122,6 +128,8 @@ PF_API time_t pf_timegm(struct tm *tm);
 
 PF_API uint64_t pf_time_ns(void);
 PF_API int pf_sleep_ns(uint64_t ns);
+PF_API unsigned pf_sleep(unsigned seconds);
+PF_API int pf_usleep(unsigned long usec);
 PF_API int pf_deadline_ns(struct timespec *ts, int64_t ns);
 
 #define PF__NS_PER_SEC 1000000000L
@@ -233,6 +241,14 @@ typedef pf_clockid_t clockid_t;
     #if PF__TIME_MAP(PF_CONFIG_HAVE_GMTIME_R)
         #undef gmtime_r
         #define gmtime_r pf_gmtime_r
+    #endif
+    #if PF__TIME_MAP(PF_CONFIG_HAVE_SLEEP)
+        #undef sleep
+        #define sleep pf_sleep
+    #endif
+    #if PF__TIME_MAP(PF_CONFIG_HAVE_USLEEP)
+        #undef usleep
+        #define usleep pf_usleep
     #endif
     #if PF__TIME_MAP(PF_CONFIG_HAVE_LOCALTIME_R)
         #undef localtime_r

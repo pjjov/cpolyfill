@@ -20,6 +20,7 @@ suites = [
     'mman',
     'overflow',
     'platform',
+    'process',
     'random',
     'semaphore',
     'signal',
@@ -72,6 +73,17 @@ test_env.set('PF_TEST_DL_MODULE', dl_module.full_path())
 # internal helpers (which are not exported from the shared library).
 lib_objects = lib.extract_all_objects(recursive: true)
 
+# The program the process suite starts.
+child = executable(
+    'cpolyfill-test-child',
+    'child.c',
+    objects: lib_objects,
+    include_directories: inc,
+    dependencies: sys_deps,
+    install: false,
+)
+test_env.set('PF_TEST_CHILD', child.full_path())
+
 # The same tests are built for several language standards, because what the
 # headers do depends on the standard of the code including them:
 #
@@ -107,7 +119,7 @@ foreach name, options : variants
             protocol: 'tap',
             suite: [name, suite],
             env: test_env,
-            depends: dl_module,
+            depends: [dl_module, child],
             timeout: 120,
         )
     endforeach

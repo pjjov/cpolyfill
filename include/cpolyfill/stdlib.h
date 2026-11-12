@@ -35,6 +35,13 @@
         int pf_unsetenv(const char *name)
                 POSIX setenv and unsetenv: 0, or -1 with errno EINVAL (empty
                 name or one containing '=') or ENOMEM.
+        int pf_env_foreach(int (*fn)(const char *name, const char *value,
+                                     void *user), void *user)
+                Calls `fn` for every environment variable (of a copy taken
+                first, so `fn` may change the environment), until it
+                returns non-zero. Returns that value, 0 when all were seen,
+                or a PF_E* code (PF_ENOMEM). On Windows names and values are
+                UTF-8, and the hidden "=C:" variables are left out.
                 None of these are safe to call while another thread changes
                 the environment.
 
@@ -98,6 +105,9 @@ PF_API pf_ssize_t pf_getdelim(char **line, size_t *cap, int delim, FILE *f);
 PF_API ptrdiff_t pf_getenv(const char *name, char *buf, size_t size);
 PF_API int pf_setenv(const char *name, const char *value, int overwrite);
 PF_API int pf_unsetenv(const char *name);
+PF_API int pf_env_foreach(
+    int (*fn)(const char *name, const char *value, void *user), void *user
+);
 
 PF_API void pf_qsort_r(
     void *base,

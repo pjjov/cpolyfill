@@ -36,6 +36,7 @@ sources = files(
     'src/fs.c',
     'src/io.c',
     'src/mman.c',
+    'src/process.c',
     'src/random.c',
     'src/semaphore.c',
     'src/signal.c',
@@ -56,6 +57,7 @@ if is_windows
         'src/win32/fs.c',
         'src/win32/io.c',
         'src/win32/path.c',
+        'src/win32/process.c',
         'src/win32/threads.c',
     )
 else
@@ -63,6 +65,7 @@ else
         'src/posix/dirent.c',
         'src/posix/fs.c',
         'src/posix/io.c',
+        'src/posix/process.c',
         'src/posix/threads.c',
     )
 endif
