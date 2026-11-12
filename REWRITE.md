@@ -275,8 +275,64 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-None pending. Step 7 (`process`, `signal`, `random`, `sysinfo`, `cpuid`,
-`term`) needs an API proposal first.
+### Step 7: `process`, `signal`, `random`, `sysinfo`, `cpuid`, `term` (approved 2026-11-12)
+
+Whole step: new functions return `0` / `-PF_E*`; string results use the
+`pf_getenv` form (`ptrdiff_t f(char *buf, size_t size)`); waits take an
+absolute UTC deadline (NULL: forever). Data flowing in and out of the
+library goes through `pf_stream_t` where it can.
+
+`process.h`: `pf_pid_t` (`pid_t`, `unsigned long` on Windows),
+`pf_getpid`, `pf_getppid`, `pf_popen` / `pf_pclose` (UTF-8). `pf_spawn(p,
+argv, opts)` with `pf_spawn_opts_t { cwd, env ("K=V", NULL: inherit),
+stdio[3] { mode, fd }, flags }`, modes `PF_STDIO_INHERIT/PIPE/NULL/FD`,
+flags `PF_SPAWN_SEARCH_PATH`, `PF_SPAWN_STDERR_TO_STDOUT`,
+`PF_SPAWN_NEW_GROUP`, `PF_SPAWN_HIDE_WINDOW`. `pf_process_t` has `pid` and
+the pipes as streams `in`, `out`, `err` (`vt == NULL` without a pipe).
+`pf_process_wait(p, deadline, pf_exit_status_t *)` (`{ exited, code,
+signal }`, PF_ETIMEDOUT), `pf_process_try_wait`, `pf_process_kill(p,
+force)`, `pf_process_free`. `pf_process_communicate(p, in, out, err)`
+pumps streams without deadlock; `pf_process_run(argv, opts, in, out, err,
+status)` does spawn + communicate + wait. `pf_exe_path(buf, size)`.
+Standard names `getpid`, `getppid`, `popen`, `pclose` on Windows.
+
+`stdlib.h`: `pf_env_foreach(fn, user)`. `time.h`: `pf_sleep`, `pf_usleep`
+(standard names where missing).
+
+`signal.h`: `pf_shutdown_init(flags)` (`PF_SHUTDOWN_HUP`,
+`PF_SHUTDOWN_FORCE_SECOND`, off by default), `pf_shutdown_requested`,
+`pf_shutdown_signal`, `pf_shutdown_wait(deadline)`,
+`pf_shutdown_request(sig)`, `pf_shutdown_reset`, `pf_shutdown_fd` (POSIX
+self-pipe, readable once requested) / `pf_shutdown_handle` (Windows
+event), `pf_shutdown_done` (lets the Windows close / logoff handler
+return). `PF_SIGHUP`, `PF_SIGINT`, `PF_SIGTERM`, `PF_SIGBREAK`,
+`pf_signal_name`.
+
+`random.h`: `pf_getrandom(buf, n)`, `pf_random_u32`, `pf_random_u64`,
+`pf_random_uniform(bound)` (abort if the OS fails). Stand-ins
+`pf_getentropy`, `pf_arc4random`, `pf_arc4random_buf`,
+`pf_arc4random_uniform`, standard names where missing. Non-crypto
+`pf_rng_t` (xoshiro256**): `pf_rng_seed`, `pf_rng_seed_random`,
+`pf_rng_u32`, `pf_rng_u64`, `pf_rng_uniform`, `pf_rng_double`.
+
+`sysinfo.h`: `pf_cpu_count`, `pf_cpu_count_physical`,
+`pf_cpu_count_available` (affinity, cgroup v2 `cpu.max`),
+`pf_cache_line_size` + `PF_CACHE_LINE_SIZE`, `pf_memory_total`,
+`pf_memory_available`, `pf_os_info(pf_os_info_t *)` (`name`, `version`,
+`pretty`, `machine`), `pf_cpu_name`, `pf_gethostname`.
+
+`cpuid.h` (H+L): inline `pf_cpuid`, `pf_cpuidex`, `pf_xgetbv`,
+`pf_cpuid_max_leaf`; library `pf_cpuid_reg`, `pf_cpu_vendor`, `bool
+pf_cpu_has(pf_cpu_feature)` (usable: includes the XCR0 check). x86
+features keep v1's names (`PF_CPU_AVX2`), ARM ones `PF_CPU_ARM_*`.
+Compile-time `PF_TARGET_*` always 0 or 1. v1's `PF_HAS_*`,
+`PF_SUPPORTS_*`, `PF_CAN_USE_*` and `pf_cpu_logical_cores` are gone.
+
+`term.h`: `pf_isatty` (`isatty` on Windows), `pf_term_is_terminal` (also
+mintty pipes), `pf_term_size`, `pf_term_raw(fd, flags, saved)` /
+`pf_term_restore` (`PF_TERM_KEEP_SIGNALS`, `pf_term_state_t` fixed size),
+`pf_term_echo`, `pf_term_enable_vt`, `pf_term_set_utf8` (restored at
+exit), `pf_term_colors`.
 
 ## Current state and notes
 
@@ -623,6 +679,12 @@ Caveats:
   `pf_stream_buffer` content is NUL-terminated; `pf_copy_file` of a file
   onto itself fails with `PF_EINVAL`; `pf_remove_all` of a missing path
   succeeds; the io standard names map always on Windows.
+
+- 2026-11-12: Step 7 spec approved: `cpuid.h` becomes H+L with
+  `pf_cpu_has` and `PF_TARGET_*`; `pf_gethostname` in `sysinfo.h`; a
+  non-crypto `pf_rng_t`; process I/O prefers `pf_stream_t`. Chosen for
+  the maintainer: the shutdown state is exposed as an fd / event handle,
+  and forcing exit on a second signal is an opt-in flag.
 
 ## Open questions
 
