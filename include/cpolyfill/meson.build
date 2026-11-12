@@ -18,6 +18,7 @@ public_headers = files(
     'mman.h',
     'overflow.h',
     'platform.h',
+    'random.h',
     'semaphore.h',
     'stdc.h',
     'stdlib.h',
@@ -109,7 +110,7 @@ endforeach
 
 # POSIX functions, with the headers that declare them where they exist.
 posix_prefix = libc_prefix
-foreach h : ['unistd.h', 'fcntl.h', 'sys/stat.h', 'sys/types.h']
+foreach h : ['unistd.h', 'fcntl.h', 'sys/stat.h', 'sys/types.h', 'sys/random.h']
     if cc.has_header(h)
         posix_prefix += '#include <@0@>\n'.format(h)
     endif
@@ -121,6 +122,10 @@ posix_functions = [
     # fs.h
     'realpath', 'mkstemp', 'mkdtemp', 'symlink', 'readlink', 'link',
     'truncate',
+    # random.h
+    'getentropy', 'arc4random', 'arc4random_buf', 'arc4random_uniform',
+    # time.h
+    'sleep', 'usleep',
 ]
 foreach fn : posix_functions
     found = cc.links(

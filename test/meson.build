@@ -19,6 +19,7 @@ suites = [
     'mman',
     'overflow',
     'platform',
+    'random',
     'semaphore',
     'std_names',
     'std_polyfill',

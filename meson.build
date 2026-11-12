@@ -35,6 +35,7 @@ sources = files(
     'src/fs.c',
     'src/io.c',
     'src/mman.c',
+    'src/random.c',
     'src/semaphore.c',
     'src/stdlib.c',
     'src/string.c',
@@ -138,6 +139,16 @@ if not is_windows
             ) ? 1 : 0,
         ),
     ]
+endif
+
+# getrandom (random.c), in glibc since 2.25.
+if host_machine.system() in ['linux', 'android']
+    lib_args += '-DPF__HAVE_GETRANDOM=@0@'.format(
+        cc.has_function('getrandom', prefix: '#include <sys/random.h>') ? 1 : 0,
+    )
+endif
+if is_windows
+    sys_deps += cc.find_library('bcrypt')
 endif
 
 # Threads (threads.c, atomic.c).

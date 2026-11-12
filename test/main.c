@@ -38,6 +38,7 @@ extern pf_test_t suite_macro[];
 extern pf_test_t suite_mman[];
 extern pf_test_t suite_overflow[];
 extern pf_test_t suite_platform[];
+extern pf_test_t suite_random[];
 extern pf_test_t suite_semaphore[];
 extern pf_test_t suite_std_names[];
 extern pf_test_t suite_std_polyfill[];
@@ -74,6 +75,7 @@ int main(int argc, char *argv[]) {
         { "mman", 1, suite_mman },
         { "overflow", 3, suite_overflow },
         { "platform", 1, suite_platform },
+        { "random", 3, suite_random },
         { "semaphore", 1, suite_semaphore },
         { "std_names", 1, suite_std_names },
         { "std_polyfill", 3, suite_std_polyfill },
