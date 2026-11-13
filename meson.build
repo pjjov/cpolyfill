@@ -36,6 +36,7 @@ sources = files(
     'src/fs.c',
     'src/io.c',
     'src/mman.c',
+    'src/pipe.c',
     'src/process.c',
     'src/random.c',
     'src/semaphore.c',

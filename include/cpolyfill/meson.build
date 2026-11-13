@@ -18,6 +18,7 @@ public_headers = files(
     'macro.h',
     'mman.h',
     'overflow.h',
+    'pipe.h',
     'platform.h',
     'process.h',
     'random.h',

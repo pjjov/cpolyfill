@@ -38,6 +38,7 @@ extern pf_test_t suite_io[];
 extern pf_test_t suite_macro[];
 extern pf_test_t suite_mman[];
 extern pf_test_t suite_overflow[];
+extern pf_test_t suite_pipe[];
 extern pf_test_t suite_platform[];
 extern pf_test_t suite_process[];
 extern pf_test_t suite_random[];
@@ -81,6 +82,7 @@ int main(int argc, char *argv[]) {
         { "macro", 1, suite_macro },
         { "mman", 1, suite_mman },
         { "overflow", 3, suite_overflow },
+        { "pipe", 1, suite_pipe },
         { "platform", 1, suite_platform },
         { "process", 1, suite_process },
         { "random", 3, suite_random },

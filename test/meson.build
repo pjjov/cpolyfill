@@ -19,6 +19,7 @@ suites = [
     'macro',
     'mman',
     'overflow',
+    'pipe',
     'platform',
     'process',
     'random',

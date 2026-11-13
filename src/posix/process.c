@@ -10,6 +10,7 @@
 
 #include <cpolyfill/fs.h>
 #include <cpolyfill/io.h>
+#include <cpolyfill/pipe.h>
 #include <cpolyfill/process.h>
 #include <cpolyfill/time.h>
 
@@ -85,12 +86,9 @@ static int pf__fd_high(int fd) {
 /* A pipe, both ends close-on-exec and at 3 or above: 0 or a PF_E* code. */
 static int pf__pipe(int p[2]) {
     int raw[2];
-#if defined(O_CLOEXEC) && !PF_OS_APPLE
-    if (pipe2(raw, O_CLOEXEC) != 0)
-#else
-    if (pipe(raw) != 0)
-#endif
-        return pf_error_from_errno(errno);
+    int rc = pf_pipe(raw, 0);
+    if (rc)
+        return rc;
     p[0] = pf__fd_high(raw[0]);
     p[1] = pf__fd_high(raw[1]);
     if (p[0] < 0 || p[1] < 0) {
