@@ -94,6 +94,8 @@
 #define PF_CONFIG_HAVE_DIRENT_H @PF_CONFIG_HAVE_DIRENT_H@
 #define PF_CONFIG_HAVE_DLFCN_H @PF_CONFIG_HAVE_DLFCN_H@
 #define PF_CONFIG_HAVE_SYS_MMAN_H @PF_CONFIG_HAVE_SYS_MMAN_H@
+/* Windows: <afunix.h> defines struct sockaddr_un (<cpolyfill/socket.h>). */
+#define PF_CONFIG_HAVE_AFUNIX_H @PF_CONFIG_HAVE_AFUNIX_H@
 
 /* The value of O_CLOEXEC (PF_O_CLOEXEC); 0 on Windows. */
 #define PF_CONFIG_O_CLOEXEC @PF_CONFIG_O_CLOEXEC@

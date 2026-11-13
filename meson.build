@@ -40,6 +40,7 @@ sources = files(
     'src/random.c',
     'src/semaphore.c',
     'src/signal.c',
+    'src/socket.c',
     'src/stdlib.c',
     'src/string.c',
     'src/sysinfo.c',
@@ -156,6 +157,18 @@ if host_machine.system() in ['linux', 'android']
 endif
 if is_windows
     sys_deps += cc.find_library('bcrypt')
+endif
+
+# Sockets (socket.c, pipe.c): Winsock, and accept4 where it exists.
+if is_windows
+    sys_deps += cc.find_library('ws2_32')
+else
+    lib_args += '-DPF__HAVE_ACCEPT4=@0@'.format(
+        cc.has_function(
+            'accept4',
+            prefix: '#define _GNU_SOURCE\n#include <sys/socket.h>',
+        ) ? 1 : 0,
+    )
 endif
 
 # Threads (threads.c, atomic.c).

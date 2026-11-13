@@ -241,6 +241,10 @@ ptrdiff_t pf__path_from_wide(
 int pf__errno_win32(void);
 #endif
 
+/* Milliseconds until the UTC `deadline` (rounded up, at most INT_MAX), 0
+   if it passed, -1 without one (socket.c). */
+int pf__deadline_ms(const struct timespec *deadline);
+
 /* timegm on every platform, without the system's (time.c). */
 #include <time.h>
 time_t pf__timegm_portable(struct tm *tm);

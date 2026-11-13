@@ -23,6 +23,7 @@ public_headers = files(
     'random.h',
     'semaphore.h',
     'signal.h',
+    'socket.h',
     'stdc.h',
     'stdlib.h',
     'string.h',
@@ -146,7 +147,7 @@ int main(void) {
     conf.set10('PF_CONFIG_HAVE_' + fn.to_upper(), found)
 endforeach
 
-foreach h : ['dirent.h', 'dlfcn.h', 'sys/mman.h']
+foreach h : ['dirent.h', 'dlfcn.h', 'sys/mman.h', 'afunix.h']
     conf.set10(
         'PF_CONFIG_HAVE_' + h.underscorify().to_upper(),
         cc.has_header(h),
