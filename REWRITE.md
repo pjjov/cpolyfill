@@ -275,7 +275,57 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-None pending. Step 8 (`socket`, `pipe`) needs an API proposal first.
+### Step 8: `socket`, `pipe` (approved 2026-11-13)
+
+`socket.h` (L):
+
+- `pf_socket_t` (`int`, `SOCKET` as `uintptr_t` on Windows),
+  `PF_SOCKET_INVALID`. The header includes the system socket headers
+  (`winsock2.h`, `ws2tcpip.h`, `afunix.h` or our own `sockaddr_un` per
+  `config.h` on Windows). No init call: `WSAStartup` runs once on first
+  use.
+- `pf_sockaddr_t`: `{ union { sa, in4, in6, un, storage } u; len }`,
+  with `pf_sockaddr_ip` (numeric, scope ids too), `_any`, `_loopback`,
+  `_unix` (`@` = Linux abstract), `_format`, `_port`, `_set_port`,
+  `_equal`, `_family`.
+- `pf_socket`, `pf_socketpair`, `pf_bind`, `pf_listen`, `pf_accept`,
+  `pf_connect(s, addr, deadline)`, `pf_send` / `recv` / `sendto` /
+  `recvfrom`, `pf_shutdown`, `pf_socket_close`, `pf_getsockname`,
+  `pf_getpeername`, `pf_getsockopt` / `pf_setsockopt` (`void *`),
+  `pf_socket_error` (SO_ERROR). 0 / bytes, or a PF_E* code.
+- Always close-on-exec (no opt-out); `PF_SOCK_NONBLOCK`; no SIGPIPE
+  (`MSG_NOSIGNAL`, `SO_NOSIGPIPE`), PF_EPIPE; EINTR retried; accepted
+  sockets are blocking unless the flag says otherwise.
+- `pf_socketpair` on Windows: AF_UNIX, else TCP loopback; stream only.
+- `pf_poll(fds, n, deadline)` (WSAPoll), `pf_socket_wait(s, events,
+  deadline)`.
+- Option helpers `pf_socket_set_{nonblocking, nodelay, keepalive,
+  reuseaddr, reuseport, ipv6only, linger, recv_timeout, send_timeout,
+  recv_buffer, send_buffer}`; reuseaddr is a no-op on Windows, reuseport
+  PF_ENOSYS where missing.
+- `pf_getaddrinfo` / `pf_freeaddrinfo` / `pf_getnameinfo` (UTF-8 on
+  Windows), `pf_resolve`, `pf_inet_pton` / `pf_inet_ntop`. EAI_* map to
+  PF_E*: NONAME / NODATA -> ENOENT, AGAIN -> EAGAIN, FAIL -> EIO, MEMORY
+  -> ENOMEM, FAMILY -> EAFNOSUPPORT, SERVICE / SOCKTYPE -> EINVAL,
+  SYSTEM -> errno.
+- `pf_tcp_connect`, `pf_tcp_listen`, `pf_unix_connect`,
+  `pf_unix_listen`, `pf_stream_from_socket`.
+- Standard names (Windows): `SHUT_RD` / `SHUT_WR` / `SHUT_RDWR`,
+  `MSG_NOSIGNAL` (0), `inet_pton` / `inet_ntop`. `poll` and `socketpair`
+  cannot be mapped (deadline, `int sv[2]`).
+
+`pipe.h` (L), redesigned:
+
+- `pf_pipe(int fds[2], flags)`: anonymous, close-on-exec (`_pipe` binary
+  and not inherited on Windows), `PF_PIPE_NONBLOCK` (PF_ENOSYS on
+  Windows). `process.c` uses it.
+- Named, connection-based, two-way: `pf_pipe_listen`, `pf_pipe_accept`
+  (deadline), `pf_pipe_connect` (deadline), `pf_pipe_read`,
+  `pf_pipe_write`, `pf_pipe_close`, `pf_pipe_server_close`,
+  `pf_stream_from_pipe`. Windows named pipes (overlapped internally);
+  POSIX AF_UNIX stream sockets, a plain name under `$XDG_RUNTIME_DIR`,
+  else `$TMPDIR`, else `/tmp`; a name with `/` is a path. v1's FIFO
+  wrapper is dropped.
 
 ## Current state and notes
 
@@ -694,6 +744,11 @@ Caveats:
   unknown; `pf_process_t` has private fields; Windows refuses batch files
   in `pf_spawn`; POSIX spawns with fork + execve rather than posix_spawn;
   `pf_process_communicate` closes each pipe once it reaches its end.
+
+- 2026-11-13: Step 8 spec approved: `pipe.h` is redesigned (anonymous
+  pipes plus connection-based named pipes, AF_UNIX on POSIX); sockets and
+  pipes are always close-on-exec; getaddrinfo errors map to PF_E*;
+  Windows AF_UNIX (Windows 10 1803) is relied on.
 
 ## Open questions
 
