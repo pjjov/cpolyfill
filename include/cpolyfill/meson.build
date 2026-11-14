@@ -51,6 +51,10 @@ have_cli = not get_option('cli').disabled()
 if have_cli
     public_headers += files('cli.h')
 endif
+have_daemon = not get_option('daemon').disabled()
+if have_daemon
+    public_headers += files('daemon.h')
+endif
 
 version = meson.project_version().split('.')
 

@@ -83,6 +83,9 @@ endif
 if have_cli
     sources += files('src/cli.c')
 endif
+if have_daemon
+    sources += files('src/daemon.c')
+endif
 
 lib_args = [
     '-DPF__BUILDING',

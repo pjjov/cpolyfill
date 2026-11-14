@@ -42,3 +42,10 @@ option(
     value: 'auto',
     description: 'Command line interfaces, <cpolyfill/cli.h>.',
 )
+
+option(
+    'daemon',
+    type: 'feature',
+    value: 'auto',
+    description: 'Background services, <cpolyfill/daemon.h>.',
+)

@@ -51,6 +51,9 @@ endif
 if have_cli
     suites += 'cli'
 endif
+if have_daemon
+    suites += 'daemon'
+endif
 
 # The portable implementations, compared with the builtins.
 test_sources = files(
@@ -70,6 +73,7 @@ test_args = [
     '-DPF_TEST_KNOWN_BUGS=@0@'.format(get_option('known_bugs') ? 1 : 0),
     '-DPF_TEST_ARGPARSE=@0@'.format(have_argparse ? 1 : 0),
     '-DPF_TEST_CLI=@0@'.format(have_cli ? 1 : 0),
+    '-DPF_TEST_DAEMON=@0@'.format(have_daemon ? 1 : 0),
 ]
 if not is_msvc
     test_args += '-Werror=undef'

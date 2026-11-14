@@ -34,6 +34,9 @@ extern pf_test_t suite_cli[];
 #endif
 extern pf_test_t suite_cpuid[];
 extern pf_test_t suite_ctype[];
+#if PF_TEST_DAEMON
+extern pf_test_t suite_daemon[];
+#endif
 extern pf_test_t suite_debug[];
 extern pf_test_t suite_dirent[];
 extern pf_test_t suite_dlfcn[];
@@ -87,6 +90,9 @@ int main(int argc, char *argv[]) {
 #endif
         { "cpuid", 1, suite_cpuid },
         { "ctype", 1, suite_ctype },
+#if PF_TEST_DAEMON
+        { "daemon", 1, suite_daemon },
+#endif
         { "debug", 1, suite_debug },
         { "dirent", 1, suite_dirent },
         { "dlfcn", 1, suite_dlfcn },
