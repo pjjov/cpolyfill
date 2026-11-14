@@ -193,6 +193,28 @@ static void pf__process_clear(pf_process_t *p) {
     p->pf__handle = -1;
 }
 
+/* Records `pid` in `p`, with a pidfd for timed waits where there is one. */
+static void pf__process_track(pf_process_t *p, pid_t pid) {
+    p->pid = pid;
+#if (PF_OS_LINUX || PF_OS_ANDROID) && defined(SYS_pidfd_open)
+    {
+        long fd = syscall(SYS_pidfd_open, pid, 0);
+        if (fd >= 0) {
+            int high = pf__fd_high((int)fd);
+            p->pf__handle = high >= 0 ? high : -1;
+        }
+    }
+#endif
+}
+
+int pf__process_adopt(struct pf_process_t *p, long pid) {
+    if (!p || pid <= 0)
+        return PF_EINVAL;
+    pf__process_clear(p);
+    pf__process_track(p, (pid_t)pid);
+    return PF_OK;
+}
+
 /* What the child runs, prepared by the parent: everything after fork is
    async-signal-safe. */
 struct pf__child {
@@ -358,16 +380,7 @@ PF_API int pf_spawn(
         goto out;
     }
 
-    p->pid = pid;
-#if (PF_OS_LINUX || PF_OS_ANDROID) && defined(SYS_pidfd_open)
-    {
-        long fd = syscall(SYS_pidfd_open, pid, 0);
-        if (fd >= 0) {
-            int high = pf__fd_high((int)fd);
-            p->pf__handle = high >= 0 ? high : -1;
-        }
-    }
-#endif
+    pf__process_track(p, pid);
     /* The caller's ends of the pipes. */
     for (k = 0; k < 3; k++) {
         int mine;

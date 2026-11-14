@@ -33,6 +33,7 @@ suites = [
     'string',
     'sysinfo',
     'term',
+    'test',
     'threads',
     'time',
     'types',
@@ -86,6 +87,17 @@ child = executable(
 )
 test_env.set('PF_TEST_CHILD', child.full_path())
 
+# A test program with known outcomes, for the test suite.
+sample = executable(
+    'cpolyfill-test-sample',
+    'sample.c',
+    objects: lib_objects,
+    include_directories: inc,
+    dependencies: sys_deps,
+    install: false,
+)
+test_env.set('PF_TEST_SAMPLE', sample.full_path())
+
 # The same tests are built for several language standards, because what the
 # headers do depends on the standard of the code including them:
 #
@@ -121,7 +133,7 @@ foreach name, options : variants
             protocol: 'tap',
             suite: [name, suite],
             env: test_env,
-            depends: [dl_module, child],
+            depends: [dl_module, child, sample],
             timeout: 120,
         )
     endforeach

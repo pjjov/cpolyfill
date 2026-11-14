@@ -8,7 +8,7 @@
 #ifndef PF_TEST_CHECK_H
 #define PF_TEST_CHECK_H
 
-#include "runner.h"
+#include <cpolyfill/test.h>
 
 /* The tests check with PF_ASSERT_ALWAYS*: never compiled out, and the
    default handler aborts, so a forked test reports the failure. */
@@ -26,15 +26,8 @@
 #endif
 #define KNOWN_BUG(fn) (PF_TEST_KNOWN_BUGS ? (fn) : (pf_test_fn)0)
 
-/* Marks a test that cannot run on this platform. It passes, but says why
-   when the PF_TEST_VERBOSE environment variable is set. */
-#define SKIP(why) pf__test_skip(__func__, (why))
-
-static inline int pf__test_skip(const char *name, const char *why) {
-    if (getenv("PF_TEST_VERBOSE"))
-        fprintf(stderr, "# skip %s: %s\n", name, why);
-    return 0;
-}
+/* Skips a test that cannot run here, saying why. */
+#define SKIP(why) pf_test_skip("%s", (why))
 
 /* A small deterministic PRNG for tests that draw on the seed. */
 static inline unsigned test_rand(unsigned *state) {

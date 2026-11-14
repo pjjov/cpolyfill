@@ -249,4 +249,12 @@ int pf__deadline_ms(const struct timespec *deadline);
 #include <time.h>
 time_t pf__timegm_portable(struct tm *tm);
 
+#if !PF_OS_WINDOWS
+/* Makes `p` track a child made with fork, so pf_process_wait (with a
+   deadline), pf_process_kill and pf_process_free work on it
+   (posix/process.c, used by test.c). */
+struct pf_process_t;
+int pf__process_adopt(struct pf_process_t *p, long pid);
+#endif
+
 #endif /* CPOLYFILL_INTERNAL_H */

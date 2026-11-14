@@ -218,6 +218,7 @@ static void jump_back(
 
 static int test_checked(int seed, int i) {
     volatile int failed = 0;
+    pf_assert_handler_fn prev;
     (void)seed, (void)i;
 
     PF_ASSERT_ALWAYS_EQ(pf_checked_sadd(2, 3), 5);
@@ -225,7 +226,7 @@ static int test_checked(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_checked_umulsize(1u << 10, 1u << 10), 1u << 20);
     PF_ASSERT_ALWAYS_EQ(pf_checked_smuldiff(-4, 5), -20);
 
-    pf_set_assert_handler(jump_back);
+    prev = pf_set_assert_handler(jump_back);
     if (setjmp(env) == 0)
         (void)pf_checked_sadd(INT_MAX, 1);
     else
@@ -238,7 +239,7 @@ static int test_checked(int seed, int i) {
         (void)pf_checked_smul8(16, 8);
     else
         failed++;
-    pf_set_assert_handler(NULL);
+    pf_set_assert_handler(prev);
     PF_ASSERT_ALWAYS_EQ(failed, 3);
     return 0;
 }

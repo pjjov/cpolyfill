@@ -94,18 +94,19 @@ static void jump_back(
 
 static int test_assert(int seed, int i) {
     int reached;
+    pf_assert_handler_fn prev;
     (void)seed, (void)i;
 
     /* `assert` is PF_ASSERT, so a failure reaches the handler. */
     assert(1 + 1 == 2);
-    pf_set_assert_handler(jump_back);
+    prev = pf_set_assert_handler(jump_back);
     if (setjmp(env) == 0) {
         assert(1 + 1 == 3);
         reached = 0;
     } else {
         reached = 1;
     }
-    pf_set_assert_handler(NULL);
+    pf_set_assert_handler(prev);
     PF_ASSERT_ALWAYS(reached);
     return 0;
 }

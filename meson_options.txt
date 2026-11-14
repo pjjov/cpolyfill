@@ -21,3 +21,10 @@ option(
     value: 'auto',
     description: 'Thread support. Without it, creating a thread fails at run time.',
 )
+
+option(
+    'test',
+    type: 'feature',
+    value: 'auto',
+    description: 'The unit-test runner, <cpolyfill/test.h>. The library\'s own tests need it.',
+)

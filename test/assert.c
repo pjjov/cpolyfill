@@ -53,24 +53,25 @@ static void recording_handler(
 }
 
 /* Runs `stmt` with the recording handler and checks whether it failed. */
-#define EXPECT(want_failure, stmt)                \
-    do {                                          \
-        int failed_;                              \
-        memset(&failure, 0, sizeof(failure));     \
-        pf_set_assert_handler(recording_handler); \
-        if (setjmp(failure.env) == 0) {           \
-            stmt;                                 \
-            failed_ = 0;                          \
-        } else {                                  \
-            failed_ = 1;                          \
-        }                                         \
-        pf_set_assert_handler(NULL);              \
-        PF_ASSERT_ALWAYS_MSG(                     \
-            failed_ == (want_failure),            \
-            "%s `%s'",                            \
-            failed_ ? "failed:" : "passed:",      \
-            #stmt                                 \
-        );                                        \
+#define EXPECT(want_failure, stmt)                        \
+    do {                                                  \
+        int failed_;                                      \
+        pf_assert_handler_fn prev_;                       \
+        memset(&failure, 0, sizeof(failure));             \
+        prev_ = pf_set_assert_handler(recording_handler); \
+        if (setjmp(failure.env) == 0) {                   \
+            stmt;                                         \
+            failed_ = 0;                                  \
+        } else {                                          \
+            failed_ = 1;                                  \
+        }                                                 \
+        pf_set_assert_handler(prev_);                     \
+        PF_ASSERT_ALWAYS_MSG(                             \
+            failed_ == (want_failure),                    \
+            "%s `%s'",                                    \
+            failed_ ? "failed:" : "passed:",              \
+            #stmt                                         \
+        );                                                \
     } while (0)
 #define EXPECT_FAIL(stmt) EXPECT(1, stmt)
 #define EXPECT_PASS(stmt) EXPECT(0, stmt)
@@ -128,11 +129,14 @@ static int test_handler(int seed, int i) {
 
     /* The previous handler is returned, NULL restores the default. */
     {
+        pf_assert_handler_fn runner = pf_set_assert_handler(NULL);
         pf_assert_handler_fn def = pf_set_assert_handler(recording_handler);
         PF_ASSERT_ALWAYS(def != NULL);
         PF_ASSERT_ALWAYS(def != recording_handler);
         PF_ASSERT_ALWAYS(pf_set_assert_handler(NULL) == recording_handler);
         PF_ASSERT_ALWAYS(pf_set_assert_handler(NULL) == def);
+        /* Back to the test runner's. */
+        pf_set_assert_handler(runner);
     }
     return 0;
 }
@@ -331,6 +335,7 @@ static int test_default_output(int seed, int i) {
     if (pid == 0) {
         int a = 1, b = 2;
         signal(SIGABRT, SIG_DFL);
+        pf_set_assert_handler(NULL); /* not the test runner's */
         dup2(fds[1], 2);
         close(fds[0]);
         line = __LINE__ + 1;

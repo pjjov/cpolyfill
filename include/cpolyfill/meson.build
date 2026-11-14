@@ -36,6 +36,11 @@ public_headers = files(
     'unicode.h',
     'version.h',
 )
+# The test runner module, a feature with nothing to look for.
+have_test_module = not get_option('test').disabled()
+if have_test_module
+    public_headers += files('test.h')
+endif
 
 version = meson.project_version().split('.')
 

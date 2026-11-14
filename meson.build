@@ -72,6 +72,10 @@ else
     )
 endif
 
+if have_test_module
+    sources += files('src/test.c')
+endif
+
 lib_args = ['-DPF__BUILDING']
 if is_msvc
     lib_args += ['-D_CRT_SECURE_NO_WARNINGS']
@@ -327,5 +331,9 @@ pkg.generate(
 )
 
 if not meson.is_subproject() and get_option('tests')
-    subdir('test')
+    if have_test_module
+        subdir('test')
+    else
+        warning('The tests are not built: they need the test module (-Dtest).')
+    endif
 endif
