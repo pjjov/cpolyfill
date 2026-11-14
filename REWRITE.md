@@ -243,7 +243,7 @@ H = header-only (language layer), L = compiled (platform layer).
 | `argparse.h` | `pf_argparse.h` | L | port, naming cleanup |
 | `daemon.h` | `pf_daemon.h` | L | port, snake_case options, `PF_E*` errors |
 | `test.h` | `pf_test.h` | L | done in step 9 |
-| `exception.h` | `pf_exception.h` | L | port |
+| `exception.h` | `pf_exception.h` | L | done in step 9 |
 | `array.h` | `pf_array.h` | H (+L) | port, runtime allocator |
 | `typeid.h` | `pf_typeid.h` | L | port |
 
@@ -275,13 +275,13 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-None pending. The rest of step 9 (`exception`, `typeid`, `array`,
+None pending. The rest of step 9 (`typeid`, `array`,
 `argparse`, `cli`, `daemon`, in that order) needs an API proposal first,
 module by module.
 
 ## Current state and notes
 
-What exists after step 8 and the first module of step 9:
+What exists after step 8 and the `test` and `exception` modules of step 9:
 
 - `include/cpolyfill/`: `platform.h`, `config.h.in` (+ `meson.build`
   listing `public_headers`; add new headers there), `version.h`,
@@ -292,14 +292,14 @@ What exists after step 8 and the first module of step 9:
   `time.h`, `threads.h`, `atomic.h`, `semaphore.h`, the file headers
   `fs.h`, `dirent.h`, `dlfcn.h`, `mman.h`, `io.h`, and the OS headers
   `process.h`, `signal.h`, `random.h`, `sysinfo.h`, `cpuid.h`, `term.h`,
-  the network headers `socket.h`, `pipe.h`, and `test.h`. Each header documents
+  the network headers `socket.h`, `pipe.h`, and `test.h`, `exception.h`. Each header documents
   its API in its top comment.
 - `src/`: `internal.h` (include first in every source), `allocator.h`
   (vendored), `alloc.c`, `assert.c`, `debug.c`, `errno.c`, `stdlib.c`,
   `string.c`, `uchar.c`, `unicode.c`, `version.c`, `time.c`, `atomic.c`,
   `threads.c`, `semaphore.c`, `fs.c`, `dirent.c`, `dlfcn.c`, `mman.c`,
   `io.c`, `process.c`, `signal.c`, `random.c`, `sysinfo.c`, `cpuid.c`,
-  `term.c`, `socket.c`, `pipe.c`, `test.c`, `posix/{threads,fs,dirent,io,process}.c`,
+  `term.c`, `socket.c`, `pipe.c`, `test.c`, `exception.c`, `posix/{threads,fs,dirent,io,process}.c`,
   `win32/{threads,fs,dirent,io,path,process}.c`, `win32/error.c` (Win32/WSA ->
   `PF_E*`, public since step 4).
   `debug.c` uses execinfo, else `_Unwind_Backtrace`, plus `dladdr`;
@@ -586,10 +586,20 @@ Apps (step 9, in progress):
 - The `test` suite drives `test/sample.c` (`cpolyfill-test-sample`,
   through `PF_TEST_SAMPLE`) in every mode. The whole suite also passes
   with `--isolate=spawn` and `--no-isolate` (checked by hand).
-- TSan cannot `longjmp` out of an assert handler in a forked child ("can't
-  find longjmp buf"): the assert, overflow, std_names and (through
-  `--no-isolate`) test suites fail under `-Db_sanitize=thread`, as they
-  did before the port. Keep TSan to the concurrency suites.
+- `exception.h`: try blocks are `pf_exception_frame_t`s declared by
+  `PF_TRY` on the caller's stack and linked from the stack's top (no
+  capacity). `PF_TRY ... PF_CATCH(e) ... PF_TRY_END` is one `do { } while
+  (0)` statement with `if (setjmp(...) == 0)`. `pf__try_pop` fails an
+  assertion when the top is not its own frame (an inner try block left by
+  return / break / goto). Messages are copied into the stack's buffer with
+  memmove, cut at a UTF-8 boundary; formatted ones go through a 1 KiB
+  local buffer first, so arguments may point into the stack's buffer.
+  `PF_EXCEPTION_NO_LOCATION` (consumer macro) blanks file / line / func.
+  `test/exception_noloc.c` throws from module 9 without the location.
+- TSan with Clang 23 on this machine cannot run setjmp / longjmp at all
+  ("can't find longjmp buf", even a six-line program): the assert,
+  overflow, std_names, test and exception suites fail under
+  `-Db_sanitize=thread`. Keep TSan to the concurrency suites.
 
 Language layer notes, for later steps:
 
@@ -787,6 +797,16 @@ Caveats:
   picks the mechanism; isolated children report a failed assertion as
   "assertion failed" (exit 99) rather than SIGABRT; exit code 2 also when
   isolated tests cannot be set up.
+
+- 2026-11-14: `exception` spec approved: try blocks are the block macros
+  `PF_TRY` / `PF_CATCH` / `PF_TRY_END` (setjmp in a conforming context),
+  frames on the caller's stack instead of a fixed array, upper-case throw
+  macros, `pf_exception_thread_stack`, and an option to leave the call
+  site out (`PF_EXCEPTION_NO_LOCATION`).
+
+- 2026-11-14: `exception` implemented as specified, plus:
+  `pf_rethrow` takes exceptions of other stacks (copying the message);
+  a NULL `e` gives PF_EINVAL (v1: -1).
 
 ## Open questions
 
