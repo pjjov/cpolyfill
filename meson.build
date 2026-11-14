@@ -80,8 +80,14 @@ endif
 if have_argparse
     sources += files('src/argparse.c')
 endif
+if have_cli
+    sources += files('src/cli.c')
+endif
 
-lib_args = ['-DPF__BUILDING']
+lib_args = [
+    '-DPF__BUILDING',
+    '-DPF__HAVE_ARGPARSE=@0@'.format(have_argparse ? 1 : 0),
+]
 if is_msvc
     lib_args += ['-D_CRT_SECURE_NO_WARNINGS']
 endif

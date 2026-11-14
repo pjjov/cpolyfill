@@ -47,6 +47,10 @@ have_argparse = not get_option('argparse').disabled()
 if have_argparse
     public_headers += files('argparse.h')
 endif
+have_cli = not get_option('cli').disabled()
+if have_cli
+    public_headers += files('cli.h')
+endif
 
 version = meson.project_version().split('.')
 

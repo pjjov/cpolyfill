@@ -29,6 +29,9 @@ extern pf_test_t suite_assert[];
 extern pf_test_t suite_atomic[];
 extern pf_test_t suite_attribute[];
 extern pf_test_t suite_bitwise[];
+#if PF_TEST_CLI
+extern pf_test_t suite_cli[];
+#endif
 extern pf_test_t suite_cpuid[];
 extern pf_test_t suite_ctype[];
 extern pf_test_t suite_debug[];
@@ -79,6 +82,9 @@ int main(int argc, char *argv[]) {
         { "atomic", 1, suite_atomic },
         { "attribute", 1, suite_attribute },
         { "bitwise", 3, suite_bitwise },
+#if PF_TEST_CLI
+        { "cli", 1, suite_cli },
+#endif
         { "cpuid", 1, suite_cpuid },
         { "ctype", 1, suite_ctype },
         { "debug", 1, suite_debug },

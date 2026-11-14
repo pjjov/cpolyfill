@@ -35,3 +35,10 @@ option(
     value: 'auto',
     description: 'Command line parsing, <cpolyfill/argparse.h>.',
 )
+
+option(
+    'cli',
+    type: 'feature',
+    value: 'auto',
+    description: 'Command line interfaces, <cpolyfill/cli.h>.',
+)
