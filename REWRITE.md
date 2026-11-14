@@ -239,7 +239,7 @@ H = header-only (language layer), L = compiled (platform layer).
 | `term.h` | `pf_cli.h` (part) | L | done in step 7 |
 | `socket.h` | `pf_socket.h` | L | + `socketpair`, AF_UNIX on Windows |
 | `pipe.h` | `pf_pipe.h` | L | port |
-| `cli.h` | `pf_cli.h` | L | port onto `term.h`, naming cleanup |
+| `cli.h` | `pf_cli.h` | L | done in step 9 |
 | `argparse.h` | `pf_argparse.h` | L | done in step 9 |
 | `daemon.h` | `pf_daemon.h` | L | port, snake_case options, `PF_E*` errors |
 | `test.h` | `pf_test.h` | L | done in step 9 |
@@ -274,12 +274,12 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-None pending. The rest of step 9 (`cli`, `daemon`, in that order) needs an API proposal first,
+None pending. The rest of step 9 (`daemon`) needs an API proposal first,
 module by module.
 
 ## Current state and notes
 
-What exists after step 8 and the `test`, `exception`, `typeid` and `argparse` modules of step 9:
+What exists after step 8 and the `test`, `exception`, `typeid`, `argparse` and `cli` modules of step 9:
 
 - `include/cpolyfill/`: `platform.h`, `config.h.in` (+ `meson.build`
   listing `public_headers`; add new headers there), `version.h`,
@@ -290,14 +290,14 @@ What exists after step 8 and the `test`, `exception`, `typeid` and `argparse` mo
   `time.h`, `threads.h`, `atomic.h`, `semaphore.h`, the file headers
   `fs.h`, `dirent.h`, `dlfcn.h`, `mman.h`, `io.h`, and the OS headers
   `process.h`, `signal.h`, `random.h`, `sysinfo.h`, `cpuid.h`, `term.h`,
-  the network headers `socket.h`, `pipe.h`, and `test.h`, `exception.h`, `typeid.h`, `argparse.h`. Each header documents
+  the network headers `socket.h`, `pipe.h`, and `test.h`, `exception.h`, `typeid.h`, `argparse.h`, `cli.h`. Each header documents
   its API in its top comment.
 - `src/`: `internal.h` (include first in every source), `allocator.h`
   (vendored), `alloc.c`, `assert.c`, `debug.c`, `errno.c`, `stdlib.c`,
   `string.c`, `uchar.c`, `unicode.c`, `version.c`, `time.c`, `atomic.c`,
   `threads.c`, `semaphore.c`, `fs.c`, `dirent.c`, `dlfcn.c`, `mman.c`,
   `io.c`, `process.c`, `signal.c`, `random.c`, `sysinfo.c`, `cpuid.c`,
-  `term.c`, `socket.c`, `pipe.c`, `test.c`, `exception.c`, `typeid.c`, `argparse.c`, `posix/{threads,fs,dirent,io,process}.c`,
+  `term.c`, `socket.c`, `pipe.c`, `test.c`, `exception.c`, `typeid.c`, `argparse.c`, `cli.c`, `posix/{threads,fs,dirent,io,process}.c`,
   `win32/{threads,fs,dirent,io,path,process}.c`, `win32/error.c` (Win32/WSA ->
   `PF_E*`, public since step 4).
   `debug.c` uses execinfo, else `_Unwind_Backtrace`, plus `dladdr`;
@@ -615,6 +615,20 @@ Apps (step 9, in progress):
   On Windows, `pf_argparser_init` swaps main's `__argv` for
   `pf_args_utf8` (CommandLineToArgvW, WTF-8, built once, kept for the
   program's life).
+- `cli.h` (meson feature `cli`; the argparse binding is compiled when the
+  library has argparse, `PF__HAVE_ARGPARSE`, else it is a no-op): stream
+  facts come from `term.h` (`pf_term_colors` decides AUTO; ALWAYS gives
+  at least 256, 24-bit with COLORTERM). Styles are a `uint64_t`: fg in
+  bits 0-25 (24-bit value + 2-bit kind: basic 0-15, 256 palette, RGB),
+  attributes 26-30, bg shifted by 32; RGB falls back to the 6x6x6 cube,
+  256 to the nearest of 16 (a bit per channel). Text width is code points
+  with a short list of wide (CJK, Hangul, emoji) and zero-width (combining,
+  ZW*) blocks, CSI and OSC escapes skipped: not the Unicode tables, by the
+  maintainer's choice. Prompts only when `c->interactive` (ALWAYS, or AUTO
+  with in and out terminals). The spinner and progress bar redraw at most
+  every `interval_ms` (80) and register as the live line, which printing
+  clears first. The pty tests set TERM=xterm and clear the colour
+  variables.
 - TSan with Clang 23 on this machine cannot run setjmp / longjmp at all
   ("can't find longjmp buf", even a six-line program): the assert,
   overflow, std_names, test and exception suites fail under
@@ -686,7 +700,8 @@ Caveats:
   pf_spawn, mintty detection, and the console close handler.
 - Step 9's Windows code (`--isolate=spawn` as the default, SetErrorMode /
   `_set_abort_behavior` in children, NTSTATUS exit codes, `pf_args_utf8`
-  and the `__argv` check in `pf_argparser_init`) is not compiled either;
+  and the `__argv` check in `pf_argparser_init`, the console UTF-8 switch
+  in `pf_cli_init`) is not compiled either;
   the spawn path itself runs on Linux.
 - Step 8's Windows code (Winsock paths of `socket.c`, the named pipes of
   `pipe.c`, `_pipe`) is not compiled either, nor the macOS / BSD
@@ -853,6 +868,18 @@ Caveats:
   `pf_argparser_set_short` for the common options' short names (the v1
   macros cannot work in a compiled library); `pf_next_token` dropped
   (`pf_strsep`); the `verbose` field dropped (`verbosity > 0`).
+
+- 2026-11-14: `cli` spec approved: built on `term.h`; prompts only when
+  interactive (AUTO needs in and out terminals); a simple width
+  approximation instead of Unicode tables; 256-colour and RGB styles with
+  fallback; spinner / progress redraw every 80 ms by default.
+
+- 2026-11-14: `cli` implemented as specified, plus: `pf_cli_progress_finish`
+  / `_stop` are public (v1 had no public end); spinner frames come from
+  `pf_cli_spinner_frames()` (no exported data); v1's `pf_cli_now` dropped
+  (`pf_time_ns`); `pf_cli_clearline` became `pf_cli_clear_line`; v1 never
+  set its live widget, so printing during an animation now clears the
+  line as documented.
 
 ## Open questions
 
