@@ -13,6 +13,7 @@ public_headers = files(
     'dlfcn.h',
     'endian.h',
     'errno.h',
+    'exception.h',
     'fs.h',
     'io.h',
     'macro.h',

@@ -14,6 +14,7 @@
 #include <cpolyfill/debug.h>
 #include <cpolyfill/endian.h>
 #include <cpolyfill/errno.h>
+#include <cpolyfill/exception.h>
 #include <cpolyfill/macro.h>
 #include <cpolyfill/overflow.h>
 #include <cpolyfill/stdc.h>
@@ -236,6 +237,27 @@ static void test_concurrency() {
     pf_mtx_destroy(&m);
 }
 
+/* Try blocks in C++ (trivial frames only: longjmp skips destructors). */
+static int throw_deep(pf_exception_stack_t *s, int n) {
+    return n == 0 ? PF_THROWF(s, 4, "deep %d", n) : throw_deep(s, n - 1);
+}
+
+static void test_exception() {
+    pf_exception_stack_t *s = pf_exception_thread_stack();
+    volatile int caught = 0;
+
+    PF_TRY(s, 0, 4) {
+        throw_deep(s, 5);
+    } PF_CATCH(e) {
+        PF_ASSERT_ALWAYS_EQ(e->code, 4);
+        PF_ASSERT_ALWAYS_STR_EQ(e->msg, "deep 0");
+        PF_ASSERT_ALWAYS_STR_EQ(e->func, "throw_deep");
+        caught = 1;
+    } PF_TRY_END;
+    PF_ASSERT_ALWAYS_EQ(caught, 1);
+    PF_ASSERT_ALWAYS_EQ(PF_THROW(s, 5, "uncaught"), 5);
+}
+
 int main() {
     PF_ASSERT_ALWAYS_EQ(constructed, 1);
     test_types();
@@ -246,5 +268,6 @@ int main() {
     test_integers();
     test_text();
     test_concurrency();
+    test_exception();
     return 0;
 }

@@ -33,6 +33,7 @@ extern pf_test_t suite_dirent[];
 extern pf_test_t suite_dlfcn[];
 extern pf_test_t suite_endian[];
 extern pf_test_t suite_errno[];
+extern pf_test_t suite_exception[];
 extern pf_test_t suite_fs[];
 extern pf_test_t suite_io[];
 extern pf_test_t suite_macro[];
@@ -78,6 +79,7 @@ int main(int argc, char *argv[]) {
         { "dlfcn", 1, suite_dlfcn },
         { "endian", 3, suite_endian },
         { "errno", 1, suite_errno },
+        { "exception", 1, suite_exception },
         { "fs", 1, suite_fs },
         { "io", 1, suite_io },
         { "macro", 1, suite_macro },

@@ -14,6 +14,7 @@ suites = [
     'dlfcn',
     'endian',
     'errno',
+    'exception',
     'fs',
     'io',
     'macro',
@@ -47,6 +48,7 @@ test_sources = files(
     'main.c',
     'atomic_lib.c',
     'bitwise_portable.c',
+    'exception_noloc.c',
     'overflow_portable.c',
 )
 foreach suite : suites
