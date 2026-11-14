@@ -241,7 +241,7 @@ H = header-only (language layer), L = compiled (platform layer).
 | `pipe.h` | `pf_pipe.h` | L | port |
 | `cli.h` | `pf_cli.h` | L | done in step 9 |
 | `argparse.h` | `pf_argparse.h` | L | done in step 9 |
-| `daemon.h` | `pf_daemon.h` | L | port, snake_case options, `PF_E*` errors |
+| `daemon.h` | `pf_daemon.h` | L | done in step 9 |
 | `test.h` | `pf_test.h` | L | done in step 9 |
 | `exception.h` | `pf_exception.h` | L | done in step 9 |
 | `typeid.h` | `pf_typeid.h` | H+L | done in step 9 |
@@ -266,7 +266,7 @@ committed.
 - [x] 6. Files: `fs`, `dirent`, `dlfcn`, `mman`, `io`
 - [x] 7. OS: `process`, `signal`, `random`, `sysinfo`, `cpuid`, `term`
 - [x] 8. Network: `socket`, `pipe`
-- [ ] 9. Apps: `cli`, `argparse`, `daemon`, `test`, `exception`,
+- [x] 9. Apps: `cli`, `argparse`, `daemon`, `test`, `exception`,
       `typeid` (`array` dropped)
 
 ## Approved step specs
@@ -274,12 +274,12 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-None pending. The rest of step 9 (`daemon`) needs an API proposal first,
-module by module.
+None pending. All nine steps are done; what is left before a 2.0 release
+is listed under "Caveats" below (Windows / macOS / BSD builds, README).
 
 ## Current state and notes
 
-What exists after step 8 and the `test`, `exception`, `typeid`, `argparse` and `cli` modules of step 9:
+What exists after step 9:
 
 - `include/cpolyfill/`: `platform.h`, `config.h.in` (+ `meson.build`
   listing `public_headers`; add new headers there), `version.h`,
@@ -290,14 +290,15 @@ What exists after step 8 and the `test`, `exception`, `typeid`, `argparse` and `
   `time.h`, `threads.h`, `atomic.h`, `semaphore.h`, the file headers
   `fs.h`, `dirent.h`, `dlfcn.h`, `mman.h`, `io.h`, and the OS headers
   `process.h`, `signal.h`, `random.h`, `sysinfo.h`, `cpuid.h`, `term.h`,
-  the network headers `socket.h`, `pipe.h`, and `test.h`, `exception.h`, `typeid.h`, `argparse.h`, `cli.h`. Each header documents
+  the network headers `socket.h`, `pipe.h`, and the app headers `test.h`, `exception.h`, `typeid.h`, `argparse.h`,
+  `cli.h`, `daemon.h`. Each header documents
   its API in its top comment.
 - `src/`: `internal.h` (include first in every source), `allocator.h`
   (vendored), `alloc.c`, `assert.c`, `debug.c`, `errno.c`, `stdlib.c`,
   `string.c`, `uchar.c`, `unicode.c`, `version.c`, `time.c`, `atomic.c`,
   `threads.c`, `semaphore.c`, `fs.c`, `dirent.c`, `dlfcn.c`, `mman.c`,
   `io.c`, `process.c`, `signal.c`, `random.c`, `sysinfo.c`, `cpuid.c`,
-  `term.c`, `socket.c`, `pipe.c`, `test.c`, `exception.c`, `typeid.c`, `argparse.c`, `cli.c`, `posix/{threads,fs,dirent,io,process}.c`,
+  `term.c`, `socket.c`, `pipe.c`, `test.c`, `exception.c`, `typeid.c`, `argparse.c`, `cli.c`, `daemon.c`, `posix/{threads,fs,dirent,io,process}.c`,
   `win32/{threads,fs,dirent,io,path,process}.c`, `win32/error.c` (Win32/WSA ->
   `PF_E*`, public since step 4).
   `debug.c` uses execinfo, else `_Unwind_Backtrace`, plus `dladdr`;
@@ -568,7 +569,7 @@ Network (step 8):
 - The connect-timeout test uses 10.255.255.1 and skips when there is no
   route.
 
-Apps (step 9, in progress):
+Apps (step 9):
 
 - `test.h` (meson feature `test`, default auto; the library's tests need
   it, without it they are skipped with a warning). Isolated repetitions
@@ -629,6 +630,17 @@ Apps (step 9, in progress):
   every `interval_ms` (80) and register as the live line, which printing
   clears first. The pty tests set TERM=xterm and clear the colour
   variables.
+- `daemon.h` (meson feature `daemon`): with PF_DAEMON_DETACH the original
+  process waits on a close-on-exec pipe for the daemon's start result
+  (after the lock and PID file) and returns PF_DAEMON_PARENT or that
+  error; the middle process `_exit`s; stdio is flushed before forking.
+  Descriptors are closed with `close_range` (Linux), `closefrom` (BSDs),
+  else the `/proc/self/fd` or `/dev/fd` listing, else a loop capped at
+  65536; 0-2 are never closed (stdio goes to /dev/null with dup2). The
+  lock is `pf_lock_file` on a close-on-exec file on every platform (the
+  Windows named mutex is gone). The PID file is written with
+  PF_WRITE_ATOMIC and removed only if it still holds our pid. Only the
+  close_range path runs here; the listing and loop fallbacks were not run.
 - TSan with Clang 23 on this machine cannot run setjmp / longjmp at all
   ("can't find longjmp buf", even a six-line program): the assert,
   overflow, std_names, test and exception suites fail under
@@ -701,7 +713,8 @@ Caveats:
 - Step 9's Windows code (`--isolate=spawn` as the default, SetErrorMode /
   `_set_abort_behavior` in children, NTSTATUS exit codes, `pf_args_utf8`
   and the `__argv` check in `pf_argparser_init`, the console UTF-8 switch
-  in `pf_cli_init`) is not compiled either;
+  in `pf_cli_init`, the Windows half of `daemon.c`) is not compiled
+  either;
   the spawn path itself runs on Linux.
 - Step 8's Windows code (Winsock paths of `socket.c`, the named pipes of
   `pipe.c`, `_pipe`) is not compiled either, nor the macOS / BSD
@@ -880,6 +893,16 @@ Caveats:
   (`pf_time_ns`); `pf_cli_clearline` became `pf_cli_clear_line`; v1 never
   set its live widget, so printing during an animation now clears the
   line as documented.
+
+- 2026-11-14: `daemon` spec approved: the parent gets the daemon's start
+  result; a flock-style lock file everywhere; zero options mean no
+  detaching, with PF_DAEMON_KEEP_* flags; detaching stays a no-op on
+  Windows.
+
+- 2026-11-14: `daemon` implemented as specified. v1's error-info struct,
+  `returnParent`, `windowsMutexNamespace` and `windowsUtf8` are gone;
+  `pf_daemon_notify` takes no daemon object; `pf_daemon_is_running` is
+  true after a successful start even without a lock.
 
 ## Open questions
 
