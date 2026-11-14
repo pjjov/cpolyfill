@@ -54,6 +54,13 @@
                 pf_term_enable_vt succeeds (which this calls), 0 if it
                 fails.
 
+    Modes chosen by the user, for <cpolyfill/argparse.h> and
+    <cpolyfill/cli.h>:
+
+        pf_color_mode_t         PF_COLOR_AUTO, PF_COLOR_ALWAYS,
+                                PF_COLOR_NEVER
+        pf_interactive_mode_t   PF_INTERACTIVE_AUTO, _ALWAYS, _NEVER
+
     Standard names, with PF_STD_NAMES or PF_STD_NAMES_TERM, on Windows:
     `isatty`.
 
@@ -86,6 +93,20 @@
 #endif
 
 #define PF_TERM_KEEP_SIGNALS 0x1u
+
+/* When to use colours or prompts, as chosen by the user (--color, see
+   <cpolyfill/argparse.h>): AUTO decides by the terminal. */
+typedef enum pf_color_mode_t {
+    PF_COLOR_AUTO,
+    PF_COLOR_ALWAYS,
+    PF_COLOR_NEVER
+} pf_color_mode_t;
+
+typedef enum pf_interactive_mode_t {
+    PF_INTERACTIVE_AUTO,
+    PF_INTERACTIVE_ALWAYS,
+    PF_INTERACTIVE_NEVER
+} pf_interactive_mode_t;
 
 typedef struct pf_term_state_t {
     union {

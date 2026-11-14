@@ -77,6 +77,9 @@ endif
 if have_test_module
     sources += files('src/test.c')
 endif
+if have_argparse
+    sources += files('src/argparse.c')
+endif
 
 lib_args = ['-DPF__BUILDING']
 if is_msvc

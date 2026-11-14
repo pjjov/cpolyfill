@@ -43,6 +43,10 @@ have_test_module = not get_option('test').disabled()
 if have_test_module
     public_headers += files('test.h')
 endif
+have_argparse = not get_option('argparse').disabled()
+if have_argparse
+    public_headers += files('argparse.h')
+endif
 
 version = meson.project_version().split('.')
 

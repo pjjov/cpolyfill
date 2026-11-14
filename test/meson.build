@@ -44,6 +44,11 @@ suites = [
     'version',
 ]
 
+# Suites of the optional modules.
+if have_argparse
+    suites += 'argparse'
+endif
+
 # The portable implementations, compared with the builtins.
 test_sources = files(
     'main.c',
@@ -60,6 +65,7 @@ test_args = [
     # The checks must not be compiled out, so tests cannot pass by accident.
     is_msvc ? '/UNDEBUG' : '-UNDEBUG',
     '-DPF_TEST_KNOWN_BUGS=@0@'.format(get_option('known_bugs') ? 1 : 0),
+    '-DPF_TEST_ARGPARSE=@0@'.format(have_argparse ? 1 : 0),
 ]
 if not is_msvc
     test_args += '-Werror=undef'

@@ -22,6 +22,9 @@
 /* clang-format off */
 
 extern pf_test_t suite_alloc[];
+#if PF_TEST_ARGPARSE
+extern pf_test_t suite_argparse[];
+#endif
 extern pf_test_t suite_assert[];
 extern pf_test_t suite_atomic[];
 extern pf_test_t suite_attribute[];
@@ -69,6 +72,9 @@ extern pf_test_t suite_version[];
 int main(int argc, char *argv[]) {
     static const pf_suite_t suites[] = {
         { "alloc", 5, suite_alloc },
+#if PF_TEST_ARGPARSE
+        { "argparse", 1, suite_argparse },
+#endif
         { "assert", 1, suite_assert },
         { "atomic", 1, suite_atomic },
         { "attribute", 1, suite_attribute },
