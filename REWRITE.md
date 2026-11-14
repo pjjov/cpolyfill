@@ -240,7 +240,7 @@ H = header-only (language layer), L = compiled (platform layer).
 | `socket.h` | `pf_socket.h` | L | + `socketpair`, AF_UNIX on Windows |
 | `pipe.h` | `pf_pipe.h` | L | port |
 | `cli.h` | `pf_cli.h` | L | port onto `term.h`, naming cleanup |
-| `argparse.h` | `pf_argparse.h` | L | port, naming cleanup |
+| `argparse.h` | `pf_argparse.h` | L | done in step 9 |
 | `daemon.h` | `pf_daemon.h` | L | port, snake_case options, `PF_E*` errors |
 | `test.h` | `pf_test.h` | L | done in step 9 |
 | `exception.h` | `pf_exception.h` | L | done in step 9 |
@@ -274,12 +274,12 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-None pending. The rest of step 9 (`argparse`, `cli`, `daemon`, in that order) needs an API proposal first,
+None pending. The rest of step 9 (`cli`, `daemon`, in that order) needs an API proposal first,
 module by module.
 
 ## Current state and notes
 
-What exists after step 8 and the `test`, `exception` and `typeid` modules of step 9:
+What exists after step 8 and the `test`, `exception`, `typeid` and `argparse` modules of step 9:
 
 - `include/cpolyfill/`: `platform.h`, `config.h.in` (+ `meson.build`
   listing `public_headers`; add new headers there), `version.h`,
@@ -290,14 +290,14 @@ What exists after step 8 and the `test`, `exception` and `typeid` modules of ste
   `time.h`, `threads.h`, `atomic.h`, `semaphore.h`, the file headers
   `fs.h`, `dirent.h`, `dlfcn.h`, `mman.h`, `io.h`, and the OS headers
   `process.h`, `signal.h`, `random.h`, `sysinfo.h`, `cpuid.h`, `term.h`,
-  the network headers `socket.h`, `pipe.h`, and `test.h`, `exception.h`, `typeid.h`. Each header documents
+  the network headers `socket.h`, `pipe.h`, and `test.h`, `exception.h`, `typeid.h`, `argparse.h`. Each header documents
   its API in its top comment.
 - `src/`: `internal.h` (include first in every source), `allocator.h`
   (vendored), `alloc.c`, `assert.c`, `debug.c`, `errno.c`, `stdlib.c`,
   `string.c`, `uchar.c`, `unicode.c`, `version.c`, `time.c`, `atomic.c`,
   `threads.c`, `semaphore.c`, `fs.c`, `dirent.c`, `dlfcn.c`, `mman.c`,
   `io.c`, `process.c`, `signal.c`, `random.c`, `sysinfo.c`, `cpuid.c`,
-  `term.c`, `socket.c`, `pipe.c`, `test.c`, `exception.c`, `typeid.c`, `posix/{threads,fs,dirent,io,process}.c`,
+  `term.c`, `socket.c`, `pipe.c`, `test.c`, `exception.c`, `typeid.c`, `argparse.c`, `posix/{threads,fs,dirent,io,process}.c`,
   `win32/{threads,fs,dirent,io,path,process}.c`, `win32/error.c` (Win32/WSA ->
   `PF_E*`, public since step 4).
   `debug.c` uses execinfo, else `_Unwind_Backtrace`, plus `dladdr`;
@@ -600,6 +600,21 @@ Apps (step 9, in progress):
   from it. The library counts the 128-bit types as integers when its
   compiler defines `__SIZEOF_INT128__`. Signed stores write the low bytes
   through uintN_t + memcpy (no implementation-defined conversion).
+- `argparse.h` (meson feature `argparse`; its suite is listed only when
+  built, `PF_TEST_ARGPARSE`): v1's callback design. Items are a parameter,
+  a long option (name by pointer + length, never copied) or one short
+  option with `rest` (the rest of its cluster); value options take the
+  rest or the next argument and set `rest_used`, which ends the cluster;
+  flags take a value only after '=' (counts also digits). Integers are
+  parsed by hand (decimal, 0x, 0b, overflow-checked); doubles go through
+  strtod after rewriting '.' to the locale's decimal point (checked by
+  hand with a de_DE locale built by localedef into a directory given by
+  LOCPATH; none is installed here, so the test skips). Errors go to
+  `pf_argparser_set_error_fn` or `err`; the CLI module will bind through
+  that hook. `pf_color_mode_t` / `pf_interactive_mode_t` live in `term.h`.
+  On Windows, `pf_argparser_init` swaps main's `__argv` for
+  `pf_args_utf8` (CommandLineToArgvW, WTF-8, built once, kept for the
+  program's life).
 - TSan with Clang 23 on this machine cannot run setjmp / longjmp at all
   ("can't find longjmp buf", even a six-line program): the assert,
   overflow, std_names, test and exception suites fail under
@@ -670,8 +685,9 @@ Caveats:
   Windows: argument quoting (the `args` test), the handle list of
   pf_spawn, mintty detection, and the console close handler.
 - Step 9's Windows code (`--isolate=spawn` as the default, SetErrorMode /
-  `_set_abort_behavior` in children, NTSTATUS exit codes) is not compiled
-  either; the spawn path itself runs on Linux.
+  `_set_abort_behavior` in children, NTSTATUS exit codes, `pf_args_utf8`
+  and the `__argv` check in `pf_argparser_init`) is not compiled either;
+  the spawn path itself runs on Linux.
 - Step 8's Windows code (Winsock paths of `socket.c`, the named pipes of
   `pipe.c`, `_pipe`) is not compiled either, nor the macOS / BSD
   branches (`sa_len`, SO_NOSIGPIPE, no accept4 on macOS). To check first
@@ -825,6 +841,18 @@ Caveats:
 
 - 2026-11-14: `array` (v1 `pf_array.h`) is dropped from v2; the
   maintainer uses other solutions now.
+
+- 2026-11-14: `argparse` spec approved: the CLI binds to argparse through
+  an error hook (argparse does not know the CLI); getopt rules for short
+  clusters; integers decimal / 0x / 0b (no octal); locale-independent
+  decimals; UTF-8 arguments automatic on Windows; renamed parameter
+  helpers (`pf_param_is`, `_equals`, `_match`, `_consume`, `_expect`,
+  `pf_option_is`).
+
+- 2026-11-14: `argparse` implemented as specified, plus
+  `pf_argparser_set_short` for the common options' short names (the v1
+  macros cannot work in a compiled library); `pf_next_token` dropped
+  (`pf_strsep`); the `verbose` field dropped (`verbosity > 0`).
 
 ## Open questions
 
