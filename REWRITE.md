@@ -242,7 +242,7 @@ H = header-only (language layer), L = compiled (platform layer).
 | `cli.h` | `pf_cli.h` | L | port onto `term.h`, naming cleanup |
 | `argparse.h` | `pf_argparse.h` | L | port, naming cleanup |
 | `daemon.h` | `pf_daemon.h` | L | port, snake_case options, `PF_E*` errors |
-| `test.h` | `pf_test.h` | L | port |
+| `test.h` | `pf_test.h` | L | done in step 9 |
 | `exception.h` | `pf_exception.h` | L | port |
 | `array.h` | `pf_array.h` | H (+L) | port, runtime allocator |
 | `typeid.h` | `pf_typeid.h` | L | port |
@@ -275,12 +275,13 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-None pending. Step 9 (`cli`, `argparse`, `daemon`, `test`, `exception`,
-`array`, `typeid`) needs an API proposal first, module by module.
+None pending. The rest of step 9 (`exception`, `typeid`, `array`,
+`argparse`, `cli`, `daemon`, in that order) needs an API proposal first,
+module by module.
 
 ## Current state and notes
 
-What exists after step 8:
+What exists after step 8 and the first module of step 9:
 
 - `include/cpolyfill/`: `platform.h`, `config.h.in` (+ `meson.build`
   listing `public_headers`; add new headers there), `version.h`,
@@ -291,23 +292,24 @@ What exists after step 8:
   `time.h`, `threads.h`, `atomic.h`, `semaphore.h`, the file headers
   `fs.h`, `dirent.h`, `dlfcn.h`, `mman.h`, `io.h`, and the OS headers
   `process.h`, `signal.h`, `random.h`, `sysinfo.h`, `cpuid.h`, `term.h`,
-  and the network headers `socket.h`, `pipe.h`. Each header documents
+  the network headers `socket.h`, `pipe.h`, and `test.h`. Each header documents
   its API in its top comment.
 - `src/`: `internal.h` (include first in every source), `allocator.h`
   (vendored), `alloc.c`, `assert.c`, `debug.c`, `errno.c`, `stdlib.c`,
   `string.c`, `uchar.c`, `unicode.c`, `version.c`, `time.c`, `atomic.c`,
   `threads.c`, `semaphore.c`, `fs.c`, `dirent.c`, `dlfcn.c`, `mman.c`,
   `io.c`, `process.c`, `signal.c`, `random.c`, `sysinfo.c`, `cpuid.c`,
-  `term.c`, `socket.c`, `pipe.c`, `posix/{threads,fs,dirent,io,process}.c`,
+  `term.c`, `socket.c`, `pipe.c`, `test.c`, `posix/{threads,fs,dirent,io,process}.c`,
   `win32/{threads,fs,dirent,io,path,process}.c`, `win32/error.c` (Win32/WSA ->
   `PF_E*`, public since step 4).
   `debug.c` uses execinfo, else `_Unwind_Backtrace`, plus `dladdr`;
   meson detects them and passes `PF__HAVE_EXECINFO` / `PF__HAVE_UNWIND`
   / `PF__HAVE_DLADDR` as library arguments (not in `config.h`).
-- `test/`: `runner.h` is v1's `pf_test.h`, kept as a temporary runner
-  until the `test` module is ported (step 9). Tests check with
-  `PF_ASSERT_ALWAYS*` (the private `CHECK*` macros are gone); `check.h`
-  keeps `SKIP`, `KNOWN_BUG` and `test_rand`. A new suite is a
+- `test/`: the suites run on `<cpolyfill/test.h>` (`runner.h` is gone).
+  Tests check with `PF_ASSERT_ALWAYS*` (the private `CHECK*` macros are
+  gone); `check.h` keeps `SKIP` (now `pf_test_skip`), `KNOWN_BUG` and
+  `test_rand`. A test that installs its own assert handler restores the
+  previous one, not NULL (the runner has its own). A new suite is a
   `test/<name>.c` defining `pf_test_t suite_<name>[]`, listed in
   `test/meson.build` and `test/main.c`. Tests link the library's objects
   directly, so they can include `../src/internal.h` and test internals.
@@ -568,6 +570,27 @@ Network (step 8):
 - The connect-timeout test uses 10.255.255.1 and skips when there is no
   route.
 
+Apps (step 9, in progress):
+
+- `test.h` (meson feature `test`, default auto; the library's tests need
+  it, without it they are skipped with a warning). Isolated repetitions
+  run in a fork child (POSIX default) or a copy of the program started
+  with the hidden `--pf-test-child suite test i seed report` (Windows
+  default, `--isolate=spawn` anywhere). Children replace the assert
+  handler with one that prints and exits 99; exit codes 0 / 1 / 77 / 99
+  mean pass / fail / skip / assertion. The skip reason goes through one
+  temporary report file per run. Fork children are waited for through
+  the internal `pf__process_adopt` (posix/process.c), so timeouts use the
+  pidfd / kqueue waits of `pf_process_wait`. `--no-isolate` longjmps out
+  of failed assertions in the runner's thread.
+- The `test` suite drives `test/sample.c` (`cpolyfill-test-sample`,
+  through `PF_TEST_SAMPLE`) in every mode. The whole suite also passes
+  with `--isolate=spawn` and `--no-isolate` (checked by hand).
+- TSan cannot `longjmp` out of an assert handler in a forked child ("can't
+  find longjmp buf"): the assert, overflow, std_names and (through
+  `--no-isolate`) test suites fail under `-Db_sanitize=thread`, as they
+  did before the port. Keep TSan to the concurrency suites.
+
 Language layer notes, for later steps:
 
 - Attribute placement: `PF_*` attribute macros go first in a
@@ -632,6 +655,9 @@ Caveats:
   or any ARM feature detection (no ARM machine). To check first on
   Windows: argument quoting (the `args` test), the handle list of
   pf_spawn, mintty detection, and the console close handler.
+- Step 9's Windows code (`--isolate=spawn` as the default, SetErrorMode /
+  `_set_abort_behavior` in children, NTSTATUS exit codes) is not compiled
+  either; the spawn path itself runs on Linux.
 - Step 8's Windows code (Winsock paths of `socket.c`, the named pipes of
   `pipe.c`, `_pipe`) is not compiled either, nor the macOS / BSD
   branches (`sa_len`, SO_NOSIGPIPE, no accept4 on macOS). To check first
@@ -751,6 +777,16 @@ Caveats:
   recv timeouts are PF_EAGAIN as on POSIX; `pf_poll` and `socketpair` get
   no standard names; `pf_pipe_t` has private fields; named pipes are
   owner-only (0600 socket file, an owner + SYSTEM DACL on Windows).
+
+- 2026-11-14: `test` spec approved: v1's types and `pf_test_main` kept;
+  `pf_test_skip` / PF_TEST_SKIP 77; isolation on every platform (fork on
+  POSIX, re-spawning the program on Windows); `--timeout` (default 0, no
+  limit), `--repeat`, wildcards, monotonic timings.
+
+- 2026-11-14: `test` implemented as specified, plus: `--isolate=fork|spawn`
+  picks the mechanism; isolated children report a failed assertion as
+  "assertion failed" (exit 99) rather than SIGABRT; exit code 2 also when
+  isolated tests cannot be set up.
 
 ## Open questions
 
