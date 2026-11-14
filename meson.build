@@ -49,6 +49,7 @@ sources = files(
     'src/term.c',
     'src/threads.c',
     'src/time.c',
+    'src/typeid.c',
     'src/uchar.c',
     'src/unicode.c',
     'src/version.c',

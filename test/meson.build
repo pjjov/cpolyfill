@@ -37,6 +37,7 @@ suites = [
     'test',
     'threads',
     'time',
+    'typeid',
     'types',
     'uchar',
     'unicode',

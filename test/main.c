@@ -56,6 +56,7 @@ extern pf_test_t suite_term[];
 extern pf_test_t suite_test[];
 extern pf_test_t suite_threads[];
 extern pf_test_t suite_time[];
+extern pf_test_t suite_typeid[];
 extern pf_test_t suite_types[];
 extern pf_test_t suite_uchar[];
 extern pf_test_t suite_unicode[];
@@ -102,6 +103,7 @@ int main(int argc, char *argv[]) {
         { "test", 1, suite_test },
         { "threads", 1, suite_threads },
         { "time", 3, suite_time },
+        { "typeid", 3, suite_typeid },
         { "types", 1, suite_types },
         { "uchar", 1, suite_uchar },
         { "unicode", 5, suite_unicode },

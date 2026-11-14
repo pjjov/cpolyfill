@@ -33,6 +33,7 @@ public_headers = files(
     'term.h',
     'threads.h',
     'time.h',
+    'typeid.h',
     'types.h',
     'unicode.h',
     'version.h',
