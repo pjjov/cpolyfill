@@ -244,7 +244,6 @@ H = header-only (language layer), L = compiled (platform layer).
 | `daemon.h` | `pf_daemon.h` | L | port, snake_case options, `PF_E*` errors |
 | `test.h` | `pf_test.h` | L | done in step 9 |
 | `exception.h` | `pf_exception.h` | L | done in step 9 |
-| `array.h` | `pf_array.h` | H (+L) | port, runtime allocator |
 | `typeid.h` | `pf_typeid.h` | H+L | done in step 9 |
 
 Later, not part of v2.0: event loop (epoll / kqueue / IOCP), file
@@ -268,15 +267,14 @@ committed.
 - [x] 7. OS: `process`, `signal`, `random`, `sysinfo`, `cpuid`, `term`
 - [x] 8. Network: `socket`, `pipe`
 - [ ] 9. Apps: `cli`, `argparse`, `daemon`, `test`, `exception`,
-      `array`, `typeid`
+      `typeid` (`array` dropped)
 
 ## Approved step specs
 
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-None pending. The rest of step 9 (`array`,
-`argparse`, `cli`, `daemon`, in that order) needs an API proposal first,
+None pending. The rest of step 9 (`argparse`, `cli`, `daemon`, in that order) needs an API proposal first,
 module by module.
 
 ## Current state and notes
@@ -697,7 +695,7 @@ Caveats:
 - 2026-11-06: Dependency and pkg-config name stays `cpolyfill`, even
   though it breaks v1 consumers.
 - 2026-11-06: Rewrite happens on the `v2` branch.
-- 2026-11-06: All v1 modules are kept.
+- 2026-11-06: All v1 modules are kept (but see 2026-11-14: `array`).
 - 2026-11-06: Commits use a subject line only, no body, no co-author
   trailer.
 - 2026-11-06: Standard names opt-in is both global (`PF_STD_NAMES`) and
@@ -824,6 +822,9 @@ Caveats:
   entries (`__int128` is not a type everywhere); their loads give
   PF_ERANGE beyond intmax_t / uintmax_t and their limits are those
   ranges.
+
+- 2026-11-14: `array` (v1 `pf_array.h`) is dropped from v2; the
+  maintainer uses other solutions now.
 
 ## Open questions
 
