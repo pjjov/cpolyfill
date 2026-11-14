@@ -245,7 +245,7 @@ H = header-only (language layer), L = compiled (platform layer).
 | `test.h` | `pf_test.h` | L | done in step 9 |
 | `exception.h` | `pf_exception.h` | L | done in step 9 |
 | `array.h` | `pf_array.h` | H (+L) | port, runtime allocator |
-| `typeid.h` | `pf_typeid.h` | L | port |
+| `typeid.h` | `pf_typeid.h` | H+L | done in step 9 |
 
 Later, not part of v2.0: event loop (epoll / kqueue / IOCP), file
 watching (inotify / kqueue / ReadDirectoryChangesW).
@@ -275,13 +275,13 @@ committed.
 Specs approved by the maintainer but not implemented yet. Once a step is
 done, replace its spec with a few lines in "Current state and notes".
 
-None pending. The rest of step 9 (`typeid`, `array`,
+None pending. The rest of step 9 (`array`,
 `argparse`, `cli`, `daemon`, in that order) needs an API proposal first,
 module by module.
 
 ## Current state and notes
 
-What exists after step 8 and the `test` and `exception` modules of step 9:
+What exists after step 8 and the `test`, `exception` and `typeid` modules of step 9:
 
 - `include/cpolyfill/`: `platform.h`, `config.h.in` (+ `meson.build`
   listing `public_headers`; add new headers there), `version.h`,
@@ -292,14 +292,14 @@ What exists after step 8 and the `test` and `exception` modules of step 9:
   `time.h`, `threads.h`, `atomic.h`, `semaphore.h`, the file headers
   `fs.h`, `dirent.h`, `dlfcn.h`, `mman.h`, `io.h`, and the OS headers
   `process.h`, `signal.h`, `random.h`, `sysinfo.h`, `cpuid.h`, `term.h`,
-  the network headers `socket.h`, `pipe.h`, and `test.h`, `exception.h`. Each header documents
+  the network headers `socket.h`, `pipe.h`, and `test.h`, `exception.h`, `typeid.h`. Each header documents
   its API in its top comment.
 - `src/`: `internal.h` (include first in every source), `allocator.h`
   (vendored), `alloc.c`, `assert.c`, `debug.c`, `errno.c`, `stdlib.c`,
   `string.c`, `uchar.c`, `unicode.c`, `version.c`, `time.c`, `atomic.c`,
   `threads.c`, `semaphore.c`, `fs.c`, `dirent.c`, `dlfcn.c`, `mman.c`,
   `io.c`, `process.c`, `signal.c`, `random.c`, `sysinfo.c`, `cpuid.c`,
-  `term.c`, `socket.c`, `pipe.c`, `test.c`, `exception.c`, `posix/{threads,fs,dirent,io,process}.c`,
+  `term.c`, `socket.c`, `pipe.c`, `test.c`, `exception.c`, `typeid.c`, `posix/{threads,fs,dirent,io,process}.c`,
   `win32/{threads,fs,dirent,io,path,process}.c`, `win32/error.c` (Win32/WSA ->
   `PF_E*`, public since step 4).
   `debug.c` uses execinfo, else `_Unwind_Backtrace`, plus `dladdr`;
@@ -596,6 +596,12 @@ Apps (step 9, in progress):
   local buffer first, so arguments may point into the stack's buffer.
   `PF_EXCEPTION_NO_LOCATION` (consumer macro) blanks file / line / func.
   `test/exception_noloc.c` throws from module 9 without the location.
+- `typeid.h`: the `PF_TYPEID` table and the enum are in the header (ids
+  as in v1, plus INT128 / UINT128 = 56 / 57 as XO entries); `typeid.c`
+  builds a table indexed by id (name, kind, size) and per-type switches
+  from it. The library counts the 128-bit types as integers when its
+  compiler defines `__SIZEOF_INT128__`. Signed stores write the low bytes
+  through uintN_t + memcpy (no implementation-defined conversion).
 - TSan with Clang 23 on this machine cannot run setjmp / longjmp at all
   ("can't find longjmp buf", even a six-line program): the assert,
   overflow, std_names, test and exception suites fail under
@@ -807,6 +813,17 @@ Caveats:
 - 2026-11-14: `exception` implemented as specified, plus:
   `pf_rethrow` takes exceptions of other stacks (copying the message);
   a NULL `e` gives PF_EINVAL (v1: -1).
+
+- 2026-11-14: `typeid` spec approved: v1 ids kept, `PF_TYPE_USER`
+  (1024), compiled helpers with sign-extending loads and no type punning,
+  `pf_type_is_signed` / `_is_atomic` / `pf_type_size` / `pf_type_name`;
+  128-bit integers added (ids 56 / 57); `char` stays out of the integers;
+  no `PF_TYPEID_OF`.
+
+- 2026-11-14: `typeid` implemented as specified. The 128-bit types are XO
+  entries (`__int128` is not a type everywhere); their loads give
+  PF_ERANGE beyond intmax_t / uintmax_t and their limits are those
+  ranges.
 
 ## Open questions
 
