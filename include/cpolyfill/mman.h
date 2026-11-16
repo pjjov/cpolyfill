@@ -109,29 +109,29 @@ PF_END_DECLS
 
 /* ---- Standard names --------------------------------------------------- */
 
-#if !defined(PF__MMAN_STD_NAMES)                                   \
-    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_MMAN))  \
+#if !defined(PF__MMAN_STD_NAMES)                                  \
+    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_MMAN)) \
         || defined(PF_STD_NAMES_MMAN))
-    #define PF__MMAN_STD_NAMES
+#define PF__MMAN_STD_NAMES
 
-    #if !PF_CONFIG_HAVE_SYS_MMAN_H
-        #define PROT_NONE PF_PROT_NONE
-        #define PROT_READ PF_PROT_READ
-        #define PROT_WRITE PF_PROT_WRITE
-        #define PROT_EXEC PF_PROT_EXEC
-        #define MAP_SHARED PF_MAP_SHARED
-        #define MAP_PRIVATE PF_MAP_PRIVATE
-        #define MAP_ANONYMOUS PF_MAP_ANONYMOUS
-        #define MAP_ANON PF_MAP_ANON
-        #define MAP_FAILED PF_MAP_FAILED
-        #define MS_ASYNC PF_MS_ASYNC
-        #define MS_INVALIDATE PF_MS_INVALIDATE
-        #define MS_SYNC PF_MS_SYNC
-        #define mmap pf_mmap
-        #define munmap pf_munmap
-        #define mprotect pf_mprotect
-        #define msync pf_msync
-        #define mlock pf_mlock
-        #define munlock pf_munlock
-    #endif
+#if !PF_CONFIG_HAVE_SYS_MMAN_H
+    #define PROT_NONE PF_PROT_NONE
+    #define PROT_READ PF_PROT_READ
+    #define PROT_WRITE PF_PROT_WRITE
+    #define PROT_EXEC PF_PROT_EXEC
+    #define MAP_SHARED PF_MAP_SHARED
+    #define MAP_PRIVATE PF_MAP_PRIVATE
+    #define MAP_ANONYMOUS PF_MAP_ANONYMOUS
+    #define MAP_ANON PF_MAP_ANON
+    #define MAP_FAILED PF_MAP_FAILED
+    #define MS_ASYNC PF_MS_ASYNC
+    #define MS_INVALIDATE PF_MS_INVALIDATE
+    #define MS_SYNC PF_MS_SYNC
+    #define mmap pf_mmap
+    #define munmap pf_munmap
+    #define mprotect pf_mprotect
+    #define msync pf_msync
+    #define mlock pf_mlock
+    #define munlock pf_munlock
+#endif
 #endif

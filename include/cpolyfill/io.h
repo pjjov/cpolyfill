@@ -293,44 +293,44 @@ PF_END_DECLS
 #if !defined(PF__IO_STD_NAMES)                                  \
     && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_IO)) \
         || defined(PF_STD_NAMES_IO))
-    #define PF__IO_STD_NAMES
+#define PF__IO_STD_NAMES
 
-    #ifdef PF__FORCE_STD_NAMES_POLYFILL
-        #define PF__IO_MAP(have) 1
-    #else
-        #define PF__IO_MAP(have) (PF_OS_WINDOWS || !(have))
-    #endif
+#ifdef PF__FORCE_STD_NAMES_POLYFILL
+    #define PF__IO_MAP(have) 1
+#else
+    #define PF__IO_MAP(have) (PF_OS_WINDOWS || !(have))
+#endif
 
-    #if PF__IO_MAP(PF_CONFIG_HAVE_FSEEKO)
-        #undef fseeko
-        #define fseeko pf_fseeko
-    #endif
-    #if PF__IO_MAP(PF_CONFIG_HAVE_FTELLO)
-        #undef ftello
-        #define ftello pf_ftello
-    #endif
-    #if PF__IO_MAP(PF_CONFIG_HAVE_PREAD)
-        #undef pread
-        #define pread pf_pread
-    #endif
-    #if PF__IO_MAP(PF_CONFIG_HAVE_PWRITE)
-        #undef pwrite
-        #define pwrite pf_pwrite
-    #endif
-    #if PF__IO_MAP(PF_CONFIG_HAVE_FSYNC)
-        #undef fsync
-        #define fsync pf_fsync
-    #endif
-    #if PF__IO_MAP(PF_CONFIG_HAVE_FTRUNCATE)
-        #undef ftruncate
-        #define ftruncate pf_ftruncate
-    #endif
-    #if PF__IO_MAP(PF_CONFIG_HAVE_FMEMOPEN)
-        #undef fmemopen
-        #define fmemopen pf_fmemopen
-    #endif
-    #if PF__IO_MAP(PF_CONFIG_HAVE_OPEN_MEMSTREAM)
-        #undef open_memstream
-        #define open_memstream pf_open_memstream
-    #endif
+#if PF__IO_MAP(PF_CONFIG_HAVE_FSEEKO)
+    #undef fseeko
+    #define fseeko pf_fseeko
+#endif
+#if PF__IO_MAP(PF_CONFIG_HAVE_FTELLO)
+    #undef ftello
+    #define ftello pf_ftello
+#endif
+#if PF__IO_MAP(PF_CONFIG_HAVE_PREAD)
+    #undef pread
+    #define pread pf_pread
+#endif
+#if PF__IO_MAP(PF_CONFIG_HAVE_PWRITE)
+    #undef pwrite
+    #define pwrite pf_pwrite
+#endif
+#if PF__IO_MAP(PF_CONFIG_HAVE_FSYNC)
+    #undef fsync
+    #define fsync pf_fsync
+#endif
+#if PF__IO_MAP(PF_CONFIG_HAVE_FTRUNCATE)
+    #undef ftruncate
+    #define ftruncate pf_ftruncate
+#endif
+#if PF__IO_MAP(PF_CONFIG_HAVE_FMEMOPEN)
+    #undef fmemopen
+    #define fmemopen pf_fmemopen
+#endif
+#if PF__IO_MAP(PF_CONFIG_HAVE_OPEN_MEMSTREAM)
+    #undef open_memstream
+    #define open_memstream pf_open_memstream
+#endif
 #endif

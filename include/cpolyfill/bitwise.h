@@ -109,7 +109,7 @@
         #define PF__BIT_GNU 0
     #endif
     #define PF__BIT_MSVC PF_CC_MSVC
-    #if PF_STD_C23 && defined(__has_include) \
+    #if PF_STD_C23 && defined(__has_include)      \
         && !defined(PF__FORCE_STD_NAMES_POLYFILL)
         #if __has_include(<stdbit.h>)
             #include <stdbit.h>
@@ -191,12 +191,12 @@
         return r;                    \
     }
 
-#define PF__P_PARITY(type)                   \
-    {                                        \
-        int r = 0;                           \
+#define PF__P_PARITY(type)                      \
+    {                                           \
+        int r = 0;                              \
         for (; x != 0; x = (type)(x & (x - 1))) \
-            r ^= 1;                          \
-        return r;                            \
+            r ^= 1;                             \
+        return r;                               \
     }
 
 #define PF__P_POW2FLOOR(type)                    \
@@ -232,11 +232,11 @@
 
 /* The count is reduced modulo the width, and so is the complementary
    shift, so a shift by the full width never happens. */
-#define PF__P_ROTL(type)                                    \
-    return (type)((x << (n & (PF__BITS(type) - 1u)))        \
+#define PF__P_ROTL(type)                                       \
+    return (type)((x << (n & (PF__BITS(type) - 1u)))           \
                   | (x >> ((0u - n) & (PF__BITS(type) - 1u))))
-#define PF__P_ROTR(type)                                    \
-    return (type)((x >> (n & (PF__BITS(type) - 1u)))        \
+#define PF__P_ROTR(type)                                       \
+    return (type)((x >> (n & (PF__BITS(type) - 1u)))           \
                   | (x << ((0u - n) & (PF__BITS(type) - 1u))))
 
 /* ---- Classic GCC and Clang builtins ----------------------------------- */
@@ -244,17 +244,17 @@
 /* Each is a series of `if (...) return ...;` picked by the size of the
    type, falling through to the portable body for wider types. */
 #if PF__BIT_GNU
-    #define PF__G_CLZ(type)                                            \
-        if (x == 0)                                                    \
-            return (int)PF__BITS(type);                                \
-        if (sizeof(type) <= sizeof(unsigned int))                      \
-            return __builtin_clz((unsigned int)x)                      \
-                - (int)(PF__BITS(unsigned int) - PF__BITS(type));      \
-        if (sizeof(type) <= sizeof(unsigned long))                     \
-            return __builtin_clzl((unsigned long)x)                    \
-                - (int)(PF__BITS(unsigned long) - PF__BITS(type));     \
-        if (sizeof(type) <= sizeof(unsigned long long))                \
-            return __builtin_clzll((unsigned long long)x)              \
+    #define PF__G_CLZ(type)                                             \
+        if (x == 0)                                                     \
+            return (int)PF__BITS(type);                                 \
+        if (sizeof(type) <= sizeof(unsigned int))                       \
+            return __builtin_clz((unsigned int)x)                       \
+                - (int)(PF__BITS(unsigned int) - PF__BITS(type));       \
+        if (sizeof(type) <= sizeof(unsigned long))                      \
+            return __builtin_clzl((unsigned long)x)                     \
+                - (int)(PF__BITS(unsigned long) - PF__BITS(type));      \
+        if (sizeof(type) <= sizeof(unsigned long long))                 \
+            return __builtin_clzll((unsigned long long)x)               \
                 - (int)(PF__BITS(unsigned long long) - PF__BITS(type));
     #define PF__G_CTZ(type)                                \
         if (x == 0)                                        \
@@ -289,34 +289,34 @@
 /* ---- MSVC intrinsics -------------------------------------------------- */
 
 #if PF__BIT_MSVC
-    #define PF__M_CLZ32(type)                              \
-        if (sizeof(type) <= 4) {                           \
-            unsigned long i = 0;                           \
-            return _BitScanReverse(&i, (unsigned long)x)   \
-                ? (int)(PF__BITS(type) - 1u - i)           \
-                : (int)PF__BITS(type);                     \
+    #define PF__M_CLZ32(type)                            \
+        if (sizeof(type) <= 4) {                         \
+            unsigned long i = 0;                         \
+            return _BitScanReverse(&i, (unsigned long)x) \
+                ? (int)(PF__BITS(type) - 1u - i)         \
+                : (int)PF__BITS(type);                   \
         }
-    #define PF__M_CTZ32(type)                              \
-        if (sizeof(type) <= 4) {                           \
-            unsigned long i = 0;                           \
-            return _BitScanForward(&i, (unsigned long)x)   \
-                ? (int)i                                   \
-                : (int)PF__BITS(type);                     \
+    #define PF__M_CTZ32(type)                            \
+        if (sizeof(type) <= 4) {                         \
+            unsigned long i = 0;                         \
+            return _BitScanForward(&i, (unsigned long)x) \
+                ? (int)i                                 \
+                : (int)PF__BITS(type);                   \
         }
     #if PF__BIT_MSVC64
-        #define PF__M_CLZ64(type)                                   \
-            if (sizeof(type) <= 8) {                                \
-                unsigned long i = 0;                                \
-                return _BitScanReverse64(&i, (unsigned __int64)x)   \
-                    ? (int)(PF__BITS(type) - 1u - i)                \
-                    : (int)PF__BITS(type);                          \
+        #define PF__M_CLZ64(type)                                 \
+            if (sizeof(type) <= 8) {                              \
+                unsigned long i = 0;                              \
+                return _BitScanReverse64(&i, (unsigned __int64)x) \
+                    ? (int)(PF__BITS(type) - 1u - i)              \
+                    : (int)PF__BITS(type);                        \
             }
-        #define PF__M_CTZ64(type)                                   \
-            if (sizeof(type) <= 8) {                                \
-                unsigned long i = 0;                                \
-                return _BitScanForward64(&i, (unsigned __int64)x)   \
-                    ? (int)i                                        \
-                    : (int)PF__BITS(type);                          \
+        #define PF__M_CTZ64(type)                                 \
+            if (sizeof(type) <= 8) {                              \
+                unsigned long i = 0;                              \
+                return _BitScanForward64(&i, (unsigned __int64)x) \
+                    ? (int)i                                      \
+                    : (int)PF__BITS(type);                        \
             }
     #else
         #define PF__M_CLZ64(type)
@@ -326,10 +326,10 @@
     #define PF__M_CTZ(type) PF__M_CTZ32(type) PF__M_CTZ64(type)
 
     #if PF__BIT_POPCNT && PF_ARCH_X86_64
-        #define PF__M_POPCOUNT(type)                       \
-            if (sizeof(type) <= 4)                         \
-                return (int)__popcnt((unsigned int)x);     \
-            if (sizeof(type) <= 8)                         \
+        #define PF__M_POPCOUNT(type)                         \
+            if (sizeof(type) <= 4)                           \
+                return (int)__popcnt((unsigned int)x);       \
+            if (sizeof(type) <= 8)                           \
                 return (int)__popcnt64((unsigned __int64)x);
     #elif PF__BIT_POPCNT
         #define PF__M_POPCOUNT(type)                   \
@@ -340,18 +340,18 @@
     #endif
 
     /* The rotate intrinsics take the count masked to the width. */
-    #define PF__M_ROT(type, dir)                                         \
-        if (sizeof(type) == 1)                                           \
-            return (type)_rot##dir##8(                                   \
-                (unsigned char)x, (unsigned char)(n & 7u)                \
-            );                                                           \
-        if (sizeof(type) == 2)                                           \
-            return (type)_rot##dir##16(                                  \
-                (unsigned short)x, (unsigned char)(n & 15u)              \
-            );                                                           \
-        if (sizeof(type) == 4)                                           \
-            return (type)_rot##dir((unsigned int)x, (int)(n & 31u));     \
-        if (sizeof(type) == 8)                                           \
+    #define PF__M_ROT(type, dir)                                             \
+        if (sizeof(type) == 1)                                               \
+            return (type)_rot##dir##8(                                       \
+                (unsigned char)x, (unsigned char)(n & 7u)                    \
+            );                                                               \
+        if (sizeof(type) == 2)                                               \
+            return (type)_rot##dir##16(                                      \
+                (unsigned short)x, (unsigned char)(n & 15u)                  \
+            );                                                               \
+        if (sizeof(type) == 4)                                               \
+            return (type)_rot##dir((unsigned int)x, (int)(n & 31u));         \
+        if (sizeof(type) == 8)                                               \
             return (type)_rot##dir##64((unsigned __int64)x, (int)(n & 63u));
     #define PF__M_ROTL(type) PF__M_ROT(type, l)
     #define PF__M_ROTR(type) PF__M_ROT(type, r)
@@ -377,14 +377,14 @@
     #define PF__B_ISPOW2(type) return stdc_has_single_bit(x) ? 1 : 0;
 #else
     #if PF__BIT_BUILTIN(__builtin_clzg)
-        #define PF__B_CLZ(type)                                  \
+        #define PF__B_CLZ(type)                                 \
             return (int)__builtin_clzg(x, (int)PF__BITS(type));
     #else
         #define PF__B_CLZ(type) PF__G_CLZ(type) PF__M_CLZ(type) PF__P_CLZ(type)
     #endif
 
     #if PF__BIT_BUILTIN(__builtin_ctzg)
-        #define PF__B_CTZ(type)                                  \
+        #define PF__B_CTZ(type)                                 \
             return (int)__builtin_ctzg(x, (int)PF__BITS(type));
     #else
         #define PF__B_CTZ(type) PF__G_CTZ(type) PF__M_CTZ(type) PF__P_CTZ(type)
@@ -393,7 +393,7 @@
     #if PF__BIT_BUILTIN(__builtin_popcountg)
         #define PF__B_POPCOUNT(type) return (int)__builtin_popcountg(x);
     #else
-        #define PF__B_POPCOUNT(type)                                 \
+        #define PF__B_POPCOUNT(type)                                       \
             PF__G_POPCOUNT(type) PF__M_POPCOUNT(type) PF__P_POPCOUNT(type)
     #endif
 
@@ -430,15 +430,15 @@
     && PF__BIT_BUILTIN(__builtin_bitreverse16)              \
     && PF__BIT_BUILTIN(__builtin_bitreverse32)              \
     && PF__BIT_BUILTIN(__builtin_bitreverse64)
-    #define PF__B_BITREVERSE(type)                                        \
-        if (sizeof(type) == 1)                                            \
-            return (type)__builtin_bitreverse8((unsigned char)x);         \
-        if (sizeof(type) == 2)                                            \
-            return (type)__builtin_bitreverse16((unsigned short)x);       \
-        if (sizeof(type) == 4)                                            \
-            return (type)__builtin_bitreverse32((unsigned int)x);         \
-        if (sizeof(type) == 8)                                            \
-            return (type)__builtin_bitreverse64((unsigned long long)x);   \
+    #define PF__B_BITREVERSE(type)                                      \
+        if (sizeof(type) == 1)                                          \
+            return (type)__builtin_bitreverse8((unsigned char)x);       \
+        if (sizeof(type) == 2)                                          \
+            return (type)__builtin_bitreverse16((unsigned short)x);     \
+        if (sizeof(type) == 4)                                          \
+            return (type)__builtin_bitreverse32((unsigned int)x);       \
+        if (sizeof(type) == 8)                                          \
+            return (type)__builtin_bitreverse64((unsigned long long)x); \
         PF__P_BITREVERSE(type)
 #else
     #define PF__B_BITREVERSE(type) PF__P_BITREVERSE(type)
@@ -448,41 +448,54 @@
 
 PF_BEGIN_DECLS
 
-#define PF_IMPL_BITWISE(suffix, type, max)                                    \
-    PF__BIT_FN int pf_clz##suffix(type x) { PF__B_CLZ(type) }                 \
-    PF__BIT_FN int pf_ctz##suffix(type x) { PF__B_CTZ(type) }                 \
-    PF__BIT_FN int pf_clo##suffix(type x) { return pf_clz##suffix((type)~x); } \
+#define PF_IMPL_BITWISE(suffix, type, max)                                     \
+    PF__BIT_FN int pf_clz##suffix(type x) {                                    \
+        PF__B_CLZ(type)                                                        \
+    } PF__BIT_FN int pf_ctz##suffix(type x) {                                  \
+        PF__B_CTZ(type)                                                        \
+    } PF__BIT_FN int pf_clo##suffix(type x) {                                  \
+        return pf_clz##suffix((type)~x);                                       \
+    }                                                                          \
     PF__BIT_FN int pf_cto##suffix(type x) { return pf_ctz##suffix((type)~x); } \
-    PF__BIT_FN int pf_flz##suffix(type x) {                                   \
-        return (type)~x != 0 ? pf_clz##suffix((type)~x) + 1 : 0;              \
-    }                                                                         \
-    PF__BIT_FN int pf_flo##suffix(type x) {                                   \
-        return x != 0 ? pf_clz##suffix(x) + 1 : 0;                            \
-    }                                                                         \
-    PF__BIT_FN int pf_ftz##suffix(type x) {                                   \
-        return (type)~x != 0 ? pf_ctz##suffix((type)~x) + 1 : 0;              \
-    }                                                                         \
-    PF__BIT_FN int pf_fto##suffix(type x) {                                   \
-        return x != 0 ? pf_ctz##suffix(x) + 1 : 0;                            \
-    }                                                                         \
-    PF__BIT_FN int pf_popcount##suffix(type x) { PF__B_POPCOUNT(type) }       \
-    PF__BIT_FN int pf_zerocount##suffix(type x) {                             \
-        return pf_popcount##suffix((type)~x);                                 \
-    }                                                                         \
-    PF__BIT_FN int pf_parity##suffix(type x) { PF__B_PARITY(type) }           \
-    PF__BIT_FN int pf_ispow2##suffix(type x) { PF__B_ISPOW2(type) }           \
-    PF__BIT_FN type pf_pow2floor##suffix(type x) { PF__B_POW2FLOOR(type) }    \
-    PF__BIT_FN type pf__pow2ceil##suffix(type x) { PF__B_POW2CEIL(type) }     \
-    PF__BIT_FN type pf_pow2ceil##suffix(type x) {                             \
-        return x == 0 || x > ((max) >> 1) + 1 ? (type)0                       \
-                                              : pf__pow2ceil##suffix(x);      \
-    }                                                                         \
-    PF__BIT_FN int pf_bitwidth##suffix(type x) {                              \
-        return (int)PF__BITS(type) - pf_clz##suffix(x);                       \
-    }                                                                         \
-    PF__BIT_FN type pf_bitreverse##suffix(type x) { PF__B_BITREVERSE(type) }  \
-    PF__BIT_FN type pf_rotl##suffix(type x, unsigned n) { PF__B_ROTL(type) }  \
-    PF__BIT_FN type pf_rotr##suffix(type x, unsigned n) { PF__B_ROTR(type) }
+    PF__BIT_FN int pf_flz##suffix(type x) {                                    \
+        return (type)~x != 0 ? pf_clz##suffix((type)~x) + 1 : 0;               \
+    }                                                                          \
+    PF__BIT_FN int pf_flo##suffix(type x) {                                    \
+        return x != 0 ? pf_clz##suffix(x) + 1 : 0;                             \
+    }                                                                          \
+    PF__BIT_FN int pf_ftz##suffix(type x) {                                    \
+        return (type)~x != 0 ? pf_ctz##suffix((type)~x) + 1 : 0;               \
+    }                                                                          \
+    PF__BIT_FN int pf_fto##suffix(type x) {                                    \
+        return x != 0 ? pf_ctz##suffix(x) + 1 : 0;                             \
+    }                                                                          \
+    PF__BIT_FN int pf_popcount##suffix(type x) {                               \
+        PF__B_POPCOUNT(type)                                                   \
+    } PF__BIT_FN int pf_zerocount##suffix(type x) {                            \
+        return pf_popcount##suffix((type)~x);                                  \
+    }                                                                          \
+    PF__BIT_FN int pf_parity##suffix(type x) {                                 \
+        PF__B_PARITY(type)                                                     \
+    } PF__BIT_FN int pf_ispow2##suffix(type x) {                               \
+        PF__B_ISPOW2(type)                                                     \
+    } PF__BIT_FN type pf_pow2floor##suffix(type x) {                           \
+        PF__B_POW2FLOOR(type)                                                  \
+    } PF__BIT_FN type pf__pow2ceil##suffix(type x) {                           \
+        PF__B_POW2CEIL(type)                                                   \
+    } PF__BIT_FN type pf_pow2ceil##suffix(type x) {                            \
+        return x == 0 || x > ((max) >> 1) + 1 ? (type)0                        \
+                                              : pf__pow2ceil##suffix(x);       \
+    }                                                                          \
+    PF__BIT_FN int pf_bitwidth##suffix(type x) {                               \
+        return (int)PF__BITS(type) - pf_clz##suffix(x);                        \
+    }                                                                          \
+    PF__BIT_FN type pf_bitreverse##suffix(type x) {                            \
+        PF__B_BITREVERSE(type)                                                 \
+    } PF__BIT_FN type pf_rotl##suffix(type x, unsigned n) {                    \
+        PF__B_ROTL(type)                                                       \
+    } PF__BIT_FN type pf_rotr##suffix(type x, unsigned n) {                    \
+        PF__B_ROTR(type)                                                       \
+    }
 
 /* clang-format off */
 PF_IMPL_BITWISE(,     unsigned int,       UINT_MAX)
@@ -509,40 +522,50 @@ PF_END_DECLS
         #define PF_HAS_BITWISE_GENERIC 1
 
         /* Overloads; a signed argument is ambiguous between them. */
-        #define PF__BIT_OVERLOAD(op, uc, us, ui, ul, ull)                    \
-            PF__BIT_FN uc pf__g_##op(unsigned char x) { return pf_##op##8(x); } \
-            PF__BIT_FN us pf__g_##op(unsigned short x) {                     \
-                return pf_##op##16(x);                                       \
-            }                                                                \
-            PF__BIT_FN ui pf__g_##op(unsigned int x) { return pf_##op(x); }  \
-            PF__BIT_FN ul pf__g_##op(unsigned long x) { return pf_##op##l(x); } \
-            PF__BIT_FN ull pf__g_##op(unsigned long long x) {                \
-                return pf_##op##ll(x);                                       \
+        #define PF__BIT_OVERLOAD(op, uc, us, ui, ul, ull)                   \
+            PF__BIT_FN uc pf__g_##op(unsigned char x) {                     \
+                return pf_##op##8(x);                                       \
+            }                                                               \
+            PF__BIT_FN us pf__g_##op(unsigned short x) {                    \
+                return pf_##op##16(x);                                      \
+            }                                                               \
+            PF__BIT_FN ui pf__g_##op(unsigned int x) { return pf_##op(x); } \
+            PF__BIT_FN ul pf__g_##op(unsigned long x) {                     \
+                return pf_##op##l(x);                                       \
+            }                                                               \
+            PF__BIT_FN ull pf__g_##op(unsigned long long x) {               \
+                return pf_##op##ll(x);                                      \
             }
-        #define PF__BIT_OVERLOAD_INT(op) \
+        #define PF__BIT_OVERLOAD_INT(op)                  \
             PF__BIT_OVERLOAD(op, int, int, int, int, int)
-        #define PF__BIT_OVERLOAD_SAME(op)                                    \
-            PF__BIT_OVERLOAD(                                                \
-                op, unsigned char, unsigned short, unsigned int,             \
-                unsigned long, unsigned long long                            \
+        #define PF__BIT_OVERLOAD_SAME(op) \
+            PF__BIT_OVERLOAD(             \
+                op,                       \
+                unsigned char,            \
+                unsigned short,           \
+                unsigned int,             \
+                unsigned long,            \
+                unsigned long long        \
             )
-        #define PF__BIT_OVERLOAD_ROT(op)                                     \
+        #define PF__BIT_OVERLOAD_ROT(op)                                       \
             PF__BIT_FN unsigned char pf__g_##op(unsigned char x, unsigned n) { \
-                return pf_##op##8(x, n);                                     \
-            }                                                                \
-            PF__BIT_FN unsigned short pf__g_##op(unsigned short x, unsigned n) { \
-                return pf_##op##16(x, n);                                    \
-            }                                                                \
-            PF__BIT_FN unsigned int pf__g_##op(unsigned int x, unsigned n) { \
-                return pf_##op(x, n);                                        \
-            }                                                                \
+                return pf_##op##8(x, n);                                       \
+            }                                                                  \
+            PF__BIT_FN unsigned short pf__g_##op(                              \
+                unsigned short x, unsigned n                                   \
+            ) {                                                                \
+                return pf_##op##16(x, n);                                      \
+            }                                                                  \
+            PF__BIT_FN unsigned int pf__g_##op(unsigned int x, unsigned n) {   \
+                return pf_##op(x, n);                                          \
+            }                                                                  \
             PF__BIT_FN unsigned long pf__g_##op(unsigned long x, unsigned n) { \
-                return pf_##op##l(x, n);                                     \
-            }                                                                \
-            PF__BIT_FN unsigned long long pf__g_##op(                        \
-                unsigned long long x, unsigned n                             \
-            ) {                                                              \
-                return pf_##op##ll(x, n);                                    \
+                return pf_##op##l(x, n);                                       \
+            }                                                                  \
+            PF__BIT_FN unsigned long long pf__g_##op(                          \
+                unsigned long long x, unsigned n                               \
+            ) {                                                                \
+                return pf_##op##ll(x, n);                                      \
             }
 
 extern "C++" {
@@ -590,26 +613,36 @@ PF__BIT_OVERLOAD_ROT(rotr)
 /* Calling it with an argument does not compile, which is the point. */
 extern void pf__bitwise_argument_must_be_unsigned(void);
 
-        #define PF__BIT_IS(x, type) \
+        #define PF__BIT_IS(x, type)                           \
             __builtin_types_compatible_p(__typeof__(x), type)
-        #define PF__BIT_SELECT(x, uc, us, ui, ul, ull)                 \
-            __builtin_choose_expr(                                     \
-                PF__BIT_IS(x, unsigned char), uc,                      \
-            __builtin_choose_expr(                                     \
-                PF__BIT_IS(x, unsigned short), us,                     \
-            __builtin_choose_expr(                                     \
-                PF__BIT_IS(x, unsigned int), ui,                       \
-            __builtin_choose_expr(                                     \
-                PF__BIT_IS(x, unsigned long), ul,                      \
-            __builtin_choose_expr(                                     \
-                PF__BIT_IS(x, unsigned long long), ull,                \
-                pf__bitwise_argument_must_be_unsigned)))))
+        #define PF__BIT_SELECT(x, uc, us, ui, ul, ull)                \
+            __builtin_choose_expr(                                    \
+                PF__BIT_IS(x, unsigned char),                         \
+                uc,                                                   \
+                __builtin_choose_expr(                                \
+                    PF__BIT_IS(x, unsigned short),                    \
+                    us,                                               \
+                    __builtin_choose_expr(                            \
+                        PF__BIT_IS(x, unsigned int),                  \
+                        ui,                                           \
+                        __builtin_choose_expr(                        \
+                            PF__BIT_IS(x, unsigned long),             \
+                            ul,                                       \
+                            __builtin_choose_expr(                    \
+                                PF__BIT_IS(x, unsigned long long),    \
+                                ull,                                  \
+                                pf__bitwise_argument_must_be_unsigned \
+                            )                                         \
+                        )                                             \
+                    )                                                 \
+                )                                                     \
+            )
 
     #endif
 
     #ifndef __cplusplus
-        #define PF__BIT_GENERIC(op, x)                                   \
-            PF__BIT_SELECT(                                              \
+        #define PF__BIT_GENERIC(op, x)                                       \
+            PF__BIT_SELECT(                                                  \
                 x, pf_##op##8, pf_##op##16, pf_##op, pf_##op##l, pf_##op##ll \
             )
     #endif
@@ -640,9 +673,10 @@ extern void pf__bitwise_argument_must_be_unsigned(void);
 
 /* ---- Standard names --------------------------------------------------- */
 
-#if ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_BITWISE)) \
-     || defined(PF_STD_NAMES_BITWISE))                             \
-    && !defined(__cplusplus)
+#if (                                                            \
+    (defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_BITWISE)) \
+    || defined(PF_STD_NAMES_BITWISE)                             \
+) && !defined(__cplusplus)
 
     /* PF__FORCE_STD_NAMES_POLYFILL is for the tests only. */
     #if defined(__has_include) && !defined(PF__FORCE_STD_NAMES_POLYFILL)
@@ -673,48 +707,48 @@ extern void pf__bitwise_argument_must_be_unsigned(void);
             #endif
         #endif
 
-        #define PF__STDBIT_ONE(sfx, type, pfsfx)                              \
-            PF_INLINE unsigned int stdc_leading_zeros##sfx(type x) {         \
-                return (unsigned int)pf_clz##pfsfx(x);                       \
-            }                                                                \
-            PF_INLINE unsigned int stdc_leading_ones##sfx(type x) {          \
-                return (unsigned int)pf_clo##pfsfx(x);                       \
-            }                                                                \
-            PF_INLINE unsigned int stdc_trailing_zeros##sfx(type x) {        \
-                return (unsigned int)pf_ctz##pfsfx(x);                       \
-            }                                                                \
-            PF_INLINE unsigned int stdc_trailing_ones##sfx(type x) {         \
-                return (unsigned int)pf_cto##pfsfx(x);                       \
-            }                                                                \
-            PF_INLINE unsigned int stdc_first_leading_zero##sfx(type x) {    \
-                return (unsigned int)pf_flz##pfsfx(x);                       \
-            }                                                                \
-            PF_INLINE unsigned int stdc_first_leading_one##sfx(type x) {     \
-                return (unsigned int)pf_flo##pfsfx(x);                       \
-            }                                                                \
-            PF_INLINE unsigned int stdc_first_trailing_zero##sfx(type x) {   \
-                return (unsigned int)pf_ftz##pfsfx(x);                       \
-            }                                                                \
-            PF_INLINE unsigned int stdc_first_trailing_one##sfx(type x) {    \
-                return (unsigned int)pf_fto##pfsfx(x);                       \
-            }                                                                \
-            PF_INLINE unsigned int stdc_count_zeros##sfx(type x) {           \
-                return (unsigned int)pf_zerocount##pfsfx(x);                 \
-            }                                                                \
-            PF_INLINE unsigned int stdc_count_ones##sfx(type x) {            \
-                return (unsigned int)pf_popcount##pfsfx(x);                  \
-            }                                                                \
-            PF_INLINE bool stdc_has_single_bit##sfx(type x) {                \
-                return pf_ispow2##pfsfx(x) != 0;                             \
-            }                                                                \
-            PF_INLINE unsigned int stdc_bit_width##sfx(type x) {             \
-                return (unsigned int)pf_bitwidth##pfsfx(x);                  \
-            }                                                                \
-            PF_INLINE type stdc_bit_floor##sfx(type x) {                     \
-                return (type)pf_pow2floor##pfsfx(x);                         \
-            }                                                                \
-            PF_INLINE type stdc_bit_ceil##sfx(type x) {                      \
-                return x <= 1 ? (type)1 : (type)pf_pow2ceil##pfsfx(x);       \
+        #define PF__STDBIT_ONE(sfx, type, pfsfx)                           \
+            PF_INLINE unsigned int stdc_leading_zeros##sfx(type x) {       \
+                return (unsigned int)pf_clz##pfsfx(x);                     \
+            }                                                              \
+            PF_INLINE unsigned int stdc_leading_ones##sfx(type x) {        \
+                return (unsigned int)pf_clo##pfsfx(x);                     \
+            }                                                              \
+            PF_INLINE unsigned int stdc_trailing_zeros##sfx(type x) {      \
+                return (unsigned int)pf_ctz##pfsfx(x);                     \
+            }                                                              \
+            PF_INLINE unsigned int stdc_trailing_ones##sfx(type x) {       \
+                return (unsigned int)pf_cto##pfsfx(x);                     \
+            }                                                              \
+            PF_INLINE unsigned int stdc_first_leading_zero##sfx(type x) {  \
+                return (unsigned int)pf_flz##pfsfx(x);                     \
+            }                                                              \
+            PF_INLINE unsigned int stdc_first_leading_one##sfx(type x) {   \
+                return (unsigned int)pf_flo##pfsfx(x);                     \
+            }                                                              \
+            PF_INLINE unsigned int stdc_first_trailing_zero##sfx(type x) { \
+                return (unsigned int)pf_ftz##pfsfx(x);                     \
+            }                                                              \
+            PF_INLINE unsigned int stdc_first_trailing_one##sfx(type x) {  \
+                return (unsigned int)pf_fto##pfsfx(x);                     \
+            }                                                              \
+            PF_INLINE unsigned int stdc_count_zeros##sfx(type x) {         \
+                return (unsigned int)pf_zerocount##pfsfx(x);               \
+            }                                                              \
+            PF_INLINE unsigned int stdc_count_ones##sfx(type x) {          \
+                return (unsigned int)pf_popcount##pfsfx(x);                \
+            }                                                              \
+            PF_INLINE bool stdc_has_single_bit##sfx(type x) {              \
+                return pf_ispow2##pfsfx(x) != 0;                           \
+            }                                                              \
+            PF_INLINE unsigned int stdc_bit_width##sfx(type x) {           \
+                return (unsigned int)pf_bitwidth##pfsfx(x);                \
+            }                                                              \
+            PF_INLINE type stdc_bit_floor##sfx(type x) {                   \
+                return (type)pf_pow2floor##pfsfx(x);                       \
+            }                                                              \
+            PF_INLINE type stdc_bit_ceil##sfx(type x) {                    \
+                return x <= 1 ? (type)1 : (type)pf_pow2ceil##pfsfx(x);     \
             }
 
 PF__STDBIT_ONE(_uc, unsigned char, 8)
@@ -724,16 +758,22 @@ PF__STDBIT_ONE(_ul, unsigned long, l)
 PF__STDBIT_ONE(_ull, unsigned long long, ll)
 
         #if PF_HAS_BITWISE_GENERIC
-            #define PF__STDBIT_G(name, x) \
-                PF__BIT_SELECT(x, name##_uc, name##_us, name##_ui, name##_ul, name##_ull)(x)
+            #define PF__STDBIT_G(name, x)                                                  \
+                PF__BIT_SELECT(x, name##_uc, name##_us, name##_ui, name##_ul, name##_ull)( \
+                    x                                                                      \
+                )
             #define stdc_leading_zeros(x) PF__STDBIT_G(stdc_leading_zeros, x)
             #define stdc_leading_ones(x) PF__STDBIT_G(stdc_leading_ones, x)
             #define stdc_trailing_zeros(x) PF__STDBIT_G(stdc_trailing_zeros, x)
             #define stdc_trailing_ones(x) PF__STDBIT_G(stdc_trailing_ones, x)
-            #define stdc_first_leading_zero(x) PF__STDBIT_G(stdc_first_leading_zero, x)
-            #define stdc_first_leading_one(x) PF__STDBIT_G(stdc_first_leading_one, x)
-            #define stdc_first_trailing_zero(x) PF__STDBIT_G(stdc_first_trailing_zero, x)
-            #define stdc_first_trailing_one(x) PF__STDBIT_G(stdc_first_trailing_one, x)
+            #define stdc_first_leading_zero(x)           \
+                PF__STDBIT_G(stdc_first_leading_zero, x)
+            #define stdc_first_leading_one(x)           \
+                PF__STDBIT_G(stdc_first_leading_one, x)
+            #define stdc_first_trailing_zero(x)           \
+                PF__STDBIT_G(stdc_first_trailing_zero, x)
+            #define stdc_first_trailing_one(x)           \
+                PF__STDBIT_G(stdc_first_trailing_one, x)
             #define stdc_count_zeros(x) PF__STDBIT_G(stdc_count_zeros, x)
             #define stdc_count_ones(x) PF__STDBIT_G(stdc_count_ones, x)
             #define stdc_has_single_bit(x) PF__STDBIT_G(stdc_has_single_bit, x)

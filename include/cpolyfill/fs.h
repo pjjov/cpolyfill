@@ -313,9 +313,8 @@ PF_API int pf_lock_file(int fd, int op);
 PF_API ptrdiff_t pf_known_dir(pf_known_dir_t kind, char *buf, size_t size);
 PF_API ptrdiff_t pf_home_dir_of(const char *user, char *buf, size_t size);
 
-PF_API ptrdiff_t pf_path_join(
-    char *buf, size_t size, const char *a, const char *b
-);
+PF_API ptrdiff_t
+pf_path_join(char *buf, size_t size, const char *a, const char *b);
 PF_API ptrdiff_t pf_path_normalize(char *buf, size_t size, const char *path);
 PF_API const char *pf_path_basename(const char *path, size_t *len);
 PF_API const char *pf_path_dirname(const char *path, size_t *len);
@@ -332,71 +331,71 @@ PF_END_DECLS
 #if !defined(PF__FS_STD_NAMES)                                  \
     && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_FS)) \
         || defined(PF_STD_NAMES_FS))
-    #define PF__FS_STD_NAMES
+#define PF__FS_STD_NAMES
 
-    #ifdef PF__FORCE_STD_NAMES_POLYFILL
-        #define PF__FS_MAP(have) 1
-    #else
-        #define PF__FS_MAP(have) (PF_OS_WINDOWS || !(have))
-    #endif
+#ifdef PF__FORCE_STD_NAMES_POLYFILL
+    #define PF__FS_MAP(have) 1
+#else
+    #define PF__FS_MAP(have) (PF_OS_WINDOWS || !(have))
+#endif
 
-    #if PF_OS_WINDOWS
-        /* The CRT declares most of these in <direct.h> and <io.h>, with
+#if PF_OS_WINDOWS
+    /* The CRT declares most of these in <direct.h> and <io.h>, with
            other signatures (MinGW's mkdir takes one argument). */
-        #include <direct.h>
-        #include <io.h>
-        #include <stdio.h>
-        #undef mkdir
-        #define mkdir pf_mkdir
-        #undef rmdir
-        #define rmdir pf_rmdir
-        #undef unlink
-        #define unlink pf_unlink
-        #undef rename
-        #define rename pf_rename
-        #undef chdir
-        #define chdir pf_chdir
-        #undef getcwd
-        #define getcwd pf_getcwd
-        #undef access
-        #define access pf_access
-        #undef chmod
-        #define chmod pf_chmod
-        #undef F_OK
-        #define F_OK PF_F_OK
-        #undef R_OK
-        #define R_OK PF_R_OK
-        #undef W_OK
-        #define W_OK PF_W_OK
-        #undef X_OK
-        #define X_OK PF_X_OK
-    #endif
-    #if PF__FS_MAP(PF_CONFIG_HAVE_REALPATH)
-        #undef realpath
-        #define realpath pf_realpath
-    #endif
-    #if PF__FS_MAP(PF_CONFIG_HAVE_MKSTEMP)
-        #undef mkstemp
-        #define mkstemp pf_mkstemp
-    #endif
-    #if PF__FS_MAP(PF_CONFIG_HAVE_MKDTEMP)
-        #undef mkdtemp
-        #define mkdtemp pf_mkdtemp
-    #endif
-    #if PF__FS_MAP(PF_CONFIG_HAVE_SYMLINK)
-        #undef symlink
-        #define symlink pf_symlink
-    #endif
-    #if PF__FS_MAP(PF_CONFIG_HAVE_READLINK)
-        #undef readlink
-        #define readlink pf_readlink
-    #endif
-    #if PF__FS_MAP(PF_CONFIG_HAVE_LINK)
-        #undef link
-        #define link pf_link
-    #endif
-    #if PF__FS_MAP(PF_CONFIG_HAVE_TRUNCATE)
-        #undef truncate
-        #define truncate pf_truncate
-    #endif
+    #include <direct.h>
+    #include <io.h>
+    #include <stdio.h>
+    #undef mkdir
+    #define mkdir pf_mkdir
+    #undef rmdir
+    #define rmdir pf_rmdir
+    #undef unlink
+    #define unlink pf_unlink
+    #undef rename
+    #define rename pf_rename
+    #undef chdir
+    #define chdir pf_chdir
+    #undef getcwd
+    #define getcwd pf_getcwd
+    #undef access
+    #define access pf_access
+    #undef chmod
+    #define chmod pf_chmod
+    #undef F_OK
+    #define F_OK PF_F_OK
+    #undef R_OK
+    #define R_OK PF_R_OK
+    #undef W_OK
+    #define W_OK PF_W_OK
+    #undef X_OK
+    #define X_OK PF_X_OK
+#endif
+#if PF__FS_MAP(PF_CONFIG_HAVE_REALPATH)
+    #undef realpath
+    #define realpath pf_realpath
+#endif
+#if PF__FS_MAP(PF_CONFIG_HAVE_MKSTEMP)
+    #undef mkstemp
+    #define mkstemp pf_mkstemp
+#endif
+#if PF__FS_MAP(PF_CONFIG_HAVE_MKDTEMP)
+    #undef mkdtemp
+    #define mkdtemp pf_mkdtemp
+#endif
+#if PF__FS_MAP(PF_CONFIG_HAVE_SYMLINK)
+    #undef symlink
+    #define symlink pf_symlink
+#endif
+#if PF__FS_MAP(PF_CONFIG_HAVE_READLINK)
+    #undef readlink
+    #define readlink pf_readlink
+#endif
+#if PF__FS_MAP(PF_CONFIG_HAVE_LINK)
+    #undef link
+    #define link pf_link
+#endif
+#if PF__FS_MAP(PF_CONFIG_HAVE_TRUNCATE)
+    #undef truncate
+    #define truncate pf_truncate
+#endif
 #endif

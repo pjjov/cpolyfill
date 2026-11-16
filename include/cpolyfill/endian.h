@@ -70,22 +70,22 @@
     #define PF__ENDIAN_FN PF_INLINE
 #endif
 
-#define PF_BSWAP16(c)                                          \
-    ((uint16_t)((((uint16_t)(c) & 0xFFu) << 8)                 \
+#define PF_BSWAP16(c)                              \
+    ((uint16_t)((((uint16_t)(c) & 0xFFu) << 8)     \
                 | (((uint16_t)(c) >> 8) & 0xFFu)))
-#define PF_BSWAP32(c)                                          \
-    ((uint32_t)((((uint32_t)(c) & UINT32_C(0x000000FF)) << 24) \
-                | (((uint32_t)(c) & UINT32_C(0x0000FF00)) << 8) \
-                | (((uint32_t)(c) & UINT32_C(0x00FF0000)) >> 8) \
+#define PF_BSWAP32(c)                                              \
+    ((uint32_t)((((uint32_t)(c) & UINT32_C(0x000000FF)) << 24)     \
+                | (((uint32_t)(c) & UINT32_C(0x0000FF00)) << 8)    \
+                | (((uint32_t)(c) & UINT32_C(0x00FF0000)) >> 8)    \
                 | (((uint32_t)(c) & UINT32_C(0xFF000000)) >> 24)))
-#define PF_BSWAP64(c)                                                   \
-    ((uint64_t)((((uint64_t)(c) & UINT64_C(0x00000000000000FF)) << 56)  \
-                | (((uint64_t)(c) & UINT64_C(0x000000000000FF00)) << 40) \
-                | (((uint64_t)(c) & UINT64_C(0x0000000000FF0000)) << 24) \
-                | (((uint64_t)(c) & UINT64_C(0x00000000FF000000)) << 8)  \
-                | (((uint64_t)(c) & UINT64_C(0x000000FF00000000)) >> 8)  \
-                | (((uint64_t)(c) & UINT64_C(0x0000FF0000000000)) >> 24) \
-                | (((uint64_t)(c) & UINT64_C(0x00FF000000000000)) >> 40) \
+#define PF_BSWAP64(c)                                                      \
+    ((uint64_t)((((uint64_t)(c) & UINT64_C(0x00000000000000FF)) << 56)     \
+                | (((uint64_t)(c) & UINT64_C(0x000000000000FF00)) << 40)   \
+                | (((uint64_t)(c) & UINT64_C(0x0000000000FF0000)) << 24)   \
+                | (((uint64_t)(c) & UINT64_C(0x00000000FF000000)) << 8)    \
+                | (((uint64_t)(c) & UINT64_C(0x000000FF00000000)) >> 8)    \
+                | (((uint64_t)(c) & UINT64_C(0x0000FF0000000000)) >> 24)   \
+                | (((uint64_t)(c) & UINT64_C(0x00FF000000000000)) >> 40)   \
                 | (((uint64_t)(c) & UINT64_C(0xFF00000000000000)) >> 56)))
 
 PF_BEGIN_DECLS
@@ -128,38 +128,38 @@ PF__ENDIAN_FN uint64_t pf_bswap64(uint64_t x) {
     #define PF__ENDIAN_LE(bits, x) (x)
 #endif
 
-#define PF__ENDIAN_CONVERT(bits)                                       \
-    PF__ENDIAN_FN uint##bits##_t pf_htobe##bits(uint##bits##_t x) {    \
-        return PF__ENDIAN_BE(bits, x);                                 \
-    }                                                                  \
-    PF__ENDIAN_FN uint##bits##_t pf_be##bits##toh(uint##bits##_t x) {  \
-        return PF__ENDIAN_BE(bits, x);                                 \
-    }                                                                  \
-    PF__ENDIAN_FN uint##bits##_t pf_htole##bits(uint##bits##_t x) {    \
-        return PF__ENDIAN_LE(bits, x);                                 \
-    }                                                                  \
-    PF__ENDIAN_FN uint##bits##_t pf_le##bits##toh(uint##bits##_t x) {  \
-        return PF__ENDIAN_LE(bits, x);                                 \
-    }                                                                  \
-    PF_INLINE uint##bits##_t pf_load##bits(const void *p) {            \
-        uint##bits##_t x;                                              \
-        memcpy(&x, p, sizeof(x));                                      \
-        return x;                                                      \
-    }                                                                  \
-    PF_INLINE uint##bits##_t pf_load_be##bits(const void *p) {         \
-        return pf_be##bits##toh(pf_load##bits(p));                     \
-    }                                                                  \
-    PF_INLINE uint##bits##_t pf_load_le##bits(const void *p) {         \
-        return pf_le##bits##toh(pf_load##bits(p));                     \
-    }                                                                  \
-    PF_INLINE void pf_store##bits(void *p, uint##bits##_t x) {         \
-        memcpy(p, &x, sizeof(x));                                      \
-    }                                                                  \
-    PF_INLINE void pf_store_be##bits(void *p, uint##bits##_t x) {      \
-        pf_store##bits(p, pf_htobe##bits(x));                          \
-    }                                                                  \
-    PF_INLINE void pf_store_le##bits(void *p, uint##bits##_t x) {      \
-        pf_store##bits(p, pf_htole##bits(x));                          \
+#define PF__ENDIAN_CONVERT(bits)                                      \
+    PF__ENDIAN_FN uint##bits##_t pf_htobe##bits(uint##bits##_t x) {   \
+        return PF__ENDIAN_BE(bits, x);                                \
+    }                                                                 \
+    PF__ENDIAN_FN uint##bits##_t pf_be##bits##toh(uint##bits##_t x) { \
+        return PF__ENDIAN_BE(bits, x);                                \
+    }                                                                 \
+    PF__ENDIAN_FN uint##bits##_t pf_htole##bits(uint##bits##_t x) {   \
+        return PF__ENDIAN_LE(bits, x);                                \
+    }                                                                 \
+    PF__ENDIAN_FN uint##bits##_t pf_le##bits##toh(uint##bits##_t x) { \
+        return PF__ENDIAN_LE(bits, x);                                \
+    }                                                                 \
+    PF_INLINE uint##bits##_t pf_load##bits(const void *p) {           \
+        uint##bits##_t x;                                             \
+        memcpy(&x, p, sizeof(x));                                     \
+        return x;                                                     \
+    }                                                                 \
+    PF_INLINE uint##bits##_t pf_load_be##bits(const void *p) {        \
+        return pf_be##bits##toh(pf_load##bits(p));                    \
+    }                                                                 \
+    PF_INLINE uint##bits##_t pf_load_le##bits(const void *p) {        \
+        return pf_le##bits##toh(pf_load##bits(p));                    \
+    }                                                                 \
+    PF_INLINE void pf_store##bits(void *p, uint##bits##_t x) {        \
+        memcpy(p, &x, sizeof(x));                                     \
+    }                                                                 \
+    PF_INLINE void pf_store_be##bits(void *p, uint##bits##_t x) {     \
+        pf_store##bits(p, pf_htobe##bits(x));                         \
+    }                                                                 \
+    PF_INLINE void pf_store_le##bits(void *p, uint##bits##_t x) {     \
+        pf_store##bits(p, pf_htole##bits(x));                         \
     }
 
 PF__ENDIAN_CONVERT(16)

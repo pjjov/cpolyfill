@@ -23,10 +23,10 @@
 
 #include <cpolyfill/platform.h>
 
-#define PF_VERSION_NUMBER                                               \
+#define PF_VERSION_NUMBER                                                  \
     (PF_VERSION_MAJOR * 10000 + PF_VERSION_MINOR * 100 + PF_VERSION_PATCH)
 
-#define PF_VERSION_PREREQ(major, minor)                       \
+#define PF_VERSION_PREREQ(major, minor)                    \
     (PF_VERSION_NUMBER >= (major) * 10000 + (minor) * 100)
 
 PF_BEGIN_DECLS

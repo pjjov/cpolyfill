@@ -80,7 +80,7 @@ typedef struct pf_pipe_server_t {
 
 typedef struct pf_pipe_t {
     /* Private. */
-    intptr_t pf__h;        /* HANDLE (Windows) or socket descriptor, -1 */
+    intptr_t pf__h;          /* HANDLE (Windows) or socket descriptor, -1 */
     unsigned pf__overlapped; /* Windows: opened for overlapped I/O */
 } pf_pipe_t;
 

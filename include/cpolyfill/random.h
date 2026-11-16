@@ -94,28 +94,28 @@ PF_END_DECLS
 #if !defined(PF__RANDOM_STD_NAMES)                                  \
     && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_RANDOM)) \
         || defined(PF_STD_NAMES_RANDOM))
-    #define PF__RANDOM_STD_NAMES
+#define PF__RANDOM_STD_NAMES
 
-    #ifdef PF__FORCE_STD_NAMES_POLYFILL
-        #define PF__RANDOM_MAP(have) 1
-    #else
-        #define PF__RANDOM_MAP(have) (!(have))
-    #endif
+#ifdef PF__FORCE_STD_NAMES_POLYFILL
+    #define PF__RANDOM_MAP(have) 1
+#else
+    #define PF__RANDOM_MAP(have) (!(have))
+#endif
 
-    #if PF__RANDOM_MAP(PF_CONFIG_HAVE_GETENTROPY)
-        #undef getentropy
-        #define getentropy pf_getentropy
-    #endif
-    #if PF__RANDOM_MAP(PF_CONFIG_HAVE_ARC4RANDOM)
-        #undef arc4random
-        #define arc4random pf_arc4random
-    #endif
-    #if PF__RANDOM_MAP(PF_CONFIG_HAVE_ARC4RANDOM_BUF)
-        #undef arc4random_buf
-        #define arc4random_buf pf_arc4random_buf
-    #endif
-    #if PF__RANDOM_MAP(PF_CONFIG_HAVE_ARC4RANDOM_UNIFORM)
-        #undef arc4random_uniform
-        #define arc4random_uniform pf_arc4random_uniform
-    #endif
+#if PF__RANDOM_MAP(PF_CONFIG_HAVE_GETENTROPY)
+    #undef getentropy
+    #define getentropy pf_getentropy
+#endif
+#if PF__RANDOM_MAP(PF_CONFIG_HAVE_ARC4RANDOM)
+    #undef arc4random
+    #define arc4random pf_arc4random
+#endif
+#if PF__RANDOM_MAP(PF_CONFIG_HAVE_ARC4RANDOM_BUF)
+    #undef arc4random_buf
+    #define arc4random_buf pf_arc4random_buf
+#endif
+#if PF__RANDOM_MAP(PF_CONFIG_HAVE_ARC4RANDOM_UNIFORM)
+    #undef arc4random_uniform
+    #define arc4random_uniform pf_arc4random_uniform
+#endif
 #endif

@@ -84,22 +84,22 @@ PF_END_DECLS
 
 /* ---- Standard names --------------------------------------------------- */
 
-#if !defined(PF__DLFCN_STD_NAMES)                                    \
-    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_DLFCN))   \
+#if !defined(PF__DLFCN_STD_NAMES)                                  \
+    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_DLFCN)) \
         || defined(PF_STD_NAMES_DLFCN))
-    #define PF__DLFCN_STD_NAMES
+#define PF__DLFCN_STD_NAMES
 
-    #if !PF_CONFIG_HAVE_DLFCN_H
-        #define RTLD_LAZY PF_RTLD_LAZY
-        #define RTLD_NOW PF_RTLD_NOW
-        #define RTLD_LOCAL PF_RTLD_LOCAL
-        #define RTLD_GLOBAL PF_RTLD_GLOBAL
-        #define RTLD_DEFAULT PF_RTLD_DEFAULT
+#if !PF_CONFIG_HAVE_DLFCN_H
+    #define RTLD_LAZY PF_RTLD_LAZY
+    #define RTLD_NOW PF_RTLD_NOW
+    #define RTLD_LOCAL PF_RTLD_LOCAL
+    #define RTLD_GLOBAL PF_RTLD_GLOBAL
+    #define RTLD_DEFAULT PF_RTLD_DEFAULT
 typedef pf_dl_info_t Dl_info;
-        #define dlopen pf_dlopen
-        #define dlsym pf_dlsym
-        #define dlclose pf_dlclose
-        #define dlerror pf_dlerror
-        #define dladdr pf_dladdr
-    #endif
+    #define dlopen pf_dlopen
+    #define dlsym pf_dlsym
+    #define dlclose pf_dlclose
+    #define dlerror pf_dlerror
+    #define dladdr pf_dladdr
+#endif
 #endif

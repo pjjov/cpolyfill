@@ -89,11 +89,11 @@
 #endif
 
 #if PF__OVF_BUILTIN
-    #define PF__OVF_ADD(type, utype, min, max) \
+    #define PF__OVF_ADD(type, utype, min, max)    \
         return __builtin_add_overflow(a, b, out);
-    #define PF__OVF_SUB(type, utype, min, max) \
+    #define PF__OVF_SUB(type, utype, min, max)    \
         return __builtin_sub_overflow(a, b, out);
-    #define PF__OVF_MUL(type, utype, min, max) \
+    #define PF__OVF_MUL(type, utype, min, max)    \
         return __builtin_mul_overflow(a, b, out);
     #define PF__OVF_UADD PF__OVF_ADD
     #define PF__OVF_USUB PF__OVF_SUB
@@ -109,8 +109,8 @@
     /* The wrapped result is computed in unsigned arithmetic, where it is
        defined. `0u +` keeps types narrower than int from being promoted to
        (signed) int, where a multiplication could overflow. */
-    #define PF__OVF_WRAP(type, utype, op) \
-        (*out = (type)(utype)((0u + (utype)a) op (utype)b))
+    #define PF__OVF_WRAP(type, utype, op)                   \
+        (*out = (type)(utype)((0u + (utype)a) op(utype) b))
 
     #define PF__OVF_UADD(type, utype, min, max) \
         PF__OVF_WRAP(type, utype, +);           \
@@ -122,88 +122,81 @@
         PF__OVF_WRAP(type, utype, *);           \
         return a != 0 && *out / a != b;
 
-    #define PF__OVF_ADD(type, utype, min, max)                     \
-        PF__OVF_WRAP(type, utype, +);                              \
+    #define PF__OVF_ADD(type, utype, min, max)                       \
+        PF__OVF_WRAP(type, utype, +);                                \
         return (b > 0 && a > (max) - b) || (b < 0 && a < (min) - b);
-    #define PF__OVF_SUB(type, utype, min, max)                     \
-        PF__OVF_WRAP(type, utype, -);                              \
+    #define PF__OVF_SUB(type, utype, min, max)                       \
+        PF__OVF_WRAP(type, utype, -);                                \
         return (b < 0 && a > (max) + b) || (b > 0 && a < (min) + b);
-    #define PF__OVF_MUL(type, utype, min, max)  \
-        PF__OVF_WRAP(type, utype, *);           \
-        if (a > 0)                              \
-            return b > 0 ? a > (max) / b        \
-                         : b < (min) / a;       \
-        return b > 0 ? a < (min) / b            \
-                     : a != 0 && b < (max) / a;
+    #define PF__OVF_MUL(type, utype, min, max)                  \
+        PF__OVF_WRAP(type, utype, *);                           \
+        if (a > 0)                                              \
+            return b > 0 ? a > (max) / b : b < (min) / a;       \
+        return b > 0 ? a < (min) / b : a != 0 && b < (max) / a;
 #endif
 
 /* ---- Function generators ---------------------------------------------- */
 
-#define PF__OVF_CHECKED(name, type)                                   \
-    PF_INLINE type pf_checked_##name(type a, type b) {                \
-        type r = 0;                                                   \
-        bool overflow = pf_overflow_##name(a, b, &r);                 \
-        PF_ASSERT_ALWAYS_MSG(!overflow, "pf_checked_" #name ": integer " \
-                                        "overflow");                  \
-        return r;                                                     \
+#define PF__OVF_CHECKED(name, type)                    \
+    PF_INLINE type pf_checked_##name(type a, type b) { \
+        type r = 0;                                    \
+        bool overflow = pf_overflow_##name(a, b, &r);  \
+        PF_ASSERT_ALWAYS_MSG(                          \
+            !overflow,                                 \
+            "pf_checked_" #name ": integer "           \
+            "overflow"                                 \
+        );                                             \
+        return r;                                      \
     }
 
-#define PF__OVF_SIGNED(suffix, type, utype, min, max)                       \
-    PF_INLINE bool pf_overflow_sadd##suffix(type a, type b, type *out) {    \
-        PF__OVF_ADD(type, utype, min, max)                                  \
-    }                                                                       \
-    PF_INLINE bool pf_overflow_ssub##suffix(type a, type b, type *out) {    \
-        PF__OVF_SUB(type, utype, min, max)                                  \
-    }                                                                       \
-    PF_INLINE bool pf_overflow_smul##suffix(type a, type b, type *out) {    \
-        PF__OVF_MUL(type, utype, min, max)                                  \
-    }                                                                       \
-    PF__OVF_CHECKED(sadd##suffix, type)                                     \
-    PF__OVF_CHECKED(ssub##suffix, type)                                     \
-    PF__OVF_CHECKED(smul##suffix, type)                                     \
-    PF_INLINE type pf_saturated_sadd##suffix(type a, type b) {              \
-        type r = 0;                                                         \
-        if (pf_overflow_sadd##suffix(a, b, &r))                             \
-            return b > 0 ? (max) : (min);                                   \
-        return r;                                                           \
-    }                                                                       \
-    PF_INLINE type pf_saturated_ssub##suffix(type a, type b) {              \
-        type r = 0;                                                         \
-        if (pf_overflow_ssub##suffix(a, b, &r))                             \
-            return b < 0 ? (max) : (min);                                   \
-        return r;                                                           \
-    }                                                                       \
-    PF_INLINE type pf_saturated_smul##suffix(type a, type b) {              \
-        type r = 0;                                                         \
-        if (pf_overflow_smul##suffix(a, b, &r))                             \
-            return (a < 0) == (b < 0) ? (max) : (min);                      \
-        return r;                                                           \
+#define PF__OVF_SIGNED(suffix, type, utype, min, max)                         \
+    PF_INLINE bool pf_overflow_sadd##suffix(type a, type b, type *out) {      \
+        PF__OVF_ADD(type, utype, min, max)                                    \
+    } PF_INLINE bool pf_overflow_ssub##suffix(type a, type b, type *out) {    \
+        PF__OVF_SUB(type, utype, min, max)                                    \
+    } PF_INLINE bool pf_overflow_smul##suffix(type a, type b, type *out) {    \
+        PF__OVF_MUL(type, utype, min, max)                                    \
+    } PF__OVF_CHECKED(sadd##suffix, type) PF__OVF_CHECKED(ssub##suffix, type) \
+        PF__OVF_CHECKED(smul##suffix, type)                                   \
+            PF_INLINE type pf_saturated_sadd##suffix(type a, type b) {        \
+        type r = 0;                                                           \
+        if (pf_overflow_sadd##suffix(a, b, &r))                               \
+            return b > 0 ? (max) : (min);                                     \
+        return r;                                                             \
+    }                                                                         \
+    PF_INLINE type pf_saturated_ssub##suffix(type a, type b) {                \
+        type r = 0;                                                           \
+        if (pf_overflow_ssub##suffix(a, b, &r))                               \
+            return b < 0 ? (max) : (min);                                     \
+        return r;                                                             \
+    }                                                                         \
+    PF_INLINE type pf_saturated_smul##suffix(type a, type b) {                \
+        type r = 0;                                                           \
+        if (pf_overflow_smul##suffix(a, b, &r))                               \
+            return (a < 0) == (b < 0) ? (max) : (min);                        \
+        return r;                                                             \
     }
 
-#define PF__OVF_UNSIGNED(suffix, type, max)                                 \
-    PF_INLINE bool pf_overflow_uadd##suffix(type a, type b, type *out) {    \
-        PF__OVF_UADD(type, type, 0, max)                                    \
-    }                                                                       \
-    PF_INLINE bool pf_overflow_usub##suffix(type a, type b, type *out) {    \
-        PF__OVF_USUB(type, type, 0, max)                                    \
-    }                                                                       \
-    PF_INLINE bool pf_overflow_umul##suffix(type a, type b, type *out) {    \
-        PF__OVF_UMUL(type, type, 0, max)                                    \
-    }                                                                       \
-    PF__OVF_CHECKED(uadd##suffix, type)                                     \
-    PF__OVF_CHECKED(usub##suffix, type)                                     \
-    PF__OVF_CHECKED(umul##suffix, type)                                     \
-    PF_INLINE type pf_saturated_uadd##suffix(type a, type b) {              \
-        type r = 0;                                                         \
-        return pf_overflow_uadd##suffix(a, b, &r) ? (type)(max) : r;        \
-    }                                                                       \
-    PF_INLINE type pf_saturated_usub##suffix(type a, type b) {              \
-        type r = 0;                                                         \
-        return pf_overflow_usub##suffix(a, b, &r) ? (type)0 : r;            \
-    }                                                                       \
-    PF_INLINE type pf_saturated_umul##suffix(type a, type b) {              \
-        type r = 0;                                                         \
-        return pf_overflow_umul##suffix(a, b, &r) ? (type)(max) : r;        \
+#define PF__OVF_UNSIGNED(suffix, type, max)                                   \
+    PF_INLINE bool pf_overflow_uadd##suffix(type a, type b, type *out) {      \
+        PF__OVF_UADD(type, type, 0, max)                                      \
+    } PF_INLINE bool pf_overflow_usub##suffix(type a, type b, type *out) {    \
+        PF__OVF_USUB(type, type, 0, max)                                      \
+    } PF_INLINE bool pf_overflow_umul##suffix(type a, type b, type *out) {    \
+        PF__OVF_UMUL(type, type, 0, max)                                      \
+    } PF__OVF_CHECKED(uadd##suffix, type) PF__OVF_CHECKED(usub##suffix, type) \
+        PF__OVF_CHECKED(umul##suffix, type)                                   \
+            PF_INLINE type pf_saturated_uadd##suffix(type a, type b) {        \
+        type r = 0;                                                           \
+        return pf_overflow_uadd##suffix(a, b, &r) ? (type)(max) : r;          \
+    }                                                                         \
+    PF_INLINE type pf_saturated_usub##suffix(type a, type b) {                \
+        type r = 0;                                                           \
+        return pf_overflow_usub##suffix(a, b, &r) ? (type)0 : r;              \
+    }                                                                         \
+    PF_INLINE type pf_saturated_umul##suffix(type a, type b) {                \
+        type r = 0;                                                           \
+        return pf_overflow_umul##suffix(a, b, &r) ? (type)(max) : r;          \
     }
 
 PF_BEGIN_DECLS
@@ -252,9 +245,10 @@ PF_END_DECLS
 
 /* ---- Standard names --------------------------------------------------- */
 
-#if ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_OVERFLOW)) \
-     || defined(PF_STD_NAMES_OVERFLOW))                             \
-    && !defined(__cplusplus)
+#if (                                                             \
+    (defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_OVERFLOW)) \
+    || defined(PF_STD_NAMES_OVERFLOW)                             \
+) && !defined(__cplusplus)
 
     /* PF__FORCE_STD_NAMES_POLYFILL is for the tests only. */
     #if defined(__has_include) && !defined(PF__FORCE_STD_NAMES_POLYFILL)

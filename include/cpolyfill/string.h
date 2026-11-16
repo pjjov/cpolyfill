@@ -85,9 +85,7 @@ PF_API int pf_strncasecmp(const char *a, const char *b, size_t n);
 PF_API char *pf_strtok_r(char *s, const char *delim, char **save);
 PF_API char *pf_strsep(char **sp, const char *delim);
 PF_API char *pf_strchrnul(const char *s, int c);
-PF_API void *pf_memmem(
-    const void *hay, size_t n, const void *needle, size_t m
-);
+PF_API void *pf_memmem(const void *hay, size_t n, const void *needle, size_t m);
 PF_API void *pf_memrchr(const void *s, int c, size_t n);
 PF_API void *pf_mempcpy(void *dst, const void *src, size_t n);
 PF_API char *pf_stpcpy(char *dst, const char *src);
@@ -104,98 +102,98 @@ PF_END_DECLS
 
 /* ---- Standard names --------------------------------------------------- */
 
-#if !defined(PF__STRING_STD_NAMES)                                    \
-    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_STRING))   \
+#if !defined(PF__STRING_STD_NAMES)                                  \
+    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_STRING)) \
         || defined(PF_STD_NAMES_STRING))
-    #define PF__STRING_STD_NAMES
+#define PF__STRING_STD_NAMES
 
-    /* The system declarations come first, so a later include of these
+/* The system declarations come first, so a later include of these
        headers does not redeclare a mapped name. */
-    #include <stdio.h>
-    #if PF_CONFIG_HAVE_STRINGS_H
-        #include <strings.h>
-    #endif
+#include <stdio.h>
+#if PF_CONFIG_HAVE_STRINGS_H
+    #include <strings.h>
+#endif
 
-    #ifdef PF__FORCE_STD_NAMES_POLYFILL
-        #define PF__STR_MAP(have) 1
-    #else
-        #define PF__STR_MAP(have) (!(have))
-    #endif
+#ifdef PF__FORCE_STD_NAMES_POLYFILL
+    #define PF__STR_MAP(have) 1
+#else
+    #define PF__STR_MAP(have) (!(have))
+#endif
 
-    #if PF__STR_MAP(PF_CONFIG_HAVE_STRDUP)
-        #undef strdup
-        #define strdup pf_strdup
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_STRNDUP)
-        #undef strndup
-        #define strndup pf_strndup
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_STRNLEN)
-        #undef strnlen
-        #define strnlen pf_strnlen
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_STRLCPY)
-        #undef strlcpy
-        #define strlcpy pf_strlcpy
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_STRLCAT)
-        #undef strlcat
-        #define strlcat pf_strlcat
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_STRCASECMP)
-        #undef strcasecmp
-        #define strcasecmp pf_strcasecmp
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_STRNCASECMP)
-        #undef strncasecmp
-        #define strncasecmp pf_strncasecmp
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_STRTOK_R)
-        #undef strtok_r
-        #define strtok_r pf_strtok_r
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_STRSEP)
-        #undef strsep
-        #define strsep pf_strsep
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_STRCHRNUL)
-        #undef strchrnul
-        #define strchrnul pf_strchrnul
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_MEMMEM)
-        #undef memmem
-        #define memmem pf_memmem
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_MEMRCHR)
-        #undef memrchr
-        #define memrchr pf_memrchr
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_MEMPCPY)
-        #undef mempcpy
-        #define mempcpy pf_mempcpy
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_STPCPY)
-        #undef stpcpy
-        #define stpcpy pf_stpcpy
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_STPNCPY)
-        #undef stpncpy
-        #define stpncpy pf_stpncpy
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_MEMCCPY)
-        #undef memccpy
-        #define memccpy pf_memccpy
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_MEMSET_EXPLICIT)
-        #undef memset_explicit
-        #define memset_explicit pf_memset_explicit
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_ASPRINTF)
-        #undef asprintf
-        #define asprintf pf_asprintf
-    #endif
-    #if PF__STR_MAP(PF_CONFIG_HAVE_VASPRINTF)
-        #undef vasprintf
-        #define vasprintf pf_vasprintf
-    #endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_STRDUP)
+    #undef strdup
+    #define strdup pf_strdup
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_STRNDUP)
+    #undef strndup
+    #define strndup pf_strndup
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_STRNLEN)
+    #undef strnlen
+    #define strnlen pf_strnlen
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_STRLCPY)
+    #undef strlcpy
+    #define strlcpy pf_strlcpy
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_STRLCAT)
+    #undef strlcat
+    #define strlcat pf_strlcat
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_STRCASECMP)
+    #undef strcasecmp
+    #define strcasecmp pf_strcasecmp
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_STRNCASECMP)
+    #undef strncasecmp
+    #define strncasecmp pf_strncasecmp
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_STRTOK_R)
+    #undef strtok_r
+    #define strtok_r pf_strtok_r
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_STRSEP)
+    #undef strsep
+    #define strsep pf_strsep
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_STRCHRNUL)
+    #undef strchrnul
+    #define strchrnul pf_strchrnul
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_MEMMEM)
+    #undef memmem
+    #define memmem pf_memmem
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_MEMRCHR)
+    #undef memrchr
+    #define memrchr pf_memrchr
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_MEMPCPY)
+    #undef mempcpy
+    #define mempcpy pf_mempcpy
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_STPCPY)
+    #undef stpcpy
+    #define stpcpy pf_stpcpy
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_STPNCPY)
+    #undef stpncpy
+    #define stpncpy pf_stpncpy
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_MEMCCPY)
+    #undef memccpy
+    #define memccpy pf_memccpy
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_MEMSET_EXPLICIT)
+    #undef memset_explicit
+    #define memset_explicit pf_memset_explicit
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_ASPRINTF)
+    #undef asprintf
+    #define asprintf pf_asprintf
+#endif
+#if PF__STR_MAP(PF_CONFIG_HAVE_VASPRINTF)
+    #undef vasprintf
+    #define vasprintf pf_vasprintf
+#endif
 #endif

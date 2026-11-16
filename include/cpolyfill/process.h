@@ -214,16 +214,16 @@ PF_END_DECLS
 #if !defined(PF__PROCESS_STD_NAMES)                                  \
     && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_PROCESS)) \
         || defined(PF_STD_NAMES_PROCESS))
-    #define PF__PROCESS_STD_NAMES
+#define PF__PROCESS_STD_NAMES
 
-    #if PF_OS_WINDOWS
-        #undef getpid
-        #define getpid pf_getpid
-        #undef getppid
-        #define getppid pf_getppid
-        #undef popen
-        #define popen pf_popen
-        #undef pclose
-        #define pclose pf_pclose
-    #endif
+#if PF_OS_WINDOWS
+    #undef getpid
+    #define getpid pf_getpid
+    #undef getppid
+    #define getppid pf_getppid
+    #undef popen
+    #define popen pf_popen
+    #undef pclose
+    #define pclose pf_pclose
+#endif
 #endif

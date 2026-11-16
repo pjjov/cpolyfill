@@ -206,7 +206,7 @@
     #define PF_OS_WASI 0
 #endif
 
-#if !PF_OS_WINDOWS && !PF_OS_WASI                                          \
+#if !PF_OS_WINDOWS && !PF_OS_WASI                                           \
     && (defined(__unix__) || defined(__unix) || PF_OS_APPLE || PF_OS_CYGWIN \
         || PF_OS_HAIKU || PF_OS_EMSCRIPTEN)
     #define PF_OS_POSIX 1
@@ -218,7 +218,7 @@
 
 #ifdef __clang__
     #define PF_CC_CLANG 1
-    #define PF_CLANG_VERSION                                               \
+    #define PF_CLANG_VERSION \
         (__clang_major__ * 10000 + __clang_minor__ * 100 + __clang_patchlevel__)
 #else
     #define PF_CC_CLANG 0
@@ -252,7 +252,7 @@
 #if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER) \
     && !defined(__INTEL_LLVM_COMPILER)
     #define PF_CC_GCC 1
-    #define PF_GCC_VERSION                                         \
+    #define PF_GCC_VERSION                                              \
         (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 #else
     #define PF_CC_GCC 0
@@ -271,9 +271,9 @@
     #define PF_CC_MINGW 0
 #endif
 
-#define PF_GCC_PREREQ(major, minor)                                   \
+#define PF_GCC_PREREQ(major, minor)                     \
     (PF_GCC_VERSION >= (major) * 10000 + (minor) * 100)
-#define PF_CLANG_PREREQ(major, minor)                                 \
+#define PF_CLANG_PREREQ(major, minor)                     \
     (PF_CLANG_VERSION >= (major) * 10000 + (minor) * 100)
 #define PF_MSVC_PREREQ(version) (PF_MSVC_VERSION >= (version))
 
@@ -322,9 +322,10 @@
     #define PF_ARCH_PPC64 0
 #endif
 
-#if (defined(__powerpc__) || defined(__ppc__) || defined(__PPC__) \
-     || defined(_M_PPC))                                          \
-    && !PF_ARCH_PPC64
+#if (                                                            \
+    defined(__powerpc__) || defined(__ppc__) || defined(__PPC__) \
+    || defined(_M_PPC)                                           \
+) && !PF_ARCH_PPC64
     #define PF_ARCH_PPC 1
 #else
     #define PF_ARCH_PPC 0
@@ -384,8 +385,8 @@
     || defined(__AARCH64EL__) || defined(__MIPSEL__)
     #define PF_ENDIAN_LITTLE 1
     #define PF_ENDIAN_BIG 0
-#elif defined(__BIG_ENDIAN__) || defined(__ARMEB__) \
-    || defined(__AARCH64EB__) || defined(__MIPSEB__)
+#elif defined(__BIG_ENDIAN__) || defined(__ARMEB__) || defined(__AARCH64EB__) \
+    || defined(__MIPSEB__)
     #define PF_ENDIAN_LITTLE 0
     #define PF_ENDIAN_BIG 1
 #else

@@ -107,28 +107,28 @@ PF_END_DECLS
 
 /* ---- Standard names --------------------------------------------------- */
 
-#if !defined(PF__DIRENT_STD_NAMES)                                      \
-    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_DIRENT))     \
+#if !defined(PF__DIRENT_STD_NAMES)                                  \
+    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_DIRENT)) \
         || defined(PF_STD_NAMES_DIRENT))
-    #define PF__DIRENT_STD_NAMES
+#define PF__DIRENT_STD_NAMES
 
-    #if !PF_CONFIG_HAVE_DIRENT_H
+#if !PF_CONFIG_HAVE_DIRENT_H
 typedef pf_dir_t DIR;
-        #define dirent pf_dirent
-        #define opendir pf_opendir
-        #define readdir pf_readdir
-        #define rewinddir pf_rewinddir
-        #define closedir pf_closedir
-        #define DT_UNKNOWN PF_DT_UNKNOWN
-        #define DT_FIFO PF_DT_FIFO
-        #define DT_CHR PF_DT_CHR
-        #define DT_DIR PF_DT_DIR
-        #define DT_BLK PF_DT_BLK
-        #define DT_REG PF_DT_REG
-        #define DT_LNK PF_DT_LNK
-        #define DT_SOCK PF_DT_SOCK
-        #ifndef NAME_MAX
-            #define NAME_MAX PF_NAME_MAX
-        #endif
+    #define dirent pf_dirent
+    #define opendir pf_opendir
+    #define readdir pf_readdir
+    #define rewinddir pf_rewinddir
+    #define closedir pf_closedir
+    #define DT_UNKNOWN PF_DT_UNKNOWN
+    #define DT_FIFO PF_DT_FIFO
+    #define DT_CHR PF_DT_CHR
+    #define DT_DIR PF_DT_DIR
+    #define DT_BLK PF_DT_BLK
+    #define DT_REG PF_DT_REG
+    #define DT_LNK PF_DT_LNK
+    #define DT_SOCK PF_DT_SOCK
+    #ifndef NAME_MAX
+        #define NAME_MAX PF_NAME_MAX
     #endif
+#endif
 #endif

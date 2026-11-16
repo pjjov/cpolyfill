@@ -278,9 +278,8 @@ PF_API int pf_sockaddr_family(const pf_sockaddr_t *a);
 PF_API int pf_sockaddr_port(const pf_sockaddr_t *a);
 PF_API int pf_sockaddr_set_port(pf_sockaddr_t *a, unsigned port);
 PF_API bool pf_sockaddr_equal(const pf_sockaddr_t *a, const pf_sockaddr_t *b);
-PF_API ptrdiff_t pf_sockaddr_format(
-    const pf_sockaddr_t *a, char *buf, size_t size
-);
+PF_API ptrdiff_t
+pf_sockaddr_format(const pf_sockaddr_t *a, char *buf, size_t size);
 
 PF_API int pf_socket(
     pf_socket_t *s, int family, int type, int protocol, unsigned flags
@@ -299,15 +298,10 @@ PF_API int pf_connect(
 PF_API pf_ssize_t pf_send(pf_socket_t s, const void *buf, size_t n, int flags);
 PF_API pf_ssize_t pf_recv(pf_socket_t s, void *buf, size_t n, int flags);
 PF_API pf_ssize_t pf_sendto(
-    pf_socket_t s,
-    const void *buf,
-    size_t n,
-    int flags,
-    const pf_sockaddr_t *to
+    pf_socket_t s, const void *buf, size_t n, int flags, const pf_sockaddr_t *to
 );
-PF_API pf_ssize_t pf_recvfrom(
-    pf_socket_t s, void *buf, size_t n, int flags, pf_sockaddr_t *from
-);
+PF_API pf_ssize_t
+pf_recvfrom(pf_socket_t s, void *buf, size_t n, int flags, pf_sockaddr_t *from);
 PF_API int pf_shutdown(pf_socket_t s, int how);
 PF_API int pf_socket_close(pf_socket_t s);
 PF_API int pf_getsockname(pf_socket_t s, pf_sockaddr_t *addr);
@@ -320,9 +314,7 @@ PF_API int pf_setsockopt(
 );
 PF_API int pf_socket_error(pf_socket_t s);
 
-PF_API int pf_poll(
-    pf_pollfd_t *fds, size_t n, const struct timespec *deadline
-);
+PF_API int pf_poll(pf_pollfd_t *fds, size_t n, const struct timespec *deadline);
 PF_API int pf_socket_wait(
     pf_socket_t s, int events, const struct timespec *deadline
 );
@@ -383,8 +375,8 @@ PF_API int pf_stream_from_socket(pf_stream_t *st, pf_socket_t s, bool own);
 
 PF_END_DECLS
 
-#if PF_OS_WINDOWS                                                         \
-    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_SOCKET))       \
+#if PF_OS_WINDOWS                                                   \
+    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_SOCKET)) \
         || defined(PF_STD_NAMES_SOCKET))
     #ifndef SHUT_RD
         #define SHUT_RD PF_SHUT_RD

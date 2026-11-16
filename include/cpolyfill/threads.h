@@ -133,11 +133,7 @@ enum pf_thrd_result {
     pf_thrd_timedout = 4
 };
 
-enum pf_mtx_type {
-    pf_mtx_plain = 0,
-    pf_mtx_recursive = 1,
-    pf_mtx_timed = 2
-};
+enum pf_mtx_type { pf_mtx_plain = 0, pf_mtx_recursive = 1, pf_mtx_timed = 2 };
 
 enum pf_thrd_priority {
     PF_THRD_PRIORITY_LOWEST = -2,
@@ -265,8 +261,7 @@ PF_API void *pf_tss_get(pf_tss_t key);
 PF_API int pf_tss_set(pf_tss_t key, void *value);
 
 PF_API int pf_thrd_create_ex(
-    pf_thrd_t *thr, pf_thrd_start_t func, void *arg,
-    const pf_thrd_attr_t *attr
+    pf_thrd_t *thr, pf_thrd_start_t func, void *arg, const pf_thrd_attr_t *attr
 );
 PF_API int pf_thrd_set_name(const char *name);
 PF_API int pf_thrd_get_name(char *buf, size_t size);
@@ -306,12 +301,12 @@ PF_END_DECLS
 
 /* ---- Standard names --------------------------------------------------- */
 
-#if !defined(PF__THREADS_STD_NAMES)                                     \
-    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_THREADS))    \
+#if !defined(PF__THREADS_STD_NAMES)                                  \
+    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_THREADS)) \
         || defined(PF_STD_NAMES_THREADS))
-    #define PF__THREADS_STD_NAMES
+#define PF__THREADS_STD_NAMES
 
-    #if !PF_CONFIG_HAVE_THREADS_H || defined(PF__FORCE_STD_NAMES_POLYFILL)
+#if !PF_CONFIG_HAVE_THREADS_H || defined(PF__FORCE_STD_NAMES_POLYFILL)
 typedef pf_thrd_t thrd_t;
 typedef pf_mtx_t mtx_t;
 typedef pf_cnd_t cnd_t;
@@ -319,47 +314,47 @@ typedef pf_tss_t tss_t;
 typedef pf_thrd_start_t thrd_start_t;
 typedef pf_tss_dtor_t tss_dtor_t;
 
-        /* C23 (and glibc 2.34) have call_once in <stdlib.h>. */
-        #include <stdlib.h>
-        #ifndef ONCE_FLAG_INIT
+    /* C23 (and glibc 2.34) have call_once in <stdlib.h>. */
+    #include <stdlib.h>
+    #ifndef ONCE_FLAG_INIT
 typedef pf_once_flag once_flag;
-            #define ONCE_FLAG_INIT PF_ONCE_FLAG_INIT
-            #define call_once pf_call_once
-        #endif
-        #define TSS_DTOR_ITERATIONS PF_TSS_DTOR_ITERATIONS
-
-        #define thrd_success pf_thrd_success
-        #define thrd_busy pf_thrd_busy
-        #define thrd_error pf_thrd_error
-        #define thrd_nomem pf_thrd_nomem
-        #define thrd_timedout pf_thrd_timedout
-        #define mtx_plain pf_mtx_plain
-        #define mtx_recursive pf_mtx_recursive
-        #define mtx_timed pf_mtx_timed
-
-        #define thrd_create pf_thrd_create
-        #define thrd_equal pf_thrd_equal
-        #define thrd_current pf_thrd_current
-        #define thrd_sleep pf_thrd_sleep
-        #define thrd_yield pf_thrd_yield
-        #define thrd_exit pf_thrd_exit
-        #define thrd_detach pf_thrd_detach
-        #define thrd_join pf_thrd_join
-        #define mtx_init pf_mtx_init
-        #define mtx_lock pf_mtx_lock
-        #define mtx_timedlock pf_mtx_timedlock
-        #define mtx_trylock pf_mtx_trylock
-        #define mtx_unlock pf_mtx_unlock
-        #define mtx_destroy pf_mtx_destroy
-        #define cnd_init pf_cnd_init
-        #define cnd_signal pf_cnd_signal
-        #define cnd_broadcast pf_cnd_broadcast
-        #define cnd_wait pf_cnd_wait
-        #define cnd_timedwait pf_cnd_timedwait
-        #define cnd_destroy pf_cnd_destroy
-        #define tss_create pf_tss_create
-        #define tss_delete pf_tss_delete
-        #define tss_get pf_tss_get
-        #define tss_set pf_tss_set
+        #define ONCE_FLAG_INIT PF_ONCE_FLAG_INIT
+        #define call_once pf_call_once
     #endif
+    #define TSS_DTOR_ITERATIONS PF_TSS_DTOR_ITERATIONS
+
+    #define thrd_success pf_thrd_success
+    #define thrd_busy pf_thrd_busy
+    #define thrd_error pf_thrd_error
+    #define thrd_nomem pf_thrd_nomem
+    #define thrd_timedout pf_thrd_timedout
+    #define mtx_plain pf_mtx_plain
+    #define mtx_recursive pf_mtx_recursive
+    #define mtx_timed pf_mtx_timed
+
+    #define thrd_create pf_thrd_create
+    #define thrd_equal pf_thrd_equal
+    #define thrd_current pf_thrd_current
+    #define thrd_sleep pf_thrd_sleep
+    #define thrd_yield pf_thrd_yield
+    #define thrd_exit pf_thrd_exit
+    #define thrd_detach pf_thrd_detach
+    #define thrd_join pf_thrd_join
+    #define mtx_init pf_mtx_init
+    #define mtx_lock pf_mtx_lock
+    #define mtx_timedlock pf_mtx_timedlock
+    #define mtx_trylock pf_mtx_trylock
+    #define mtx_unlock pf_mtx_unlock
+    #define mtx_destroy pf_mtx_destroy
+    #define cnd_init pf_cnd_init
+    #define cnd_signal pf_cnd_signal
+    #define cnd_broadcast pf_cnd_broadcast
+    #define cnd_wait pf_cnd_wait
+    #define cnd_timedwait pf_cnd_timedwait
+    #define cnd_destroy pf_cnd_destroy
+    #define tss_create pf_tss_create
+    #define tss_delete pf_tss_delete
+    #define tss_get pf_tss_get
+    #define tss_set pf_tss_set
+#endif
 #endif

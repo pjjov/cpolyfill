@@ -137,12 +137,8 @@ PF__CTYPE_FN bool pf_isxdigit(int c) {
     return pf_isdigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 }
 
-PF__CTYPE_FN int pf_tolower(int c) {
-    return pf_isupper(c) ? c - 'A' + 'a' : c;
-}
-PF__CTYPE_FN int pf_toupper(int c) {
-    return pf_islower(c) ? c - 'a' + 'A' : c;
-}
+PF__CTYPE_FN int pf_tolower(int c) { return pf_isupper(c) ? c - 'A' + 'a' : c; }
+PF__CTYPE_FN int pf_toupper(int c) { return pf_islower(c) ? c - 'a' + 'A' : c; }
 
 PF__CTYPE_FN int pf_digit_value(int c, int base) {
     return (base < 2 || base > 36) ? -1

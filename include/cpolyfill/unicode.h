@@ -191,11 +191,12 @@ PF_API ptrdiff_t pf_wcs_to_utf8(
     const wchar_t *src, size_t len, char *dst, size_t cap, unsigned flags
 );
 
-PF_API size_t pf_mbrtoc8(
-    unsigned char *pc8, const char *s, size_t n, mbstate_t *ps
-);
-PF_API size_t pf_mbrtoc16(uint16_t *pc16, const char *s, size_t n, mbstate_t *ps);
-PF_API size_t pf_mbrtoc32(uint32_t *pc32, const char *s, size_t n, mbstate_t *ps);
+PF_API size_t
+pf_mbrtoc8(unsigned char *pc8, const char *s, size_t n, mbstate_t *ps);
+PF_API size_t
+pf_mbrtoc16(uint16_t *pc16, const char *s, size_t n, mbstate_t *ps);
+PF_API size_t
+pf_mbrtoc32(uint32_t *pc32, const char *s, size_t n, mbstate_t *ps);
 PF_API size_t pf_c8rtomb(char *s, unsigned char c8, mbstate_t *ps);
 PF_API size_t pf_c16rtomb(char *s, uint16_t c16, mbstate_t *ps);
 PF_API size_t pf_c32rtomb(char *s, uint32_t c32, mbstate_t *ps);
@@ -206,43 +207,43 @@ PF_END_DECLS
 
 /* ---- Standard names --------------------------------------------------- */
 
-#if !defined(__cplusplus) && !defined(PF__UNICODE_STD_NAMES)              \
-    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_UNICODE))      \
+#if !defined(__cplusplus) && !defined(PF__UNICODE_STD_NAMES)         \
+    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_UNICODE)) \
         || defined(PF_STD_NAMES_UNICODE))
-    #define PF__UNICODE_STD_NAMES
+#define PF__UNICODE_STD_NAMES
 
-    #if PF_CONFIG_HAVE_UCHAR_H && !defined(PF__FORCE_STD_NAMES_POLYFILL)
-        #include <uchar.h>
-    #else
+#if PF_CONFIG_HAVE_UCHAR_H && !defined(PF__FORCE_STD_NAMES_POLYFILL)
+    #include <uchar.h>
+#else
 typedef uint_least16_t char16_t;
 typedef uint_least32_t char32_t;
-        #if PF_STD_C23
+    #if PF_STD_C23
 typedef unsigned char char8_t;
-        #endif
     #endif
+#endif
 
-    #if !PF_CONFIG_HAVE_MBRTOC16 || defined(PF__FORCE_STD_NAMES_POLYFILL)
-        #undef mbrtoc16
-        #define mbrtoc16 pf_mbrtoc16
-    #endif
-    #if !PF_CONFIG_HAVE_C16RTOMB || defined(PF__FORCE_STD_NAMES_POLYFILL)
-        #undef c16rtomb
-        #define c16rtomb pf_c16rtomb
-    #endif
-    #if !PF_CONFIG_HAVE_MBRTOC32 || defined(PF__FORCE_STD_NAMES_POLYFILL)
-        #undef mbrtoc32
-        #define mbrtoc32 pf_mbrtoc32
-    #endif
-    #if !PF_CONFIG_HAVE_C32RTOMB || defined(PF__FORCE_STD_NAMES_POLYFILL)
-        #undef c32rtomb
-        #define c32rtomb pf_c32rtomb
-    #endif
-    #if !PF_CONFIG_HAVE_MBRTOC8 || defined(PF__FORCE_STD_NAMES_POLYFILL)
-        #undef mbrtoc8
-        #define mbrtoc8 pf_mbrtoc8
-    #endif
-    #if !PF_CONFIG_HAVE_C8RTOMB || defined(PF__FORCE_STD_NAMES_POLYFILL)
-        #undef c8rtomb
-        #define c8rtomb pf_c8rtomb
-    #endif
+#if !PF_CONFIG_HAVE_MBRTOC16 || defined(PF__FORCE_STD_NAMES_POLYFILL)
+    #undef mbrtoc16
+    #define mbrtoc16 pf_mbrtoc16
+#endif
+#if !PF_CONFIG_HAVE_C16RTOMB || defined(PF__FORCE_STD_NAMES_POLYFILL)
+    #undef c16rtomb
+    #define c16rtomb pf_c16rtomb
+#endif
+#if !PF_CONFIG_HAVE_MBRTOC32 || defined(PF__FORCE_STD_NAMES_POLYFILL)
+    #undef mbrtoc32
+    #define mbrtoc32 pf_mbrtoc32
+#endif
+#if !PF_CONFIG_HAVE_C32RTOMB || defined(PF__FORCE_STD_NAMES_POLYFILL)
+    #undef c32rtomb
+    #define c32rtomb pf_c32rtomb
+#endif
+#if !PF_CONFIG_HAVE_MBRTOC8 || defined(PF__FORCE_STD_NAMES_POLYFILL)
+    #undef mbrtoc8
+    #define mbrtoc8 pf_mbrtoc8
+#endif
+#if !PF_CONFIG_HAVE_C8RTOMB || defined(PF__FORCE_STD_NAMES_POLYFILL)
+    #undef c8rtomb
+    #define c8rtomb pf_c8rtomb
+#endif
 #endif

@@ -99,41 +99,41 @@ PF_END_DECLS
 
 /* ---- Standard names --------------------------------------------------- */
 
-#if !defined(PF__SEMAPHORE_STD_NAMES)                                    \
-    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_SEMAPHORE))   \
+#if !defined(PF__SEMAPHORE_STD_NAMES)                                  \
+    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_SEMAPHORE)) \
         || defined(PF_STD_NAMES_SEMAPHORE))
-    #define PF__SEMAPHORE_STD_NAMES
+#define PF__SEMAPHORE_STD_NAMES
 
-    #if !PF__SEM_NATIVE
-        #if PF_OS_APPLE
-            /* The system's <semaphore.h> declares the names. */
-            #include <semaphore.h>
-            #undef SEM_FAILED
-            #undef SEM_VALUE_MAX
-            #define sem_t pf_sem_t
-        #else
+#if !PF__SEM_NATIVE
+    #if PF_OS_APPLE
+        /* The system's <semaphore.h> declares the names. */
+        #include <semaphore.h>
+        #undef SEM_FAILED
+        #undef SEM_VALUE_MAX
+        #define sem_t pf_sem_t
+    #else
 typedef pf_sem_t sem_t;
-        #endif
-        #define SEM_FAILED PF_SEM_FAILED
-        #define SEM_VALUE_MAX PF_SEM_VALUE_MAX
-        #if PF_OS_WINDOWS
-            #ifndef O_CREAT
-                #define O_CREAT PF_O_CREAT
-            #endif
-            #ifndef O_EXCL
-                #define O_EXCL PF_O_EXCL
-            #endif
-        #endif
-        #define sem_init pf_sem_init
-        #define sem_destroy pf_sem_destroy
-        #define sem_wait pf_sem_wait
-        #define sem_trywait pf_sem_trywait
-        #define sem_timedwait pf_sem_timedwait
-        #define sem_clockwait pf_sem_clockwait
-        #define sem_post pf_sem_post
-        #define sem_getvalue pf_sem_getvalue
-        #define sem_open pf_sem_open
-        #define sem_close pf_sem_close
-        #define sem_unlink pf_sem_unlink
     #endif
+    #define SEM_FAILED PF_SEM_FAILED
+    #define SEM_VALUE_MAX PF_SEM_VALUE_MAX
+    #if PF_OS_WINDOWS
+        #ifndef O_CREAT
+            #define O_CREAT PF_O_CREAT
+        #endif
+        #ifndef O_EXCL
+            #define O_EXCL PF_O_EXCL
+        #endif
+    #endif
+    #define sem_init pf_sem_init
+    #define sem_destroy pf_sem_destroy
+    #define sem_wait pf_sem_wait
+    #define sem_trywait pf_sem_trywait
+    #define sem_timedwait pf_sem_timedwait
+    #define sem_clockwait pf_sem_clockwait
+    #define sem_post pf_sem_post
+    #define sem_getvalue pf_sem_getvalue
+    #define sem_open pf_sem_open
+    #define sem_close pf_sem_close
+    #define sem_unlink pf_sem_unlink
+#endif
 #endif

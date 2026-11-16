@@ -180,12 +180,12 @@ PF_END_DECLS
     #define PF__EXC_LOC __FILE__, __LINE__, __func__
 #endif
 
-#define PF_THROW(stack, code, msg) \
+#define PF_THROW(stack, code, msg)                                        \
     pf_throw_at((stack), PF_EXCEPTION_MODULE, (code), PF__EXC_LOC, (msg))
 #define PF_THROWF(stack, code, ...) \
     pf_throwf_at((stack), PF_EXCEPTION_MODULE, (code), PF__EXC_LOC, __VA_ARGS__)
-#define PF_VTHROWF(stack, code, fmt, ap)                                 \
-    pf_vthrowf_at(                                                       \
+#define PF_VTHROWF(stack, code, fmt, ap)                               \
+    pf_vthrowf_at(                                                     \
         (stack), PF_EXCEPTION_MODULE, (code), PF__EXC_LOC, (fmt), (ap) \
     )
 

@@ -179,13 +179,12 @@ PF_END_DECLS
 /* GNU: atomic pointers step by the size of what they point to. GCC's own
    <stdatomic.h> does not scale them (GCC bug 64843), Clang's does. */
 #if PF_CC_GNU
-    #define PF__ATOMIC_GNU_STEP(obj, arg)                                 \
-        ((arg)                                                            \
-         * (__builtin_classify_type(*(obj)) == 5                          \
-                ? (ptrdiff_t)((uintptr_t)((__typeof__(*(obj)))(uintptr_t) \
-                                              4096                        \
-                                          + 1)                            \
-                              - 4096u)                                    \
+    #define PF__ATOMIC_GNU_STEP(obj, arg)                                     \
+        ((arg)                                                                \
+         * (__builtin_classify_type(*(obj)) == 5                              \
+                ? (ptrdiff_t)((uintptr_t)((__typeof__(*(obj)))(uintptr_t)4096 \
+                                          + 1)                                \
+                              - 4096u)                                        \
                 : (ptrdiff_t)1))
 #endif
 
@@ -218,9 +217,9 @@ typedef atomic_flag pf_atomic_flag_t;
         atomic_compare_exchange_strong(obj, e, d)
     #define PF_ATOMIC_COMPARE_EXCHANGE_WEAK(obj, e, d) \
         atomic_compare_exchange_weak(obj, e, d)
-    #define PF_ATOMIC_FETCH_ADD(obj, v) \
+    #define PF_ATOMIC_FETCH_ADD(obj, v)                    \
         atomic_fetch_add(obj, PF__ATOMIC_STD_STEP(obj, v))
-    #define PF_ATOMIC_FETCH_SUB(obj, v) \
+    #define PF_ATOMIC_FETCH_SUB(obj, v)                    \
         atomic_fetch_sub(obj, PF__ATOMIC_STD_STEP(obj, v))
     #define PF_ATOMIC_FETCH_OR(obj, v) atomic_fetch_or(obj, v)
     #define PF_ATOMIC_FETCH_XOR(obj, v) atomic_fetch_xor(obj, v)
@@ -237,9 +236,9 @@ typedef atomic_flag pf_atomic_flag_t;
         atomic_compare_exchange_strong_explicit(obj, e, d, s, f)
     #define PF_ATOMIC_COMPARE_EXCHANGE_WEAK_EXPLICIT(obj, e, d, s, f) \
         atomic_compare_exchange_weak_explicit(obj, e, d, s, f)
-    #define PF_ATOMIC_FETCH_ADD_EXPLICIT(obj, v, mo) \
+    #define PF_ATOMIC_FETCH_ADD_EXPLICIT(obj, v, mo)                    \
         atomic_fetch_add_explicit(obj, PF__ATOMIC_STD_STEP(obj, v), mo)
-    #define PF_ATOMIC_FETCH_SUB_EXPLICIT(obj, v, mo) \
+    #define PF_ATOMIC_FETCH_SUB_EXPLICIT(obj, v, mo)                    \
         atomic_fetch_sub_explicit(obj, PF__ATOMIC_STD_STEP(obj, v), mo)
     #define PF_ATOMIC_FETCH_OR_EXPLICIT(obj, v, mo) \
         atomic_fetch_or_explicit(obj, v, mo)
@@ -268,7 +267,7 @@ typedef atomic_flag pf_atomic_flag_t;
     #define PF_ATOMIC_LLONG_LOCK_FREE ATOMIC_LLONG_LOCK_FREE
     #define PF_ATOMIC_POINTER_LOCK_FREE ATOMIC_POINTER_LOCK_FREE
 
-/* ---- C++ std::atomic -------------------------------------------------- */
+    /* ---- C++ std::atomic -------------------------------------------------- */
 
 #elif PF__ATOMIC_CXX
 
@@ -283,7 +282,7 @@ typedef std::memory_order pf_memory_order;
 typedef std::atomic_flag pf_atomic_flag_t;
     #define PF_ATOMIC_FLAG_INIT ATOMIC_FLAG_INIT
 
-    #define PF_ATOMIC_INIT(obj, v) \
+    #define PF_ATOMIC_INIT(obj, v)                     \
         ((obj)->store((v), std::memory_order_relaxed))
     #define PF_ATOMIC_LOAD(obj) std::atomic_load(obj)
     #define PF_ATOMIC_STORE(obj, v) std::atomic_store(obj, v)
@@ -340,17 +339,17 @@ typedef std::atomic_flag pf_atomic_flag_t;
     #define PF_ATOMIC_LLONG_LOCK_FREE ATOMIC_LLONG_LOCK_FREE
     #define PF_ATOMIC_POINTER_LOCK_FREE ATOMIC_POINTER_LOCK_FREE
 
-/* ---- GNU __atomic builtins -------------------------------------------- */
+    /* ---- GNU __atomic builtins -------------------------------------------- */
 
 #elif PF__ATOMIC_GNU
 
-/* The alignment C11 gives _Atomic(T): the size, for the sizes the
+    /* The alignment C11 gives _Atomic(T): the size, for the sizes the
    hardware can operate on. */
-    #define PF__ATOMIC_ALIGN(T)                                    \
-        ((sizeof(T) & (sizeof(T) - 1)) == 0 && sizeof(T) <= 16    \
-             ? sizeof(T)                                           \
+    #define PF__ATOMIC_ALIGN(T)                                \
+        ((sizeof(T) & (sizeof(T) - 1)) == 0 && sizeof(T) <= 16 \
+             ? sizeof(T)                                       \
              : __alignof__(T))
-    #define PF_ATOMIC(T) \
+    #define PF_ATOMIC(T)                                            \
         __typeof__(T) __attribute__((aligned(PF__ATOMIC_ALIGN(T))))
 
 typedef int pf_memory_order;
@@ -367,22 +366,22 @@ typedef struct pf_atomic_flag_t {
     #define PF_ATOMIC_FLAG_INIT { 0 }
 
     #define PF_ATOMIC_INIT(obj, v) ((void)(*(obj) = (v)))
-    #define PF_ATOMIC_LOAD_EXPLICIT(obj, mo)              \
-        __extension__({                                   \
-            __typeof__(*(obj)) pf__r;                     \
-            __atomic_load((obj), &pf__r, (mo));           \
-            pf__r;                                        \
+    #define PF_ATOMIC_LOAD_EXPLICIT(obj, mo)    \
+        __extension__({                         \
+            __typeof__(*(obj)) pf__r;           \
+            __atomic_load((obj), &pf__r, (mo)); \
+            pf__r;                              \
         })
-    #define PF_ATOMIC_STORE_EXPLICIT(obj, v, mo)          \
-        __extension__({                                   \
-            __typeof__(*(obj)) pf__v = (v);               \
-            __atomic_store((obj), &pf__v, (mo));          \
+    #define PF_ATOMIC_STORE_EXPLICIT(obj, v, mo) \
+        __extension__({                          \
+            __typeof__(*(obj)) pf__v = (v);      \
+            __atomic_store((obj), &pf__v, (mo)); \
         })
-    #define PF_ATOMIC_EXCHANGE_EXPLICIT(obj, v, mo)       \
-        __extension__({                                   \
-            __typeof__(*(obj)) pf__v = (v), pf__r;        \
+    #define PF_ATOMIC_EXCHANGE_EXPLICIT(obj, v, mo)         \
+        __extension__({                                     \
+            __typeof__(*(obj)) pf__v = (v), pf__r;          \
             __atomic_exchange((obj), &pf__v, &pf__r, (mo)); \
-            pf__r;                                        \
+            pf__r;                                          \
         })
     #define PF_ATOMIC_COMPARE_EXCHANGE_STRONG_EXPLICIT(obj, e, d, s, f) \
         __extension__({                                                 \
@@ -394,9 +393,9 @@ typedef struct pf_atomic_flag_t {
             __typeof__(*(obj)) pf__d = (d);                             \
             __atomic_compare_exchange((obj), (e), &pf__d, 1, (s), (f)); \
         })
-    #define PF_ATOMIC_FETCH_ADD_EXPLICIT(obj, v, mo) \
+    #define PF_ATOMIC_FETCH_ADD_EXPLICIT(obj, v, mo)                 \
         __atomic_fetch_add((obj), PF__ATOMIC_GNU_STEP(obj, v), (mo))
-    #define PF_ATOMIC_FETCH_SUB_EXPLICIT(obj, v, mo) \
+    #define PF_ATOMIC_FETCH_SUB_EXPLICIT(obj, v, mo)                 \
         __atomic_fetch_sub((obj), PF__ATOMIC_GNU_STEP(obj, v), (mo))
     #define PF_ATOMIC_FETCH_OR_EXPLICIT(obj, v, mo) \
         __atomic_fetch_or((obj), (v), (mo))
@@ -412,7 +411,7 @@ typedef struct pf_atomic_flag_t {
     #define PF_ATOMIC_THREAD_FENCE(mo) __atomic_thread_fence(mo)
     #define PF_ATOMIC_SIGNAL_FENCE(mo) __atomic_signal_fence(mo)
     #define PF_KILL_DEPENDENCY(y) (y)
-    #define PF_ATOMIC_IS_LOCK_FREE(obj) \
+    #define PF_ATOMIC_IS_LOCK_FREE(obj)              \
         __atomic_is_lock_free(sizeof(*(obj)), (obj))
 
     #define PF_ATOMIC_BOOL_LOCK_FREE __GCC_ATOMIC_BOOL_LOCK_FREE
@@ -426,7 +425,7 @@ typedef struct pf_atomic_flag_t {
     #define PF_ATOMIC_LLONG_LOCK_FREE __GCC_ATOMIC_LLONG_LOCK_FREE
     #define PF_ATOMIC_POINTER_LOCK_FREE __GCC_ATOMIC_POINTER_LOCK_FREE
 
-/* ---- Integers through functions: MSVC intrinsics or the library ------- */
+    /* ---- Integers through functions: MSVC intrinsics or the library ------- */
 
 #elif PF__ATOMIC_MSVC || PF__ATOMIC_LIB
 
@@ -436,7 +435,9 @@ typedef struct pf_atomic_flag_t {
    intrinsics, which every Windows architecture has; others go to the
    library. Full barriers, so every order is sequentially consistent. */
 PF_INLINE unsigned long long pf__atomic_msvc_cas_raw(
-    volatile void *p, size_t size, unsigned long long expect,
+    volatile void *p,
+    size_t size,
+    unsigned long long expect,
     unsigned long long desire
 ) {
     switch (size) {
@@ -528,11 +529,21 @@ PF_INLINE void *pf__atomic_msvc_fetch(
     unsigned long long old = pf__atomic_msvc_cas_raw(obj, size, 0, 0), v, seen;
     for (;;) {
         switch (op) {
-        case PF__ATOMIC_OP_ADD: v = old + arg; break;
-        case PF__ATOMIC_OP_SUB: v = old - arg; break;
-        case PF__ATOMIC_OP_OR: v = old | arg; break;
-        case PF__ATOMIC_OP_XOR: v = old ^ arg; break;
-        default: v = old & arg; break;
+        case PF__ATOMIC_OP_ADD:
+            v = old + arg;
+            break;
+        case PF__ATOMIC_OP_SUB:
+            v = old - arg;
+            break;
+        case PF__ATOMIC_OP_OR:
+            v = old | arg;
+            break;
+        case PF__ATOMIC_OP_XOR:
+            v = old ^ arg;
+            break;
+        default:
+            v = old & arg;
+            break;
         }
         seen = pf__atomic_msvc_cas_raw(obj, size, old, v & mask);
         if (seen == old)
@@ -577,47 +588,53 @@ typedef struct pf_atomic_flag_t {
 
     /* A temporary of the object's type holding `v`, as a pointer. An array
        compound literal, so a structure value can initialize it. */
-    #define PF__ATOMIC_VAL(obj, v) ((PF__ATOMIC_TYPEOF(*(obj))[1]){ (v) })
+    #define PF__ATOMIC_VAL(obj, v) ((PF__ATOMIC_TYPEOF(*(obj))[1]) { (v) })
     /* An uninitialized one, for results (the char member takes the zero, so
        any type works without brace warnings). */
-    #define PF__ATOMIC_TMP(obj)                     \
-        (&(union {                                  \
-              char pf__c;                           \
-              PF__ATOMIC_TYPEOF(*(obj)) pf__v;      \
-          }){ 0 }                                   \
+    #define PF__ATOMIC_TMP(obj)                \
+        (&(union {                             \
+              char pf__c;                      \
+              PF__ATOMIC_TYPEOF(*(obj)) pf__v; \
+          }) { 0 }                             \
               .pf__v)
     #define PF__ATOMIC_DEREF(obj, p) (*(PF__ATOMIC_TYPEOF(*(obj)) *)(p))
     /* Fetch arguments travel as unsigned long long; the arithmetic is
        modulo the size of the object, so signs and pointer steps work. */
-    #define PF__ATOMIC_STEP(obj, arg)                                     \
-        ((unsigned long long)(arg)                                        \
-         * (unsigned long long)((uintptr_t)((PF__ATOMIC_TYPEOF(*(obj)))   \
-                                                (uintptr_t)4096           \
-                                            + 1)                          \
+    #define PF__ATOMIC_STEP(obj, arg)                                    \
+        ((unsigned long long)(arg)                                       \
+         * (unsigned long long)((uintptr_t)((PF__ATOMIC_TYPEOF(*(obj)))( \
+                                                uintptr_t                \
+                                            )4096                        \
+                                            + 1)                         \
                                 - 4096u))
 
     #define PF_ATOMIC_INIT(obj, v) ((void)(*(obj) = (v)))
-    #define PF_ATOMIC_LOAD_EXPLICIT(obj, mo)                             \
-        ((void)(mo),                                                     \
-         PF__ATOMIC_DEREF(                                               \
-             obj,                                                        \
-             PF__ATOMIC_FN(load)(                                        \
-                 (obj), sizeof(*(obj)), PF__ATOMIC_TMP(obj))))
-    #define PF_ATOMIC_STORE_EXPLICIT(obj, v, mo) \
-        ((void)(mo),                             \
-         PF__ATOMIC_FN(store)(                   \
-             (obj), sizeof(*(obj)), PF__ATOMIC_VAL(obj, v)))
-    #define PF_ATOMIC_EXCHANGE_EXPLICIT(obj, v, mo)                      \
-        ((void)(mo),                                                     \
-         PF__ATOMIC_DEREF(                                               \
-             obj,                                                        \
-             PF__ATOMIC_FN(exchange)(                                    \
-                 (obj), sizeof(*(obj)), PF__ATOMIC_VAL(obj, v),          \
-                 PF__ATOMIC_TMP(obj))))
+    #define PF_ATOMIC_LOAD_EXPLICIT(obj, mo)                                 \
+        ((void)(mo),                                                         \
+         PF__ATOMIC_DEREF(                                                   \
+             obj,                                                            \
+             PF__ATOMIC_FN(load)((obj), sizeof(*(obj)), PF__ATOMIC_TMP(obj)) \
+         ))
+    #define PF_ATOMIC_STORE_EXPLICIT(obj, v, mo)                              \
+        ((void)(mo),                                                          \
+         PF__ATOMIC_FN(store)((obj), sizeof(*(obj)), PF__ATOMIC_VAL(obj, v)))
+    #define PF_ATOMIC_EXCHANGE_EXPLICIT(obj, v, mo) \
+        ((void)(mo),                                \
+         PF__ATOMIC_DEREF(                          \
+             obj,                                   \
+             PF__ATOMIC_FN(exchange)(               \
+                 (obj),                             \
+                 sizeof(*(obj)),                    \
+                 PF__ATOMIC_VAL(obj, v),            \
+                 PF__ATOMIC_TMP(obj)                \
+             )                                      \
+         ))
     #define PF_ATOMIC_COMPARE_EXCHANGE_STRONG_EXPLICIT(obj, e, d, s, f) \
-        ((void)(s), (void)(f),                                          \
+        ((void)(s),                                                     \
+         (void)(f),                                                     \
          PF__ATOMIC_FN(cas)(                                            \
-             (obj), sizeof(*(obj)), (e), PF__ATOMIC_VAL(obj, d)))
+             (obj), sizeof(*(obj)), (e), PF__ATOMIC_VAL(obj, d)         \
+         ))
     #define PF_ATOMIC_COMPARE_EXCHANGE_WEAK_EXPLICIT(obj, e, d, s, f) \
         PF_ATOMIC_COMPARE_EXCHANGE_STRONG_EXPLICIT(obj, e, d, s, f)
     #define PF__ATOMIC_FETCH(obj, op, arg, mo)                           \
@@ -625,32 +642,35 @@ typedef struct pf_atomic_flag_t {
          PF__ATOMIC_DEREF(                                               \
              obj,                                                        \
              PF__ATOMIC_FN(fetch)(                                       \
-                 (obj), sizeof(*(obj)), (op), (arg),                     \
-                 PF__ATOMIC_TMP(obj))))
-    #define PF_ATOMIC_FETCH_ADD_EXPLICIT(obj, v, mo) \
+                 (obj), sizeof(*(obj)), (op), (arg), PF__ATOMIC_TMP(obj) \
+             )                                                           \
+         ))
+    #define PF_ATOMIC_FETCH_ADD_EXPLICIT(obj, v, mo)                          \
         PF__ATOMIC_FETCH(obj, PF__ATOMIC_OP_ADD, PF__ATOMIC_STEP(obj, v), mo)
-    #define PF_ATOMIC_FETCH_SUB_EXPLICIT(obj, v, mo) \
+    #define PF_ATOMIC_FETCH_SUB_EXPLICIT(obj, v, mo)                          \
         PF__ATOMIC_FETCH(obj, PF__ATOMIC_OP_SUB, PF__ATOMIC_STEP(obj, v), mo)
-    #define PF_ATOMIC_FETCH_OR_EXPLICIT(obj, v, mo) \
+    #define PF_ATOMIC_FETCH_OR_EXPLICIT(obj, v, mo)                          \
         PF__ATOMIC_FETCH(obj, PF__ATOMIC_OP_OR, (unsigned long long)(v), mo)
-    #define PF_ATOMIC_FETCH_XOR_EXPLICIT(obj, v, mo) \
+    #define PF_ATOMIC_FETCH_XOR_EXPLICIT(obj, v, mo)                          \
         PF__ATOMIC_FETCH(obj, PF__ATOMIC_OP_XOR, (unsigned long long)(v), mo)
-    #define PF_ATOMIC_FETCH_AND_EXPLICIT(obj, v, mo) \
+    #define PF_ATOMIC_FETCH_AND_EXPLICIT(obj, v, mo)                          \
         PF__ATOMIC_FETCH(obj, PF__ATOMIC_OP_AND, (unsigned long long)(v), mo)
-    #define PF_ATOMIC_FLAG_TEST_AND_SET_EXPLICIT(f, mo)                   \
-        ((void)(mo),                                                      \
-         *(unsigned char *)PF__ATOMIC_FN(exchange)(                       \
-             &(f)->pf__value, 1, (unsigned char[1]){ 1 },                 \
-             (unsigned char[1]){ 0 })                                     \
-             != 0)
-    #define PF_ATOMIC_FLAG_CLEAR_EXPLICIT(f, mo) \
-        ((void)(mo),                             \
-         PF__ATOMIC_FN(store)(&(f)->pf__value, 1, (unsigned char[1]){ 0 }))
+    #define PF_ATOMIC_FLAG_TEST_AND_SET_EXPLICIT(f, mo) \
+        ((void)(mo),                                    \
+         *(unsigned char *)PF__ATOMIC_FN(exchange)(     \
+             &(f)->pf__value,                           \
+             1,                                         \
+             (unsigned char[1]) { 1 },                  \
+             (unsigned char[1]) { 0 }                   \
+         ) != 0)
+    #define PF_ATOMIC_FLAG_CLEAR_EXPLICIT(f, mo)                             \
+        ((void)(mo),                                                         \
+         PF__ATOMIC_FN(store)(&(f)->pf__value, 1, (unsigned char[1]) { 0 }))
 
     #define PF_ATOMIC_THREAD_FENCE(mo) ((void)(mo), PF__ATOMIC_FN(fence)())
     #define PF_ATOMIC_SIGNAL_FENCE(mo) ((void)(mo), PF__ATOMIC_FN(fence)())
     #define PF_KILL_DEPENDENCY(y) (y)
-    #define PF_ATOMIC_IS_LOCK_FREE(obj) \
+    #define PF_ATOMIC_IS_LOCK_FREE(obj)             \
         PF__ATOMIC_FN(is_lock_free)(sizeof(*(obj)))
 
     #define PF_ATOMIC_BOOL_LOCK_FREE PF__ATOMIC_ALWAYS_LOCK_FREE
@@ -668,31 +688,33 @@ typedef struct pf_atomic_flag_t {
 
 /* The sequentially consistent forms. */
 #if PF_HAS_ATOMICS && !PF__ATOMIC_STD && !PF__ATOMIC_CXX
-    #define PF_ATOMIC_LOAD(obj) \
+    #define PF_ATOMIC_LOAD(obj)                               \
         PF_ATOMIC_LOAD_EXPLICIT(obj, PF_MEMORY_ORDER_SEQ_CST)
-    #define PF_ATOMIC_STORE(obj, v) \
+    #define PF_ATOMIC_STORE(obj, v)                               \
         PF_ATOMIC_STORE_EXPLICIT(obj, v, PF_MEMORY_ORDER_SEQ_CST)
-    #define PF_ATOMIC_EXCHANGE(obj, v) \
+    #define PF_ATOMIC_EXCHANGE(obj, v)                               \
         PF_ATOMIC_EXCHANGE_EXPLICIT(obj, v, PF_MEMORY_ORDER_SEQ_CST)
-    #define PF_ATOMIC_COMPARE_EXCHANGE_STRONG(obj, e, d)                    \
-        PF_ATOMIC_COMPARE_EXCHANGE_STRONG_EXPLICIT(                         \
-            obj, e, d, PF_MEMORY_ORDER_SEQ_CST, PF_MEMORY_ORDER_SEQ_CST)
-    #define PF_ATOMIC_COMPARE_EXCHANGE_WEAK(obj, e, d)                      \
-        PF_ATOMIC_COMPARE_EXCHANGE_WEAK_EXPLICIT(                           \
-            obj, e, d, PF_MEMORY_ORDER_SEQ_CST, PF_MEMORY_ORDER_SEQ_CST)
-    #define PF_ATOMIC_FETCH_ADD(obj, v) \
+    #define PF_ATOMIC_COMPARE_EXCHANGE_STRONG(obj, e, d)                \
+        PF_ATOMIC_COMPARE_EXCHANGE_STRONG_EXPLICIT(                     \
+            obj, e, d, PF_MEMORY_ORDER_SEQ_CST, PF_MEMORY_ORDER_SEQ_CST \
+        )
+    #define PF_ATOMIC_COMPARE_EXCHANGE_WEAK(obj, e, d)                  \
+        PF_ATOMIC_COMPARE_EXCHANGE_WEAK_EXPLICIT(                       \
+            obj, e, d, PF_MEMORY_ORDER_SEQ_CST, PF_MEMORY_ORDER_SEQ_CST \
+        )
+    #define PF_ATOMIC_FETCH_ADD(obj, v)                               \
         PF_ATOMIC_FETCH_ADD_EXPLICIT(obj, v, PF_MEMORY_ORDER_SEQ_CST)
-    #define PF_ATOMIC_FETCH_SUB(obj, v) \
+    #define PF_ATOMIC_FETCH_SUB(obj, v)                               \
         PF_ATOMIC_FETCH_SUB_EXPLICIT(obj, v, PF_MEMORY_ORDER_SEQ_CST)
-    #define PF_ATOMIC_FETCH_OR(obj, v) \
+    #define PF_ATOMIC_FETCH_OR(obj, v)                               \
         PF_ATOMIC_FETCH_OR_EXPLICIT(obj, v, PF_MEMORY_ORDER_SEQ_CST)
-    #define PF_ATOMIC_FETCH_XOR(obj, v) \
+    #define PF_ATOMIC_FETCH_XOR(obj, v)                               \
         PF_ATOMIC_FETCH_XOR_EXPLICIT(obj, v, PF_MEMORY_ORDER_SEQ_CST)
-    #define PF_ATOMIC_FETCH_AND(obj, v) \
+    #define PF_ATOMIC_FETCH_AND(obj, v)                               \
         PF_ATOMIC_FETCH_AND_EXPLICIT(obj, v, PF_MEMORY_ORDER_SEQ_CST)
-    #define PF_ATOMIC_FLAG_TEST_AND_SET(f) \
+    #define PF_ATOMIC_FLAG_TEST_AND_SET(f)                               \
         PF_ATOMIC_FLAG_TEST_AND_SET_EXPLICIT(f, PF_MEMORY_ORDER_SEQ_CST)
-    #define PF_ATOMIC_FLAG_CLEAR(f) \
+    #define PF_ATOMIC_FLAG_CLEAR(f)                               \
         PF_ATOMIC_FLAG_CLEAR_EXPLICIT(f, PF_MEMORY_ORDER_SEQ_CST)
 #endif
 
@@ -701,114 +723,113 @@ typedef struct pf_atomic_flag_t {
 /* ---- Standard names --------------------------------------------------- */
 
 #if !defined(PF__ATOMIC_STD_NAMES) && PF_HAS_ATOMICS && !PF__ATOMIC_STD \
-    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_ATOMIC))       \
+    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_ATOMIC))     \
         || defined(PF_STD_NAMES_ATOMIC))
-    #define PF__ATOMIC_STD_NAMES
+#define PF__ATOMIC_STD_NAMES
 
-    #if PF__ATOMIC_CXX
-        #if PF_CPP > 202002L && defined(__has_include)
-            #if __has_include(<stdatomic.h>)
-                #include <stdatomic.h>
-                #define PF__ATOMIC_CXX_STDATOMIC
-            #endif
+#if PF__ATOMIC_CXX
+    #if PF_CPP > 202002L && defined(__has_include)
+        #if __has_include(<stdatomic.h>)
+            #include <stdatomic.h>
+            #define PF__ATOMIC_CXX_STDATOMIC
         #endif
-        #ifndef PF__ATOMIC_CXX_STDATOMIC
-            #ifndef _Atomic
-                #define _Atomic(T) std::atomic<T>
-            #endif
-using std::memory_order;
-using std::memory_order_relaxed;
-using std::memory_order_consume;
-using std::memory_order_acquire;
-using std::memory_order_release;
-using std::memory_order_acq_rel;
-using std::memory_order_seq_cst;
-using std::atomic_flag;
-using std::atomic_load;
-using std::atomic_load_explicit;
-using std::atomic_store;
-using std::atomic_store_explicit;
-using std::atomic_exchange;
-using std::atomic_exchange_explicit;
+    #endif
+    #ifndef PF__ATOMIC_CXX_STDATOMIC
+        #ifndef _Atomic
+            #define _Atomic(T) std::atomic<T>
+        #endif
 using std::atomic_compare_exchange_strong;
 using std::atomic_compare_exchange_strong_explicit;
 using std::atomic_compare_exchange_weak;
 using std::atomic_compare_exchange_weak_explicit;
+using std::atomic_exchange;
+using std::atomic_exchange_explicit;
 using std::atomic_fetch_add;
 using std::atomic_fetch_add_explicit;
-using std::atomic_fetch_sub;
-using std::atomic_fetch_sub_explicit;
-using std::atomic_fetch_or;
-using std::atomic_fetch_or_explicit;
-using std::atomic_fetch_xor;
-using std::atomic_fetch_xor_explicit;
 using std::atomic_fetch_and;
 using std::atomic_fetch_and_explicit;
-using std::atomic_flag_test_and_set;
-using std::atomic_flag_test_and_set_explicit;
+using std::atomic_fetch_or;
+using std::atomic_fetch_or_explicit;
+using std::atomic_fetch_sub;
+using std::atomic_fetch_sub_explicit;
+using std::atomic_fetch_xor;
+using std::atomic_fetch_xor_explicit;
+using std::atomic_flag;
 using std::atomic_flag_clear;
 using std::atomic_flag_clear_explicit;
-using std::atomic_thread_fence;
-using std::atomic_signal_fence;
+using std::atomic_flag_test_and_set;
+using std::atomic_flag_test_and_set_explicit;
 using std::atomic_is_lock_free;
+using std::atomic_load;
+using std::atomic_load_explicit;
+using std::atomic_signal_fence;
+using std::atomic_store;
+using std::atomic_store_explicit;
+using std::atomic_thread_fence;
 using std::kill_dependency;
-        #endif
-    #else
-        #define _Atomic(T) PF_ATOMIC(T)
+using std::memory_order;
+using std::memory_order_acq_rel;
+using std::memory_order_acquire;
+using std::memory_order_consume;
+using std::memory_order_relaxed;
+using std::memory_order_release;
+using std::memory_order_seq_cst;
+    #endif
+#else
+    #define _Atomic(T) PF_ATOMIC(T)
 typedef pf_memory_order memory_order;
-        #define memory_order_relaxed PF_MEMORY_ORDER_RELAXED
-        #define memory_order_consume PF_MEMORY_ORDER_CONSUME
-        #define memory_order_acquire PF_MEMORY_ORDER_ACQUIRE
-        #define memory_order_release PF_MEMORY_ORDER_RELEASE
-        #define memory_order_acq_rel PF_MEMORY_ORDER_ACQ_REL
-        #define memory_order_seq_cst PF_MEMORY_ORDER_SEQ_CST
+    #define memory_order_relaxed PF_MEMORY_ORDER_RELAXED
+    #define memory_order_consume PF_MEMORY_ORDER_CONSUME
+    #define memory_order_acquire PF_MEMORY_ORDER_ACQUIRE
+    #define memory_order_release PF_MEMORY_ORDER_RELEASE
+    #define memory_order_acq_rel PF_MEMORY_ORDER_ACQ_REL
+    #define memory_order_seq_cst PF_MEMORY_ORDER_SEQ_CST
 typedef pf_atomic_flag_t atomic_flag;
-        #define ATOMIC_FLAG_INIT PF_ATOMIC_FLAG_INIT
+    #define ATOMIC_FLAG_INIT PF_ATOMIC_FLAG_INIT
 
-        #define ATOMIC_BOOL_LOCK_FREE PF_ATOMIC_BOOL_LOCK_FREE
-        #define ATOMIC_CHAR_LOCK_FREE PF_ATOMIC_CHAR_LOCK_FREE
-        #define ATOMIC_CHAR16_T_LOCK_FREE PF_ATOMIC_CHAR16_T_LOCK_FREE
-        #define ATOMIC_CHAR32_T_LOCK_FREE PF_ATOMIC_CHAR32_T_LOCK_FREE
-        #define ATOMIC_WCHAR_T_LOCK_FREE PF_ATOMIC_WCHAR_T_LOCK_FREE
-        #define ATOMIC_SHORT_LOCK_FREE PF_ATOMIC_SHORT_LOCK_FREE
-        #define ATOMIC_INT_LOCK_FREE PF_ATOMIC_INT_LOCK_FREE
-        #define ATOMIC_LONG_LOCK_FREE PF_ATOMIC_LONG_LOCK_FREE
-        #define ATOMIC_LLONG_LOCK_FREE PF_ATOMIC_LLONG_LOCK_FREE
-        #define ATOMIC_POINTER_LOCK_FREE PF_ATOMIC_POINTER_LOCK_FREE
+    #define ATOMIC_BOOL_LOCK_FREE PF_ATOMIC_BOOL_LOCK_FREE
+    #define ATOMIC_CHAR_LOCK_FREE PF_ATOMIC_CHAR_LOCK_FREE
+    #define ATOMIC_CHAR16_T_LOCK_FREE PF_ATOMIC_CHAR16_T_LOCK_FREE
+    #define ATOMIC_CHAR32_T_LOCK_FREE PF_ATOMIC_CHAR32_T_LOCK_FREE
+    #define ATOMIC_WCHAR_T_LOCK_FREE PF_ATOMIC_WCHAR_T_LOCK_FREE
+    #define ATOMIC_SHORT_LOCK_FREE PF_ATOMIC_SHORT_LOCK_FREE
+    #define ATOMIC_INT_LOCK_FREE PF_ATOMIC_INT_LOCK_FREE
+    #define ATOMIC_LONG_LOCK_FREE PF_ATOMIC_LONG_LOCK_FREE
+    #define ATOMIC_LLONG_LOCK_FREE PF_ATOMIC_LLONG_LOCK_FREE
+    #define ATOMIC_POINTER_LOCK_FREE PF_ATOMIC_POINTER_LOCK_FREE
 
-        #define atomic_init PF_ATOMIC_INIT
-        #define atomic_load PF_ATOMIC_LOAD
-        #define atomic_load_explicit PF_ATOMIC_LOAD_EXPLICIT
-        #define atomic_store PF_ATOMIC_STORE
-        #define atomic_store_explicit PF_ATOMIC_STORE_EXPLICIT
-        #define atomic_exchange PF_ATOMIC_EXCHANGE
-        #define atomic_exchange_explicit PF_ATOMIC_EXCHANGE_EXPLICIT
-        #define atomic_compare_exchange_strong \
-            PF_ATOMIC_COMPARE_EXCHANGE_STRONG
-        #define atomic_compare_exchange_strong_explicit \
-            PF_ATOMIC_COMPARE_EXCHANGE_STRONG_EXPLICIT
-        #define atomic_compare_exchange_weak PF_ATOMIC_COMPARE_EXCHANGE_WEAK
-        #define atomic_compare_exchange_weak_explicit \
-            PF_ATOMIC_COMPARE_EXCHANGE_WEAK_EXPLICIT
-        #define atomic_fetch_add PF_ATOMIC_FETCH_ADD
-        #define atomic_fetch_add_explicit PF_ATOMIC_FETCH_ADD_EXPLICIT
-        #define atomic_fetch_sub PF_ATOMIC_FETCH_SUB
-        #define atomic_fetch_sub_explicit PF_ATOMIC_FETCH_SUB_EXPLICIT
-        #define atomic_fetch_or PF_ATOMIC_FETCH_OR
-        #define atomic_fetch_or_explicit PF_ATOMIC_FETCH_OR_EXPLICIT
-        #define atomic_fetch_xor PF_ATOMIC_FETCH_XOR
-        #define atomic_fetch_xor_explicit PF_ATOMIC_FETCH_XOR_EXPLICIT
-        #define atomic_fetch_and PF_ATOMIC_FETCH_AND
-        #define atomic_fetch_and_explicit PF_ATOMIC_FETCH_AND_EXPLICIT
-        #define atomic_flag_test_and_set PF_ATOMIC_FLAG_TEST_AND_SET
-        #define atomic_flag_test_and_set_explicit \
-            PF_ATOMIC_FLAG_TEST_AND_SET_EXPLICIT
-        #define atomic_flag_clear PF_ATOMIC_FLAG_CLEAR
-        #define atomic_flag_clear_explicit PF_ATOMIC_FLAG_CLEAR_EXPLICIT
-        #define atomic_thread_fence PF_ATOMIC_THREAD_FENCE
-        #define atomic_signal_fence PF_ATOMIC_SIGNAL_FENCE
-        #define atomic_is_lock_free PF_ATOMIC_IS_LOCK_FREE
-        #define kill_dependency PF_KILL_DEPENDENCY
+    #define atomic_init PF_ATOMIC_INIT
+    #define atomic_load PF_ATOMIC_LOAD
+    #define atomic_load_explicit PF_ATOMIC_LOAD_EXPLICIT
+    #define atomic_store PF_ATOMIC_STORE
+    #define atomic_store_explicit PF_ATOMIC_STORE_EXPLICIT
+    #define atomic_exchange PF_ATOMIC_EXCHANGE
+    #define atomic_exchange_explicit PF_ATOMIC_EXCHANGE_EXPLICIT
+    #define atomic_compare_exchange_strong PF_ATOMIC_COMPARE_EXCHANGE_STRONG
+    #define atomic_compare_exchange_strong_explicit \
+        PF_ATOMIC_COMPARE_EXCHANGE_STRONG_EXPLICIT
+    #define atomic_compare_exchange_weak PF_ATOMIC_COMPARE_EXCHANGE_WEAK
+    #define atomic_compare_exchange_weak_explicit \
+        PF_ATOMIC_COMPARE_EXCHANGE_WEAK_EXPLICIT
+    #define atomic_fetch_add PF_ATOMIC_FETCH_ADD
+    #define atomic_fetch_add_explicit PF_ATOMIC_FETCH_ADD_EXPLICIT
+    #define atomic_fetch_sub PF_ATOMIC_FETCH_SUB
+    #define atomic_fetch_sub_explicit PF_ATOMIC_FETCH_SUB_EXPLICIT
+    #define atomic_fetch_or PF_ATOMIC_FETCH_OR
+    #define atomic_fetch_or_explicit PF_ATOMIC_FETCH_OR_EXPLICIT
+    #define atomic_fetch_xor PF_ATOMIC_FETCH_XOR
+    #define atomic_fetch_xor_explicit PF_ATOMIC_FETCH_XOR_EXPLICIT
+    #define atomic_fetch_and PF_ATOMIC_FETCH_AND
+    #define atomic_fetch_and_explicit PF_ATOMIC_FETCH_AND_EXPLICIT
+    #define atomic_flag_test_and_set PF_ATOMIC_FLAG_TEST_AND_SET
+    #define atomic_flag_test_and_set_explicit \
+        PF_ATOMIC_FLAG_TEST_AND_SET_EXPLICIT
+    #define atomic_flag_clear PF_ATOMIC_FLAG_CLEAR
+    #define atomic_flag_clear_explicit PF_ATOMIC_FLAG_CLEAR_EXPLICIT
+    #define atomic_thread_fence PF_ATOMIC_THREAD_FENCE
+    #define atomic_signal_fence PF_ATOMIC_SIGNAL_FENCE
+    #define atomic_is_lock_free PF_ATOMIC_IS_LOCK_FREE
+    #define kill_dependency PF_KILL_DEPENDENCY
 
 typedef PF_ATOMIC(_Bool) atomic_bool;
 typedef PF_ATOMIC(char) atomic_char;
@@ -847,5 +868,5 @@ typedef PF_ATOMIC(size_t) atomic_size_t;
 typedef PF_ATOMIC(ptrdiff_t) atomic_ptrdiff_t;
 typedef PF_ATOMIC(intmax_t) atomic_intmax_t;
 typedef PF_ATOMIC(uintmax_t) atomic_uintmax_t;
-    #endif
+#endif
 #endif

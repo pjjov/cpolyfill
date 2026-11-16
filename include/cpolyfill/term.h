@@ -123,10 +123,10 @@ PF_END_DECLS
 #if !defined(PF__TERM_STD_NAMES)                                  \
     && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_TERM)) \
         || defined(PF_STD_NAMES_TERM))
-    #define PF__TERM_STD_NAMES
+#define PF__TERM_STD_NAMES
 
-    #if PF_OS_WINDOWS
-        #undef isatty
-        #define isatty pf_isatty
-    #endif
+#if PF_OS_WINDOWS
+    #undef isatty
+    #define isatty pf_isatty
+#endif
 #endif

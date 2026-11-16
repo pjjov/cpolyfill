@@ -177,71 +177,71 @@ PF_END_DECLS
 #if !defined(PF__TIME_STD_NAMES)                                  \
     && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_TIME)) \
         || defined(PF_STD_NAMES_TIME))
-    #define PF__TIME_STD_NAMES
+#define PF__TIME_STD_NAMES
 
-    #ifdef PF__FORCE_STD_NAMES_POLYFILL
-        #define PF__TIME_MAP(have) 1
-    #else
-        #define PF__TIME_MAP(have) (!(have))
-    #endif
+#ifdef PF__FORCE_STD_NAMES_POLYFILL
+    #define PF__TIME_MAP(have) 1
+#else
+    #define PF__TIME_MAP(have) (!(have))
+#endif
 
-    #if PF__TIME_MAP(PF_CONFIG_HAVE_CLOCK_GETTIME)
-        #ifndef PF__FORCE_STD_NAMES_POLYFILL
+#if PF__TIME_MAP(PF_CONFIG_HAVE_CLOCK_GETTIME)
+    #ifndef PF__FORCE_STD_NAMES_POLYFILL
 typedef pf_clockid_t clockid_t;
-        #endif
-        #undef CLOCK_REALTIME
-        #undef CLOCK_MONOTONIC
-        #undef CLOCK_PROCESS_CPUTIME_ID
-        #undef CLOCK_THREAD_CPUTIME_ID
-        #define CLOCK_REALTIME PF_CLOCK_REALTIME
-        #define CLOCK_MONOTONIC PF_CLOCK_MONOTONIC
-        #define CLOCK_PROCESS_CPUTIME_ID PF_CLOCK_PROCESS_CPUTIME_ID
-        #define CLOCK_THREAD_CPUTIME_ID PF_CLOCK_THREAD_CPUTIME_ID
-        #undef clock_gettime
-        #define clock_gettime pf_clock_gettime
     #endif
-    #if PF__TIME_MAP(PF_CONFIG_HAVE_CLOCK_GETRES)
-        #undef clock_getres
-        #define clock_getres pf_clock_getres
-    #endif
-    #if PF__TIME_MAP(PF_CONFIG_HAVE_NANOSLEEP)
-        #undef nanosleep
-        #define nanosleep pf_nanosleep
-    #endif
-    #if PF__TIME_MAP(PF_CONFIG_HAVE_TIMESPEC_GET)
-        #undef TIME_UTC
-        #undef TIME_MONOTONIC
-        #undef TIME_ACTIVE
-        #undef TIME_THREAD_ACTIVE
-        #define TIME_UTC PF_TIME_UTC
-        #define TIME_MONOTONIC PF_TIME_MONOTONIC
-        #define TIME_ACTIVE PF_TIME_ACTIVE
-        #define TIME_THREAD_ACTIVE PF_TIME_THREAD_ACTIVE
-        #undef timespec_get
-        #define timespec_get pf_timespec_get
-    #endif
-    #if PF__TIME_MAP(PF_CONFIG_HAVE_TIMESPEC_GETRES)
-        #undef timespec_getres
-        #define timespec_getres pf_timespec_getres
-    #endif
-    #if PF__TIME_MAP(PF_CONFIG_HAVE_GMTIME_R)
-        #undef gmtime_r
-        #define gmtime_r pf_gmtime_r
-    #endif
-    #if PF__TIME_MAP(PF_CONFIG_HAVE_SLEEP)
-        #undef sleep
-        #define sleep pf_sleep
-    #endif
-    #if PF__TIME_MAP(PF_CONFIG_HAVE_USLEEP)
-        #undef usleep
-        #define usleep pf_usleep
-    #endif
-    #if PF__TIME_MAP(PF_CONFIG_HAVE_LOCALTIME_R)
-        #undef localtime_r
-        #define localtime_r pf_localtime_r
-    #endif
-    #if PF__TIME_MAP(PF_CONFIG_HAVE_TIMEGM)
-        #undef timegm
-        #define timegm pf_timegm
-    #endif
+    #undef CLOCK_REALTIME
+    #undef CLOCK_MONOTONIC
+    #undef CLOCK_PROCESS_CPUTIME_ID
+    #undef CLOCK_THREAD_CPUTIME_ID
+    #define CLOCK_REALTIME PF_CLOCK_REALTIME
+    #define CLOCK_MONOTONIC PF_CLOCK_MONOTONIC
+    #define CLOCK_PROCESS_CPUTIME_ID PF_CLOCK_PROCESS_CPUTIME_ID
+    #define CLOCK_THREAD_CPUTIME_ID PF_CLOCK_THREAD_CPUTIME_ID
+    #undef clock_gettime
+    #define clock_gettime pf_clock_gettime
+#endif
+#if PF__TIME_MAP(PF_CONFIG_HAVE_CLOCK_GETRES)
+    #undef clock_getres
+    #define clock_getres pf_clock_getres
+#endif
+#if PF__TIME_MAP(PF_CONFIG_HAVE_NANOSLEEP)
+    #undef nanosleep
+    #define nanosleep pf_nanosleep
+#endif
+#if PF__TIME_MAP(PF_CONFIG_HAVE_TIMESPEC_GET)
+    #undef TIME_UTC
+    #undef TIME_MONOTONIC
+    #undef TIME_ACTIVE
+    #undef TIME_THREAD_ACTIVE
+    #define TIME_UTC PF_TIME_UTC
+    #define TIME_MONOTONIC PF_TIME_MONOTONIC
+    #define TIME_ACTIVE PF_TIME_ACTIVE
+    #define TIME_THREAD_ACTIVE PF_TIME_THREAD_ACTIVE
+    #undef timespec_get
+    #define timespec_get pf_timespec_get
+#endif
+#if PF__TIME_MAP(PF_CONFIG_HAVE_TIMESPEC_GETRES)
+    #undef timespec_getres
+    #define timespec_getres pf_timespec_getres
+#endif
+#if PF__TIME_MAP(PF_CONFIG_HAVE_GMTIME_R)
+    #undef gmtime_r
+    #define gmtime_r pf_gmtime_r
+#endif
+#if PF__TIME_MAP(PF_CONFIG_HAVE_SLEEP)
+    #undef sleep
+    #define sleep pf_sleep
+#endif
+#if PF__TIME_MAP(PF_CONFIG_HAVE_USLEEP)
+    #undef usleep
+    #define usleep pf_usleep
+#endif
+#if PF__TIME_MAP(PF_CONFIG_HAVE_LOCALTIME_R)
+    #undef localtime_r
+    #define localtime_r pf_localtime_r
+#endif
+#if PF__TIME_MAP(PF_CONFIG_HAVE_TIMEGM)
+    #undef timegm
+    #define timegm pf_timegm
+#endif
 #endif

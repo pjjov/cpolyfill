@@ -109,44 +109,44 @@ PF_END_DECLS
 
 /* ---- Standard names --------------------------------------------------- */
 
-#if !defined(PF__STDLIB_STD_NAMES)                                    \
-    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_STDLIB))   \
+#if !defined(PF__STDLIB_STD_NAMES)                                  \
+    && ((defined(PF_STD_NAMES) && !defined(PF_NO_STD_NAMES_STDLIB)) \
         || defined(PF_STD_NAMES_STDLIB))
-    #define PF__STDLIB_STD_NAMES
+#define PF__STDLIB_STD_NAMES
 
-    #ifdef PF__FORCE_STD_NAMES_POLYFILL
-        #define PF__STDLIB_MAP(have) 1
-    #else
-        #define PF__STDLIB_MAP(have) (!(have))
-    #endif
+#ifdef PF__FORCE_STD_NAMES_POLYFILL
+    #define PF__STDLIB_MAP(have) 1
+#else
+    #define PF__STDLIB_MAP(have) (!(have))
+#endif
 
-    #if PF_OS_WINDOWS && !PF_CC_MINGW && !defined(_SSIZE_T_DEFINED)
-        #define _SSIZE_T_DEFINED
+#if PF_OS_WINDOWS && !PF_CC_MINGW && !defined(_SSIZE_T_DEFINED)
+    #define _SSIZE_T_DEFINED
 typedef pf_ssize_t ssize_t;
-    #endif
+#endif
 
-    #if PF__STDLIB_MAP(PF_CONFIG_HAVE_REALLOCARRAY)
-        #undef reallocarray
-        #define reallocarray pf_reallocarray
-    #endif
-    #if PF__STDLIB_MAP(PF_CONFIG_HAVE_GETLINE)
-        #undef getline
-        #define getline pf_getline
-    #endif
-    #if PF__STDLIB_MAP(PF_CONFIG_HAVE_GETDELIM)
-        #undef getdelim
-        #define getdelim pf_getdelim
-    #endif
-    #if PF__STDLIB_MAP(PF_CONFIG_HAVE_SETENV)
-        #undef setenv
-        #define setenv pf_setenv
-    #endif
-    #if PF__STDLIB_MAP(PF_CONFIG_HAVE_UNSETENV)
-        #undef unsetenv
-        #define unsetenv pf_unsetenv
-    #endif
-    #if PF__STDLIB_MAP(PF_CONFIG_HAVE_QSORT_R)
-        #undef qsort_r
-        #define qsort_r pf_qsort_r
-    #endif
+#if PF__STDLIB_MAP(PF_CONFIG_HAVE_REALLOCARRAY)
+    #undef reallocarray
+    #define reallocarray pf_reallocarray
+#endif
+#if PF__STDLIB_MAP(PF_CONFIG_HAVE_GETLINE)
+    #undef getline
+    #define getline pf_getline
+#endif
+#if PF__STDLIB_MAP(PF_CONFIG_HAVE_GETDELIM)
+    #undef getdelim
+    #define getdelim pf_getdelim
+#endif
+#if PF__STDLIB_MAP(PF_CONFIG_HAVE_SETENV)
+    #undef setenv
+    #define setenv pf_setenv
+#endif
+#if PF__STDLIB_MAP(PF_CONFIG_HAVE_UNSETENV)
+    #undef unsetenv
+    #define unsetenv pf_unsetenv
+#endif
+#if PF__STDLIB_MAP(PF_CONFIG_HAVE_QSORT_R)
+    #undef qsort_r
+    #define qsort_r pf_qsort_r
+#endif
 #endif
