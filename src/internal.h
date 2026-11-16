@@ -26,7 +26,7 @@
     #ifndef _UNICODE
         #define _UNICODE
     #endif
-    /* Windows 10. Tentative, see "Open questions" in REWRITE.md. */
+    /* Windows 10. */
     #ifndef _WIN32_WINNT
         #define _WIN32_WINNT 0x0A00
     #endif
