@@ -249,6 +249,12 @@ int pf__deadline_ms(const struct timespec *deadline);
 #include <time.h>
 time_t pf__timegm_portable(struct tm *tm);
 
+/* The named pipe server's waitable object (pipe.c, for the poller): POSIX
+   the listening socket; Windows an event that is signalled once a client
+   connects, after starting to wait for one. 0 or a PF_E* code. */
+struct pf_pipe_server_t;
+int pf__pipe_server_poll_handle(struct pf_pipe_server_t *srv, intptr_t *h);
+
 #if !PF_OS_WINDOWS
 /* Makes `p` track a child made with fork, so pf_process_wait (with a
    deadline), pf_process_kill and pf_process_free work on it

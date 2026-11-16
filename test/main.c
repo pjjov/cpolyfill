@@ -50,6 +50,9 @@ extern pf_test_t suite_mman[];
 extern pf_test_t suite_overflow[];
 extern pf_test_t suite_pipe[];
 extern pf_test_t suite_platform[];
+#if PF_TEST_POLLER
+extern pf_test_t suite_poller[];
+#endif
 extern pf_test_t suite_process[];
 extern pf_test_t suite_random[];
 extern pf_test_t suite_semaphore[];
@@ -70,6 +73,9 @@ extern pf_test_t suite_types[];
 extern pf_test_t suite_uchar[];
 extern pf_test_t suite_unicode[];
 extern pf_test_t suite_version[];
+#if PF_TEST_WATCH
+extern pf_test_t suite_watch[];
+#endif
 
 /* clang-format on */
 
@@ -106,6 +112,9 @@ int main(int argc, char *argv[]) {
         { "overflow", 3, suite_overflow },
         { "pipe", 1, suite_pipe },
         { "platform", 1, suite_platform },
+#if PF_TEST_POLLER
+        { "poller", 1, suite_poller },
+#endif
         { "process", 1, suite_process },
         { "random", 3, suite_random },
         { "semaphore", 1, suite_semaphore },
@@ -126,6 +135,9 @@ int main(int argc, char *argv[]) {
         { "uchar", 1, suite_uchar },
         { "unicode", 5, suite_unicode },
         { "version", 1, suite_version },
+#if PF_TEST_WATCH
+        { "watch", 1, suite_watch },
+#endif
         { 0 },
     };
 

@@ -125,6 +125,8 @@ and so on) come with the dependency, so you do not list them yourself.
 | `argparse` | `auto` | Command line parsing, `<cpolyfill/argparse.h>`. |
 | `cli` | `auto` | Command line interfaces, `<cpolyfill/cli.h>`. |
 | `daemon` | `auto` | Background services, `<cpolyfill/daemon.h>`. |
+| `poller` | `auto` | Waiting for sockets, pipes, timers and processes, `<cpolyfill/poller.h>`. |
+| `watch` | `auto` | File and directory change notifications, `<cpolyfill/watch.h>`. Needs `poller`. |
 | `tests` | `true` | Build the tests (ignored when cpolyfill is a subproject). |
 | `known_bugs` | `false` | Run the tests of known defects instead of reporting them as TODO. |
 
@@ -217,6 +219,8 @@ Each header is documented in a comment at its top.
 | [random.h](include/cpolyfill/random.h) | The system's secure random generator, and a fast one for everything else. |
 | [sysinfo.h](include/cpolyfill/sysinfo.h) | Processors, memory, the operating system and the host name. |
 | [term.h](include/cpolyfill/term.h) | Terminal detection, size, raw input and colour support. |
+| [poller.h](include/cpolyfill/poller.h) | An event loop's core: waiting for sockets, pipes, timers, processes and shutdown requests at once (epoll, kqueue, IOCP) (option `poller`). |
+| [watch.h](include/cpolyfill/watch.h) | Notifications of changes to files and directory trees (inotify, kqueue, ReadDirectoryChangesW) (option `watch`). |
 
 ### Utilities
 

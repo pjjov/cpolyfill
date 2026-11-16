@@ -49,3 +49,17 @@ option(
     value: 'auto',
     description: 'Background services, <cpolyfill/daemon.h>.',
 )
+
+option(
+    'poller',
+    type: 'feature',
+    value: 'auto',
+    description: 'Waiting for sockets, pipes, timers and processes, <cpolyfill/poller.h>.',
+)
+
+option(
+    'watch',
+    type: 'feature',
+    value: 'auto',
+    description: 'File and directory change notifications, <cpolyfill/watch.h>. Needs the poller.',
+)

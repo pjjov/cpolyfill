@@ -59,10 +59,17 @@ optional_modules = {
     'argparse': have_argparse,
     'cli': have_cli,
     'daemon': have_daemon,
+    'poller': have_poller,
+    'watch': have_watch,
 }
+# Modules with a platform part as well.
+platform_modules = ['poller', 'watch']
 foreach name, enabled : optional_modules
     if enabled
         sources += files(name + '.c')
+        if name in platform_modules
+            sources += files((is_windows ? 'win32' : 'posix') / name + '.c')
+        endif
     endif
 endforeach
 

@@ -54,6 +54,12 @@ endif
 if have_daemon
     suites += 'daemon'
 endif
+if have_poller
+    suites += 'poller'
+endif
+if have_watch
+    suites += 'watch'
+endif
 
 # The portable implementations, compared with the builtins.
 test_sources = files(
@@ -74,6 +80,8 @@ test_args = [
     '-DPF_TEST_ARGPARSE=@0@'.format(have_argparse ? 1 : 0),
     '-DPF_TEST_CLI=@0@'.format(have_cli ? 1 : 0),
     '-DPF_TEST_DAEMON=@0@'.format(have_daemon ? 1 : 0),
+    '-DPF_TEST_POLLER=@0@'.format(have_poller ? 1 : 0),
+    '-DPF_TEST_WATCH=@0@'.format(have_watch ? 1 : 0),
 ]
 if not is_msvc
     test_args += '-Werror=undef'

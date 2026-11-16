@@ -236,6 +236,36 @@ PF_API int pf_pipe_accept(
     return PF_OK;
 }
 
+int pf__pipe_server_poll_handle(pf_pipe_server_t *srv, intptr_t *h) {
+    pf__pipe_srv *impl;
+    int rc;
+
+    if (!srv || !srv->pf__impl)
+        return PF_EINVAL;
+    impl = (pf__pipe_srv *)srv->pf__impl;
+    if (impl->pending == INVALID_HANDLE_VALUE) {
+        impl->pending = pf__np_create(impl->name, false, &rc);
+        if (rc)
+            return rc;
+    }
+    if (!impl->waiting) {
+        memset(&impl->ov, 0, sizeof(impl->ov));
+        ResetEvent(impl->event);
+        impl->ov.hEvent = impl->event;
+        if (!ConnectNamedPipe(impl->pending, &impl->ov)) {
+            DWORD e = GetLastError();
+            if (e == ERROR_IO_PENDING)
+                impl->waiting = true;
+            else if (e == ERROR_PIPE_CONNECTED)
+                SetEvent(impl->event); /* pf_pipe_accept takes it */
+            else
+                return pf_error_from_win32(e);
+        }
+    }
+    *h = (intptr_t)impl->event;
+    return PF_OK;
+}
+
 PF_API int pf_pipe_server_close(pf_pipe_server_t *srv) {
     pf__pipe_srv *impl;
     if (!srv || !srv->pf__impl)
@@ -269,14 +299,19 @@ PF_API int pf_pipe_connect(
     if (rc)
         return rc;
     for (;;) {
+        /* Overlapped, so a poller can wait on it (pf__np_io waits for each
+           call). */
         HANDLE h = CreateFileW(
             wname, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
-            SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION, NULL
+            FILE_FLAG_OVERLAPPED | SECURITY_SQOS_PRESENT
+                | SECURITY_IDENTIFICATION,
+            NULL
         );
         DWORD e;
         int ms;
         if (h != INVALID_HANDLE_VALUE) {
             p->pf__h = (intptr_t)h;
+            p->pf__overlapped = 1;
             rc = PF_OK;
             break;
         }
@@ -478,6 +513,13 @@ PF_API int pf_pipe_accept(
         if (rc < 0)
             return rc;
     }
+}
+
+int pf__pipe_server_poll_handle(pf_pipe_server_t *srv, intptr_t *h) {
+    if (!srv || !srv->pf__impl)
+        return PF_EINVAL;
+    *h = ((pf__pipe_srv *)srv->pf__impl)->fd;
+    return PF_OK;
 }
 
 PF_API int pf_pipe_server_close(pf_pipe_server_t *srv) {

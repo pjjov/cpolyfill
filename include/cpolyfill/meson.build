@@ -55,6 +55,18 @@ have_daemon = not get_option('daemon').disabled()
 if have_daemon
     public_headers += files('daemon.h')
 endif
+have_poller = not get_option('poller').disabled()
+if have_poller
+    public_headers += files('poller.h')
+endif
+# File watching registers with the poller.
+have_watch = not get_option('watch').disabled() and have_poller
+if get_option('watch').enabled() and not have_watch
+    error('watch needs the poller (-Dpoller)')
+endif
+if have_watch
+    public_headers += files('watch.h')
+endif
 
 version = meson.project_version().split('.')
 
