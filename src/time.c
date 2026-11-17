@@ -62,8 +62,8 @@ time_t pf__timegm_portable(struct tm *tm) {
     year = (int64_t)tm->tm_year + 1900 + fdiv(mon, 12);
     mon -= fdiv(mon, 12) * 12;
     days = days_from_civil(year, mon + 1, 1) + (int64_t)tm->tm_mday - 1;
-    secs = days * 86400 + (int64_t)tm->tm_hour * 3600
-         + (int64_t)tm->tm_min * 60 + tm->tm_sec;
+    secs = days * 86400 + (int64_t)tm->tm_hour * 3600 + (int64_t)tm->tm_min * 60
+        + tm->tm_sec;
 
     t = (time_t)secs;
     if ((int64_t)t != secs) {
@@ -200,7 +200,7 @@ PF_API int pf_nanosleep(const struct timespec *req, struct timespec *rem) {
 
     /* 100 ns units, rounded up so the sleep is never shorter. */
     ticks = (uint64_t)req->tv_sec * 10000000u
-          + ((uint64_t)req->tv_nsec + 99u) / 100u;
+        + ((uint64_t)req->tv_nsec + 99u) / 100u;
     if (ticks == 0) {
         SwitchToThread();
         return 0;
@@ -255,15 +255,25 @@ PF_API struct tm *pf_localtime_r(const time_t *t, struct tm *tm) {
 
 static int native_clock(pf_clockid_t clock, clockid_t *out) {
     switch (clock) {
-    case PF_CLOCK_REALTIME: *out = CLOCK_REALTIME; return 0;
-    case PF_CLOCK_MONOTONIC: *out = CLOCK_MONOTONIC; return 0;
+    case PF_CLOCK_REALTIME:
+        *out = CLOCK_REALTIME;
+        return 0;
+    case PF_CLOCK_MONOTONIC:
+        *out = CLOCK_MONOTONIC;
+        return 0;
     #ifdef CLOCK_PROCESS_CPUTIME_ID
-    case PF_CLOCK_PROCESS_CPUTIME_ID: *out = CLOCK_PROCESS_CPUTIME_ID; return 0;
+    case PF_CLOCK_PROCESS_CPUTIME_ID:
+        *out = CLOCK_PROCESS_CPUTIME_ID;
+        return 0;
     #endif
     #ifdef CLOCK_THREAD_CPUTIME_ID
-    case PF_CLOCK_THREAD_CPUTIME_ID: *out = CLOCK_THREAD_CPUTIME_ID; return 0;
+    case PF_CLOCK_THREAD_CPUTIME_ID:
+        *out = CLOCK_THREAD_CPUTIME_ID;
+        return 0;
     #endif
-    default: errno = EINVAL; return -1;
+    default:
+        errno = EINVAL;
+        return -1;
     }
 }
 
@@ -303,11 +313,16 @@ PF_API struct tm *pf_localtime_r(const time_t *t, struct tm *tm) {
 
 static pf_clockid_t clock_of_base(int base) {
     switch (base) {
-    case PF_TIME_UTC: return PF_CLOCK_REALTIME;
-    case PF_TIME_MONOTONIC: return PF_CLOCK_MONOTONIC;
-    case PF_TIME_ACTIVE: return PF_CLOCK_PROCESS_CPUTIME_ID;
-    case PF_TIME_THREAD_ACTIVE: return PF_CLOCK_THREAD_CPUTIME_ID;
-    default: return -1;
+    case PF_TIME_UTC:
+        return PF_CLOCK_REALTIME;
+    case PF_TIME_MONOTONIC:
+        return PF_CLOCK_MONOTONIC;
+    case PF_TIME_ACTIVE:
+        return PF_CLOCK_PROCESS_CPUTIME_ID;
+    case PF_TIME_THREAD_ACTIVE:
+        return PF_CLOCK_THREAD_CPUTIME_ID;
+    default:
+        return -1;
     }
 }
 

@@ -478,18 +478,26 @@ static int test_wstr(int seed, int i) {
 /* WTF-8, for Windows paths: unpaired surrogates survive the round trip,
    everything else converts as with the strict functions. */
 static int test_wtf8(int seed, int i) {
-    static const uint16_t lone[] = { 'a', 0xD800, 'b', 0xDC01, 0xD83D, 0xDE00, 0xDBFF };
-    static const char lone8[] = "a\xED\xA0\x80" "b\xED\xB0\x81\xF0\x9F\x98\x80\xED\xAF\xBF";
+    static const uint16_t lone[] = { 'a',    0xD800, 'b',   0xDC01,
+                                     0xD83D, 0xDE00, 0xDBFF };
+    static const char lone8[] = "a\xED\xA0\x80"
+                                "b\xED\xB0\x81\xF0\x9F\x98\x80\xED\xAF\xBF";
     uint16_t w[16];
     char s[32];
     pf__wstr ws;
     (void)seed, (void)i;
 
     PF_ASSERT_ALWAYS_EQ(pf_utf16_to_utf8(lone, 7, s, sizeof(s), 0), PF_EILSEQ);
-    PF_ASSERT_ALWAYS_EQ(pf__utf16_to_wtf8(lone, 7, s, sizeof(s)), (ptrdiff_t)strlen(lone8));
+    PF_ASSERT_ALWAYS_EQ(
+        pf__utf16_to_wtf8(lone, 7, s, sizeof(s)), (ptrdiff_t)strlen(lone8)
+    );
     PF_ASSERT_ALWAYS_STR_EQ(s, lone8);
-    PF_ASSERT_ALWAYS_EQ(pf__utf16_to_wtf8(lone, 7, NULL, 0), (ptrdiff_t)strlen(lone8));
-    PF_ASSERT_ALWAYS_EQ(pf__utf16_to_wtf8(lone, 7, s, strlen(lone8)), PF_ERANGE);
+    PF_ASSERT_ALWAYS_EQ(
+        pf__utf16_to_wtf8(lone, 7, NULL, 0), (ptrdiff_t)strlen(lone8)
+    );
+    PF_ASSERT_ALWAYS_EQ(
+        pf__utf16_to_wtf8(lone, 7, s, strlen(lone8)), PF_ERANGE
+    );
 
     PF_ASSERT_ALWAYS_EQ(pf_utf8_to_utf16(lone8, PF_NTS, w, 16, 0), PF_EILSEQ);
     PF_ASSERT_ALWAYS_EQ(pf__wtf8_to_utf16(lone8, PF_NTS, w, 16), 7);
@@ -497,12 +505,22 @@ static int test_wtf8(int seed, int i) {
 
     /* A pair written as two surrogates is not WTF-8 (it has a 4-byte
        form), and the other invalid UTF-8 stays invalid. */
-    PF_ASSERT_ALWAYS_EQ(pf__wtf8_to_utf16("\xED\xA0\xBD\xED\xB8\x80", PF_NTS, w, 16), PF_EILSEQ);
-    PF_ASSERT_ALWAYS_EQ(pf__wtf8_to_utf16("\xED\xA0", PF_NTS, w, 16), PF_EILSEQ);
-    PF_ASSERT_ALWAYS_EQ(pf__wtf8_to_utf16("\xC0\x80", PF_NTS, w, 16), PF_EILSEQ);
-    PF_ASSERT_ALWAYS_EQ(pf__wtf8_to_utf16("\xF4\x90\x80\x80", PF_NTS, w, 16), PF_EILSEQ);
+    PF_ASSERT_ALWAYS_EQ(
+        pf__wtf8_to_utf16("\xED\xA0\xBD\xED\xB8\x80", PF_NTS, w, 16), PF_EILSEQ
+    );
+    PF_ASSERT_ALWAYS_EQ(
+        pf__wtf8_to_utf16("\xED\xA0", PF_NTS, w, 16), PF_EILSEQ
+    );
+    PF_ASSERT_ALWAYS_EQ(
+        pf__wtf8_to_utf16("\xC0\x80", PF_NTS, w, 16), PF_EILSEQ
+    );
+    PF_ASSERT_ALWAYS_EQ(
+        pf__wtf8_to_utf16("\xF4\x90\x80\x80", PF_NTS, w, 16), PF_EILSEQ
+    );
     /* a low surrogate then a high one is fine (not a pair) */
-    PF_ASSERT_ALWAYS_EQ(pf__wtf8_to_utf16("\xED\xB0\x80\xED\xA0\x80", PF_NTS, w, 16), 2);
+    PF_ASSERT_ALWAYS_EQ(
+        pf__wtf8_to_utf16("\xED\xB0\x80\xED\xA0\x80", PF_NTS, w, 16), 2
+    );
 
     PF_ASSERT_ALWAYS_EQ(pf__wstr_from_wtf8(&ws, lone8), 0);
     PF_ASSERT_ALWAYS_MEM_EQ(ws.ptr, lone, sizeof(lone));

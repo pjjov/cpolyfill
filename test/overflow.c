@@ -59,7 +59,11 @@ static uint64_t normalize(int type, uint64_t v) {
 
 /* The exact result, the wrapped one, and whether it overflowed. */
 static int reference(
-    int type, int op, uint64_t ua, uint64_t ub, uint64_t *wrapped,
+    int type,
+    int op,
+    uint64_t ua,
+    uint64_t ub,
+    uint64_t *wrapped,
     uint64_t *saturated
 ) {
     unsigned w = ovf_width[type];
@@ -165,10 +169,21 @@ static int test_boundaries(int seed, int i) {
         unsigned w = ovf_width[type];
         uint64_t top = (uint64_t)1 << (w - 1); /* MIN, or half of MAX */
         uint64_t edges[] = {
-            0,       1,       2,       3,           ~(uint64_t)0,
-            ~(uint64_t)1, top, top + 1, top - 1,   top - 2,
-            top >> 1, (top >> 1) + 1, (top >> 1) - 1,
-            (uint64_t)1 << (w / 2), ((uint64_t)1 << (w / 2)) - 1,
+            0,
+            1,
+            2,
+            3,
+            ~(uint64_t)0,
+            ~(uint64_t)1,
+            top,
+            top + 1,
+            top - 1,
+            top - 2,
+            top >> 1,
+            (top >> 1) + 1,
+            (top >> 1) - 1,
+            (uint64_t)1 << (w / 2),
+            ((uint64_t)1 << (w / 2)) - 1,
             ((uint64_t)1 << (w / 2)) + 1,
         };
         size_t x, y, n = sizeof(edges) / sizeof(edges[0]);

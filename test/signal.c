@@ -113,7 +113,9 @@ static int test_thread(int seed, int i) {
     (void)seed, (void)i;
 
     pf_shutdown_reset();
-    PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&t, request_later, NULL), pf_thrd_success);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_thrd_create(&t, request_later, NULL), pf_thrd_success
+    );
     PF_ASSERT_ALWAYS_EQ(pf_deadline_ns(&deadline, 10000000000), 0);
     PF_ASSERT_ALWAYS_EQ(pf_shutdown_wait(&deadline), PF_OK);
     PF_ASSERT_ALWAYS_EQ(pf_shutdown_signal(), PF_SIGINT);
@@ -189,8 +191,7 @@ static int test_force_second(int seed, int i) {
     }
     PF_ASSERT_ALWAYS_EQ(waitpid(pid, &status, 0), pid);
     PF_ASSERT_ALWAYS_MSG(
-        WIFSIGNALED(status) && WTERMSIG(status) == SIGTERM, "status %#x",
-        status
+        WIFSIGNALED(status) && WTERMSIG(status) == SIGTERM, "status %#x", status
     );
     return 0;
 #else

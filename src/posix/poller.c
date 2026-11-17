@@ -126,7 +126,9 @@ static int pf__poll_add(pf__poller *p, pf__preg *r) {
         return fd;
     if (b->n == b->ids_cap) {
         int *ni = (int *)reallocate(
-            p->alloc, b->ids, b->ids_cap * sizeof(int),
+            p->alloc,
+            b->ids,
+            b->ids_cap * sizeof(int),
             b->ids_cap * 2 * sizeof(int)
         );
         if (!ni)
@@ -406,8 +408,12 @@ typedef struct pf__kqbe {
 } pf__kqbe;
 
 static int pf__kq_change(
-    pf__kqbe *b, uintptr_t ident, int filter, unsigned flags,
-    unsigned fflags, int id
+    pf__kqbe *b,
+    uintptr_t ident,
+    int filter,
+    unsigned flags,
+    unsigned fflags,
+    int id
 ) {
     struct kevent kev;
     EV_SET(&kev, ident, filter, flags, fflags, 0, PF__UDATA(id));
@@ -465,7 +471,7 @@ static void pf__kq_free(pf__poller *p) {
 static int pf__kq_apply(pf__poller *p, pf__preg *r) {
     pf__kqbe *b = (pf__kqbe *)p->bstate;
     bool fired = pf__fired_kind(r->kind) || r->kind == PF__PK_PIPE_SERVER
-              || r->kind == PF__PK_WATCHER;
+        || r->kind == PF__PK_WATCHER;
     bool want_r = r->armed && (fired || (r->events & PF_POLL_IN));
     bool want_w = r->armed && !fired && (r->events & PF_POLL_OUT);
     unsigned once = 0;
@@ -477,8 +483,12 @@ static int pf__kq_apply(pf__poller *p, pf__preg *r) {
     #endif
     if (want_r || (r->bidx & PF__KQ_READ)) {
         rc = pf__kq_change(
-            b, (uintptr_t)r->h, EVFILT_READ,
-            EV_ADD | (want_r ? EV_ENABLE | once : EV_DISABLE), 0, r->id
+            b,
+            (uintptr_t)r->h,
+            EVFILT_READ,
+            EV_ADD | (want_r ? EV_ENABLE | once : EV_DISABLE),
+            0,
+            r->id
         );
         if (rc)
             return rc;
@@ -486,8 +496,12 @@ static int pf__kq_apply(pf__poller *p, pf__preg *r) {
     }
     if (want_w || (r->bidx & PF__KQ_WRITE)) {
         rc = pf__kq_change(
-            b, (uintptr_t)r->h, EVFILT_WRITE,
-            EV_ADD | (want_w ? EV_ENABLE | once : EV_DISABLE), 0, r->id
+            b,
+            (uintptr_t)r->h,
+            EVFILT_WRITE,
+            EV_ADD | (want_w ? EV_ENABLE | once : EV_DISABLE),
+            0,
+            r->id
         );
         if (rc)
             return rc;
@@ -506,8 +520,12 @@ static int pf__kq_add(pf__poller *p, pf__preg *r) {
     if (r->kind == PF__PK_PROCESS) {
         pf_process_t *proc = (pf_process_t *)r->obj;
         rc = pf__kq_change(
-            b, (uintptr_t)proc->pid, EVFILT_PROC, EV_ADD | EV_ONESHOT,
-            NOTE_EXIT, r->id
+            b,
+            (uintptr_t)proc->pid,
+            EVFILT_PROC,
+            EV_ADD | EV_ONESHOT,
+            NOTE_EXIT,
+            r->id
         );
         if (rc == PF_ESRCH) {
             /* Ended (a zombie) before it could be watched. */

@@ -156,8 +156,8 @@ static int test_pty(int seed, int i) {
 
 /* The colour environment, saved and cleared, then restored. */
 static const char *const color_vars[] = {
-    "NO_COLOR", "FORCE_COLOR", "CLICOLOR_FORCE", "CLICOLOR", "TERM",
-    "COLORTERM",
+    "NO_COLOR", "FORCE_COLOR", "CLICOLOR_FORCE",
+    "CLICOLOR", "TERM",        "COLORTERM",
 };
 #define NVARS (sizeof(color_vars) / sizeof(color_vars[0]))
 

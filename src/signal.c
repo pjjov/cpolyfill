@@ -52,7 +52,9 @@ PF_API bool pf_shutdown_requested(void) {
     return PF_ATOMIC_LOAD(&pf__shutdown_sig) != 0;
 }
 
-PF_API int pf_shutdown_signal(void) { return PF_ATOMIC_LOAD(&pf__shutdown_sig); }
+PF_API int pf_shutdown_signal(void) {
+    return PF_ATOMIC_LOAD(&pf__shutdown_sig);
+}
 
 /* Records `sig` unless a request is pending: true if it was the first. */
 static bool pf__shutdown_record(int sig) {
@@ -81,8 +83,12 @@ static BOOL WINAPI pf__shutdown_ctrl(DWORD type) {
     bool ending = false;
 
     switch (type) {
-    case CTRL_C_EVENT: sig = PF_SIGINT; break;
-    case CTRL_BREAK_EVENT: sig = PF_SIGBREAK; break;
+    case CTRL_C_EVENT:
+        sig = PF_SIGINT;
+        break;
+    case CTRL_BREAK_EVENT:
+        sig = PF_SIGBREAK;
+        break;
     case CTRL_CLOSE_EVENT:
         sig = PF_SIGHUP;
         ending = true;
@@ -92,7 +98,8 @@ static BOOL WINAPI pf__shutdown_ctrl(DWORD type) {
         sig = PF_SIGTERM;
         ending = true;
         break;
-    default: return FALSE;
+    default:
+        return FALSE;
     }
     if (!pf__shutdown_record(sig) && !ending
         && (PF_ATOMIC_LOAD(&pf__shutdown_flags) & PF_SHUTDOWN_FORCE_SECOND))
@@ -307,7 +314,7 @@ PF_API int pf_shutdown_fd(void) {
 
 PF_API void *pf_shutdown_handle(void) { return NULL; }
 
-PF_API void pf_shutdown_done(void) {}
+PF_API void pf_shutdown_done(void) { }
 
 #endif
 

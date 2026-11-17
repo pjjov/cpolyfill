@@ -51,11 +51,11 @@ typedef struct pf__reparse {
 
 /* Converts `path` into `w`, or returns -1 with errno from the function it
    is used in. */
-#define PF__WPATH(w, path)                       \
-    do {                                         \
-        int pf__rc = pf__wpath(&(w), (path));    \
-        if (pf__rc)                              \
-            return pf__errno_fail(pf__rc);       \
+#define PF__WPATH(w, path)                    \
+    do {                                      \
+        int pf__rc = pf__wpath(&(w), (path)); \
+        if (pf__rc)                           \
+            return pf__errno_fail(pf__rc);    \
     } while (0)
 
 static bool pf__is_name_surrogate(ULONG tag) {
@@ -69,7 +69,8 @@ static HANDLE pf__open_meta(const uint16_t *w, bool follow) {
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         NULL,
         OPEN_EXISTING,
-        FILE_FLAG_BACKUP_SEMANTICS | (follow ? 0 : FILE_FLAG_OPEN_REPARSE_POINT),
+        FILE_FLAG_BACKUP_SEMANTICS
+            | (follow ? 0 : FILE_FLAG_OPEN_REPARSE_POINT),
         NULL
     );
 }
@@ -171,7 +172,9 @@ PF_API int pf_chdir(const char *path) {
 
 /* A wide path into `buf` (or new memory from malloc, at least `size`
    bytes, if NULL): the stand-ins' convention for getcwd / realpath. */
-static char *pf__wide_out(const uint16_t *w, size_t len, char *buf, size_t size) {
+static char *pf__wide_out(
+    const uint16_t *w, size_t len, char *buf, size_t size
+) {
     ptrdiff_t n = pf__path_from_wide(w, len, NULL, 0);
 
     if (n < 0) {
@@ -224,7 +227,8 @@ PF_API char *pf_getcwd(char *buf, size_t size) {
             errno = EAGAIN; /* changed meanwhile */
         return NULL;
     }
-    if (!buf && size && size < (size_t)pf__path_from_wide(w, got, NULL, 0) + 1) {
+    if (!buf && size
+        && size < (size_t)pf__path_from_wide(w, got, NULL, 0) + 1) {
         deallocate(NULL, w, (size_t)n * 2);
         errno = ERANGE;
         return NULL;
@@ -565,7 +569,9 @@ static int pf__stat_handle(HANDLE h, const char *path, pf_stat_t *st) {
         return pf_error_last_win32();
 
     if ((bi.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
-        && GetFileInformationByHandleEx(h, FileAttributeTagInfo, &tag, sizeof(tag))
+        && GetFileInformationByHandleEx(
+            h, FileAttributeTagInfo, &tag, sizeof(tag)
+        )
         && pf__is_name_surrogate(tag.ReparseTag))
         st->type = PF_FILE_SYMLINK; /* only when opened without following */
     else if (bi.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
@@ -607,7 +613,9 @@ static int pf__stat_path(const char *path, pf_stat_t *st, bool follow) {
     }
     rc = pf_error_last_win32();
     if (rc == PF_ENOENT || rc == PF_ENOTDIR
-        || !GetFileAttributesExW((LPCWSTR)w.ptr, GetFileExInfoStandard, &data)) {
+        || !GetFileAttributesExW(
+            (LPCWSTR)w.ptr, GetFileExInfoStandard, &data
+        )) {
         pf__wstr_free(&w);
         return rc;
     }
@@ -616,8 +624,8 @@ static int pf__stat_path(const char *path, pf_stat_t *st, bool follow) {
     pf__wstr_free(&w);
     memset(st, 0, sizeof(*st));
     st->type = (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-                 ? PF_FILE_DIR
-                 : PF_FILE_REGULAR;
+        ? PF_FILE_DIR
+        : PF_FILE_REGULAR;
     st->perm = pf__perm(data.dwFileAttributes, path);
     st->size = ((uint64_t)data.nFileSizeHigh << 32) | data.nFileSizeLow;
     st->nlink = 1;
@@ -800,8 +808,8 @@ PF_API ptrdiff_t pf_known_dir(pf_known_dir_t kind, char *buf, size_t size) {
 /* The profile directory of a local or domain account, from the registry
    (ProfileList, keyed by the account's SID). */
 PF_API ptrdiff_t pf_home_dir_of(const char *user, char *buf, size_t size) {
-    static const wchar_t list[] =
-        L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\";
+    static const wchar_t list
+        [] = L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\";
     BYTE sid[SECURITY_MAX_SID_SIZE];
     DWORD sid_size = sizeof(sid), domain_size = 256, bytes;
     wchar_t domain[256], key[256], path[MAX_PATH * 2];
@@ -836,8 +844,13 @@ PF_API ptrdiff_t pf_home_dir_of(const char *user, char *buf, size_t size) {
        path is "%SystemDrive%\\Users\\name"). */
     bytes = sizeof(path);
     st = RegGetValueW(
-        HKEY_LOCAL_MACHINE, key, L"ProfileImagePath", RRF_RT_REG_SZ, NULL,
-        path, &bytes
+        HKEY_LOCAL_MACHINE,
+        key,
+        L"ProfileImagePath",
+        RRF_RT_REG_SZ,
+        NULL,
+        path,
+        &bytes
     );
     if (st != ERROR_SUCCESS)
         return PF_ENOENT;

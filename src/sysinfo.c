@@ -55,8 +55,9 @@ static char *pf__trim(char *s) {
     while (*s == ' ' || *s == '\t')
         s++;
     n = strlen(s);
-    while (n > 0 && (s[n - 1] == ' ' || s[n - 1] == '\t' || s[n - 1] == '\n'
-                     || s[n - 1] == '\r'))
+    while (n > 0
+           && (s[n - 1] == ' ' || s[n - 1] == '\t' || s[n - 1] == '\n'
+               || s[n - 1] == '\r'))
         s[--n] = '\0';
     return s;
 }
@@ -167,8 +168,10 @@ static void pf__cpulist_each(
 static void pf__count_core(long cpu, void *user) {
     char path[96], buf[256];
     snprintf(
-        path, sizeof(path),
-        "/sys/devices/system/cpu/cpu%ld/topology/thread_siblings_list", cpu
+        path,
+        sizeof(path),
+        "/sys/devices/system/cpu/cpu%ld/topology/thread_siblings_list",
+        cpu
     );
     if (pf__read_small(path, buf, sizeof(buf)) > 0) {
         if (strtol(buf, NULL, 10) == cpu)
@@ -188,11 +191,12 @@ PF_API int pf_cpu_count_physical(void) {
         && (buf = (char *)malloc(len)) != NULL) {
         if (GetLogicalProcessorInformationEx(
                 RelationProcessorCore,
-                (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)buf, &len
+                (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)buf,
+                &len
             ))
             for (p = buf; p < buf + len;) {
-                PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX e =
-                    (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)p;
+                PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
+                    e = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)p;
                 if (e->Relationship == RelationProcessorCore)
                     n++;
                 p += e->Size;
@@ -238,8 +242,12 @@ static int pf__cgroup_cpus(void) {
     for (;;) {
         char max[128];
         char *slash;
-        snprintf(path, sizeof(path), "/sys/fs/cgroup%s/cpu.max",
-                 strcmp(rel, "/") == 0 ? "" : rel);
+        snprintf(
+            path,
+            sizeof(path),
+            "/sys/fs/cgroup%s/cpu.max",
+            strcmp(rel, "/") == 0 ? "" : rel
+        );
         if (pf__read_small(path, max, sizeof(max)) > 0
             && strncmp(max, "max", 3) != 0) {
             char *end;
@@ -333,11 +341,18 @@ PF_API ptrdiff_t pf_cpu_name(char *buf, size_t size) {
         if (RegGetValueW(
                 HKEY_LOCAL_MACHINE,
                 L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
-                L"ProcessorNameString", RRF_RT_REG_SZ, NULL, w, &wsize
+                L"ProcessorNameString",
+                RRF_RT_REG_SZ,
+                NULL,
+                w,
+                &wsize
             )
             == ERROR_SUCCESS) {
             ptrdiff_t n = pf_utf16_to_utf8(
-                (const uint16_t *)w, PF_NTS, name, sizeof(name),
+                (const uint16_t *)w,
+                PF_NTS,
+                name,
+                sizeof(name),
                 PF_UNICODE_REPLACE
             );
             if (n < 0)
@@ -350,8 +365,9 @@ PF_API ptrdiff_t pf_cpu_name(char *buf, size_t size) {
         if (!pf__sysctl_str("hw.model", name, sizeof(name)))
             name[0] = '\0';
 #elif PF_OS_LINUX || PF_OS_ANDROID
-        static const char *const keys[] = { "model name", "Model", "cpu model",
-                                            "Processor", "cpu" };
+        static const char *const keys[] = {
+            "model name", "Model", "cpu model", "Processor", "cpu"
+        };
         FILE *f = fopen("/proc/cpuinfo", "r");
         char line[512];
         size_t k, best = sizeof(keys) / sizeof(keys[0]);
@@ -416,7 +432,8 @@ PF_API size_t pf_cache_line_size(void) {
         char buf[32];
         if (pf__read_small(
                 "/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size",
-                buf, sizeof(buf)
+                buf,
+                sizeof(buf)
             )
             > 0)
             n = strtol(buf, NULL, 10);
@@ -540,7 +557,8 @@ PF_UNUSED static const char *pf__machine_name(const char *m) {
     return m;
 }
 
-#define PF__SET(field, s) pf__field(info->field, sizeof(info->field), (s), strlen(s))
+#define PF__SET(field, s)                                       \
+    pf__field(info->field, sizeof(info->field), (s), strlen(s))
 
 #if PF_OS_LINUX
 /* PRETTY_NAME of os-release, unquoted, into `out`; false if missing. */
@@ -609,7 +627,9 @@ PF_API int pf_os_info(pf_os_info_t *info) {
             memcpy(&get, &fp, sizeof(get));
             if (get(&v) == 0)
                 snprintf(
-                    info->version, sizeof(info->version), "%lu.%lu.%lu",
+                    info->version,
+                    sizeof(info->version),
+                    "%lu.%lu.%lu",
                     (unsigned long)v.dwMajorVersion,
                     (unsigned long)v.dwMinorVersion,
                     (unsigned long)v.dwBuildNumber
@@ -618,11 +638,18 @@ PF_API int pf_os_info(pf_os_info_t *info) {
         if (RegGetValueW(
                 HKEY_LOCAL_MACHINE,
                 L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
-                L"ProductName", RRF_RT_REG_SZ, NULL, w, &wsize
+                L"ProductName",
+                RRF_RT_REG_SZ,
+                NULL,
+                w,
+                &wsize
             )
             == ERROR_SUCCESS) {
             if (pf_utf16_to_utf8(
-                    (const uint16_t *)w, PF_NTS, product, sizeof(product),
+                    (const uint16_t *)w,
+                    PF_NTS,
+                    product,
+                    sizeof(product),
                     PF_UNICODE_REPLACE
                 )
                 < 0)
@@ -642,16 +669,25 @@ PF_API int pf_os_info(pf_os_info_t *info) {
             SYSTEM_INFO si;
             GetNativeSystemInfo(&si);
             switch (si.wProcessorArchitecture) {
-            case PROCESSOR_ARCHITECTURE_AMD64: native = 0x8664; break;
-            case PROCESSOR_ARCHITECTURE_INTEL: native = 0x14c; break;
-            case 12 /* PROCESSOR_ARCHITECTURE_ARM64 */: native = 0xAA64; break;
-            case PROCESSOR_ARCHITECTURE_ARM: native = 0x1c4; break;
-            default: break;
+            case PROCESSOR_ARCHITECTURE_AMD64:
+                native = 0x8664;
+                break;
+            case PROCESSOR_ARCHITECTURE_INTEL:
+                native = 0x14c;
+                break;
+            case 12 /* PROCESSOR_ARCHITECTURE_ARM64 */:
+                native = 0xAA64;
+                break;
+            case PROCESSOR_ARCHITECTURE_ARM:
+                native = 0x1c4;
+                break;
+            default:
+                break;
             }
         }
         PF__SET(
             machine,
-            native == 0x8664     ? "x86_64"
+            native == 0x8664       ? "x86_64"
                 : native == 0x14c  ? "x86"
                 : native == 0xAA64 ? "arm64"
                 : native == 0x1c4  ? "arm"
@@ -671,16 +707,26 @@ PF_API int pf_os_info(pf_os_info_t *info) {
                 "kern.osproductversion", info->version, sizeof(info->version)
             ))
             PF__SET(version, u.release);
-        snprintf(info->pretty, sizeof(info->pretty), "%s %s", info->name,
-                 info->version);
+        snprintf(
+            info->pretty,
+            sizeof(info->pretty),
+            "%s %s",
+            info->name,
+            info->version
+        );
     #else
         PF__SET(name, PF_OS_ANDROID ? "Android" : u.sysname);
         PF__SET(version, u.release);
         #if PF_OS_LINUX
         if (!pf__os_release(info->pretty, sizeof(info->pretty)))
         #endif
-            snprintf(info->pretty, sizeof(info->pretty), "%s %s", info->name,
-                     info->version);
+            snprintf(
+                info->pretty,
+                sizeof(info->pretty),
+                "%s %s",
+                info->name,
+                info->version
+            );
     #endif
     }
     return PF_OK;

@@ -75,8 +75,7 @@ static int pf__walk_dir(
             break;
         }
         if (ent->d_name[0] == '.'
-            && (!ent->d_name[1]
-                || (ent->d_name[1] == '.' && !ent->d_name[2])))
+            && (!ent->d_name[1] || (ent->d_name[1] == '.' && !ent->d_name[2])))
             continue;
 
         nlen = strlen(ent->d_name);

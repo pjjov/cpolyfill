@@ -24,9 +24,9 @@
 
 static const char *child_path(void) { return getenv("PF_TEST_CHILD"); }
 
-#define NEED_CHILD()                                                    \
-    do {                                                                \
-        if (!child_path())                                              \
+#define NEED_CHILD()                                                          \
+    do {                                                                      \
+        if (!child_path())                                                    \
             return SKIP("PF_TEST_CHILD is not set (run through meson test)"); \
     } while (0)
 
@@ -94,7 +94,9 @@ static int test_exe_path(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ((size_t)len, strlen(path));
     PF_ASSERT_ALWAYS(pf_path_is_absolute(path));
     PF_ASSERT_ALWAYS(pf_is_file(path));
-    PF_ASSERT_ALWAYS(strstr(pf_path_basename(path, &blen), "cpolyfill-test") != NULL);
+    PF_ASSERT_ALWAYS(
+        strstr(pf_path_basename(path, &blen), "cpolyfill-test") != NULL
+    );
     PF_ASSERT_ALWAYS_EQ(pf_exe_path(NULL, 0), len);
     PF_ASSERT_ALWAYS_EQ(pf_exe_path(path, 3), PF_ERANGE);
     return 0;
@@ -111,7 +113,9 @@ static int test_run(int seed, int i) {
     NEED_CHILD();
 
     PF_ASSERT_ALWAYS_EQ(pf_stream_buffer(&out, NULL), PF_OK);
-    PF_ASSERT_ALWAYS_EQ(run_child(echo, NULL, "hello\nworld", &out, NULL, &st), PF_OK);
+    PF_ASSERT_ALWAYS_EQ(
+        run_child(echo, NULL, "hello\nworld", &out, NULL, &st), PF_OK
+    );
     PF_ASSERT_ALWAYS(st.exited);
     PF_ASSERT_ALWAYS_EQ(st.code, 0);
     PF_ASSERT_ALWAYS_STR_EQ(text(&out, NULL), "hello\nworld");
@@ -229,13 +233,17 @@ static int test_options(int seed, int i) {
         void *data;
         size_t size;
         int fd;
-        PF_ASSERT_ALWAYS(pf_path_join(path, sizeof(path), tmp, "pf-proc-XXXXXX") > 0);
+        PF_ASSERT_ALWAYS(
+            pf_path_join(path, sizeof(path), tmp, "pf-proc-XXXXXX") > 0
+        );
         fd = pf_mkstemp(path);
         PF_ASSERT_ALWAYS_GE(fd, 0);
         memset(&o, 0, sizeof(o));
         o.stdio[1].mode = PF_STDIO_FD;
         o.stdio[1].fd = fd;
-        PF_ASSERT_ALWAYS_EQ(run_child(out_hi, &o, NULL, NULL, NULL, &st), PF_OK);
+        PF_ASSERT_ALWAYS_EQ(
+            run_child(out_hi, &o, NULL, NULL, NULL, &st), PF_OK
+        );
         PF_ASSERT_ALWAYS_EQ(pf_close(fd), 0);
         PF_ASSERT_ALWAYS_EQ(pf_read_file(path, &data, &size, NULL), PF_OK);
         PF_ASSERT_ALWAYS_STR_EQ((const char *)data, "hi there");
@@ -275,9 +283,9 @@ static int test_options(int seed, int i) {
 /* Arguments arrive unchanged, whatever quoting Windows needs. */
 static int test_args(int seed, int i) {
     static const char *const args[] = {
-        "args", "plain", "two words", "", "quote\"inside", "back\\slash",
-        "trail\\", "both\\\"x", "tab\there", "ünïcödé €", "\\\\server\\x y",
-        NULL,
+        "args",          "plain",       "two words",       "",
+        "quote\"inside", "back\\slash", "trail\\",         "both\\\"x",
+        "tab\there",     "ünïcödé €",   "\\\\server\\x y", NULL,
     };
     pf_stream_t out;
     pf_exit_status_t st;
@@ -480,7 +488,9 @@ static int test_streams(int seed, int i) {
 
     /* the input is dropped, without an error or a SIGPIPE */
     memset(big, 'z', sizeof(big));
-    PF_ASSERT_ALWAYS_EQ(pf_stream_memory(&in, big, sizeof(big), false, NULL), PF_OK);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_stream_memory(&in, big, sizeof(big), false, NULL), PF_OK
+    );
     PF_ASSERT_ALWAYS_EQ(
         pf_process_run(closer, NULL, &in, NULL, NULL, &st), PF_OK
     );
@@ -510,8 +520,13 @@ static int test_child_ids(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_process_free(&p), PF_OK);
 
     PF_ASSERT_ALWAYS_EQ(pf_spawn(&p, argv, &o), PF_OK);
-    snprintf(expect, sizeof(expect), "%lu %lu", (unsigned long)p.pid,
-             (unsigned long)pf_getpid());
+    snprintf(
+        expect,
+        sizeof(expect),
+        "%lu %lu",
+        (unsigned long)p.pid,
+        (unsigned long)pf_getpid()
+    );
     while ((n = pf_stream_read(&p.out, buf + got, sizeof(buf) - 1 - got)) > 0)
         got += (size_t)n;
     buf[got] = '\0';

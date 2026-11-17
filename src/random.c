@@ -14,8 +14,8 @@
 #include <string.h>
 
 #if PF_OS_WINDOWS
-    #include <windows.h>
     #include <bcrypt.h>
+    #include <windows.h>
     #ifndef BCRYPT_USE_SYSTEM_PREFERRED_RNG
         #define BCRYPT_USE_SYSTEM_PREFERRED_RNG 0x00000002
     #endif

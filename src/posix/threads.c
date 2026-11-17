@@ -30,8 +30,8 @@
         #include <pthread_np.h>
     #endif
     #if PF_OS_FREEBSD
-        #include <sys/param.h>
         #include <sys/cpuset.h>
+        #include <sys/param.h>
     #endif
     #if PF_OS_NETBSD
         #include <lwp.h>
@@ -64,8 +64,7 @@ static void *trampoline(void *raw) {
 }
 
 PF_API int pf_thrd_create_ex(
-    pf_thrd_t *thr, pf_thrd_start_t func, void *arg,
-    const pf_thrd_attr_t *attr
+    pf_thrd_t *thr, pf_thrd_start_t func, void *arg, const pf_thrd_attr_t *attr
 ) {
     size_t name_len = attr && attr->name ? strlen(attr->name) : 0;
     struct start *s;
@@ -113,9 +112,12 @@ PF_API int pf_thrd_create_ex(
 
 PF_API int pf_thrd_create(pf_thrd_t *thr, pf_thrd_start_t func, void *arg) {
     switch (pf_thrd_create_ex(thr, func, arg, NULL)) {
-    case 0: return pf_thrd_success;
-    case PF_ENOMEM: return pf_thrd_nomem;
-    default: return pf_thrd_error;
+    case 0:
+        return pf_thrd_success;
+    case PF_ENOMEM:
+        return pf_thrd_nomem;
+    default:
+        return pf_thrd_error;
     }
 }
 
@@ -123,9 +125,7 @@ PF_API int pf_thrd_equal(pf_thrd_t a, pf_thrd_t b) {
     return pthread_equal(a, b) != 0;
 }
 
-PF_API pf_thrd_t pf_thrd_current(void) {
-    return pthread_self();
-}
+PF_API pf_thrd_t pf_thrd_current(void) { return pthread_self(); }
 
 PF_API int pf_thrd_sleep(
     const struct timespec *duration, struct timespec *remaining
@@ -135,9 +135,7 @@ PF_API int pf_thrd_sleep(
     return errno == EINTR ? -1 : -2;
 }
 
-PF_API void pf_thrd_yield(void) {
-    sched_yield();
-}
+PF_API void pf_thrd_yield(void) { sched_yield(); }
 
 PF_NORETURN PF_API void pf_thrd_exit(int res) {
     pthread_exit((void *)(intptr_t)res);
@@ -168,8 +166,7 @@ PF_API int pf_mtx_init(pf_mtx_t *mtx, int type) {
         return pf_thrd_error;
     rc = pthread_mutexattr_settype(
         &attr,
-        type & pf_mtx_recursive ? PTHREAD_MUTEX_RECURSIVE
-                                : PTHREAD_MUTEX_NORMAL
+        type & pf_mtx_recursive ? PTHREAD_MUTEX_RECURSIVE : PTHREAD_MUTEX_NORMAL
     );
     if (rc == 0)
         rc = pthread_mutex_init(mtx, &attr);
@@ -185,18 +182,24 @@ PF_API int pf_mtx_lock(pf_mtx_t *mtx) {
 
 PF_API int pf_mtx_trylock(pf_mtx_t *mtx) {
     switch (pthread_mutex_trylock(mtx)) {
-    case 0: return pf_thrd_success;
-    case EBUSY: return pf_thrd_busy;
-    default: return pf_thrd_error;
+    case 0:
+        return pf_thrd_success;
+    case EBUSY:
+        return pf_thrd_busy;
+    default:
+        return pf_thrd_error;
     }
 }
 
 PF_API int pf_mtx_timedlock(pf_mtx_t *mtx, const struct timespec *deadline) {
     #if PF__HAVE_PTHREAD_MUTEX_TIMEDLOCK
     switch (pthread_mutex_timedlock(mtx, deadline)) {
-    case 0: return pf_thrd_success;
-    case ETIMEDOUT: return pf_thrd_timedout;
-    default: return pf_thrd_error;
+    case 0:
+        return pf_thrd_success;
+    case ETIMEDOUT:
+        return pf_thrd_timedout;
+    default:
+        return pf_thrd_error;
     }
     #else
     /* No timed mutex (macOS): poll, backing off from 50 us to 1 ms. */
@@ -226,9 +229,7 @@ PF_API int pf_mtx_unlock(pf_mtx_t *mtx) {
     return pthread_mutex_unlock(mtx) ? pf_thrd_error : pf_thrd_success;
 }
 
-PF_API void pf_mtx_destroy(pf_mtx_t *mtx) {
-    pthread_mutex_destroy(mtx);
-}
+PF_API void pf_mtx_destroy(pf_mtx_t *mtx) { pthread_mutex_destroy(mtx); }
 
 PF_API void pf_call_once(pf_once_flag *flag, void (*func)(void)) {
     pthread_once(flag, func);
@@ -238,9 +239,12 @@ PF_API void pf_call_once(pf_once_flag *flag, void (*func)(void)) {
 
 PF_API int pf_cnd_init(pf_cnd_t *cnd) {
     switch (pthread_cond_init(cnd, NULL)) {
-    case 0: return pf_thrd_success;
-    case ENOMEM: return pf_thrd_nomem;
-    default: return pf_thrd_error;
+    case 0:
+        return pf_thrd_success;
+    case ENOMEM:
+        return pf_thrd_nomem;
+    default:
+        return pf_thrd_error;
     }
 }
 
@@ -260,15 +264,16 @@ PF_API int pf_cnd_timedwait(
     pf_cnd_t *cnd, pf_mtx_t *mtx, const struct timespec *deadline
 ) {
     switch (pthread_cond_timedwait(cnd, mtx, deadline)) {
-    case 0: return pf_thrd_success;
-    case ETIMEDOUT: return pf_thrd_timedout;
-    default: return pf_thrd_error;
+    case 0:
+        return pf_thrd_success;
+    case ETIMEDOUT:
+        return pf_thrd_timedout;
+    default:
+        return pf_thrd_error;
     }
 }
 
-PF_API void pf_cnd_destroy(pf_cnd_t *cnd) {
-    pthread_cond_destroy(cnd);
-}
+PF_API void pf_cnd_destroy(pf_cnd_t *cnd) { pthread_cond_destroy(cnd); }
 
 /* ---- Thread-specific storage ------------------------------------------- */
 
@@ -276,13 +281,9 @@ PF_API int pf_tss_create(pf_tss_t *key, pf_tss_dtor_t dtor) {
     return pthread_key_create(key, dtor) ? pf_thrd_error : pf_thrd_success;
 }
 
-PF_API void pf_tss_delete(pf_tss_t key) {
-    pthread_key_delete(key);
-}
+PF_API void pf_tss_delete(pf_tss_t key) { pthread_key_delete(key); }
 
-PF_API void *pf_tss_get(pf_tss_t key) {
-    return pthread_getspecific(key);
-}
+PF_API void *pf_tss_get(pf_tss_t key) { return pthread_getspecific(key); }
 
 PF_API int pf_tss_set(pf_tss_t key, void *value) {
     return pthread_setspecific(key, value) ? pf_thrd_error : pf_thrd_success;
@@ -300,8 +301,8 @@ PF_API int pf_thrd_set_name(const char *name) {
         memcpy(buf, name, n);
         buf[n] = 0;
         return prctl(PR_SET_NAME, (unsigned long)buf, 0, 0, 0)
-                 ? pf_error_from_errno(errno)
-                 : 0;
+            ? pf_error_from_errno(errno)
+            : 0;
     }
     #elif PF_OS_APPLE
     {
@@ -387,7 +388,7 @@ static int mask_empty(const uint64_t *mask, size_t ncpus) {
 
     #if PF_OS_LINUX || PF_OS_ANDROID
 
-/* The kernel wants a set at least as large as its own CPU mask. */
+    /* The kernel wants a set at least as large as its own CPU mask. */
         #define LINUX_MIN_CPUS 8192
 
 PF_API int pf_thrd_set_affinity(const uint64_t *mask, size_t ncpus) {

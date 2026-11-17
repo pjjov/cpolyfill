@@ -25,20 +25,20 @@
 
 /* Runs `body(w, dir)` with a fresh watcher of every backend and a fresh
    directory. */
-#define EACH_BACKEND(w, dir, body)                                      \
-    do {                                                                \
-        int be_;                                                        \
-        for (be_ = PF__WATCH_DEFAULT; be_ <= PF__WATCH_SCAN; be_++) {   \
-            pf_watcher_t w;                                             \
-            char dir[PF_PATH_MAX];                                      \
-            test_tmpdir(dir, sizeof(dir));                              \
-            PF_ASSERT_ALWAYS_EQ(                                        \
-                pf__watcher_init_with(&w, NULL, be_, 20 * MS), 0        \
-            );                                                          \
-            body;                                                       \
-            PF_ASSERT_ALWAYS_EQ(pf_watcher_free(&w), 0);                \
-            PF_ASSERT_ALWAYS_EQ(pf_remove_all(dir), 0);                 \
-        }                                                               \
+#define EACH_BACKEND(w, dir, body)                                    \
+    do {                                                              \
+        int be_;                                                      \
+        for (be_ = PF__WATCH_DEFAULT; be_ <= PF__WATCH_SCAN; be_++) { \
+            pf_watcher_t w;                                           \
+            char dir[PF_PATH_MAX];                                    \
+            test_tmpdir(dir, sizeof(dir));                            \
+            PF_ASSERT_ALWAYS_EQ(                                      \
+                pf__watcher_init_with(&w, NULL, be_, 20 * MS), 0      \
+            );                                                        \
+            body;                                                     \
+            PF_ASSERT_ALWAYS_EQ(pf_watcher_free(&w), 0);              \
+            PF_ASSERT_ALWAYS_EQ(pf_remove_all(dir), 0);               \
+        }                                                             \
     } while (0)
 
 /* The events seen so far, copied. */
@@ -84,7 +84,9 @@ static bool expect_ms(
             snprintf(s->path, sizeof(s->path), "%s", ev[i].path);
             s->has_old = ev[i].old_path != NULL;
             snprintf(
-                s->old, sizeof(s->old), "%s",
+                s->old,
+                sizeof(s->old),
+                "%s",
                 ev[i].old_path ? ev[i].old_path : ""
             );
             s->dir = ev[i].dir;
@@ -92,7 +94,9 @@ static bool expect_ms(
     }
 }
 
-static bool expect(pf_watcher_t *w, int kind, const char *path, const char *old) {
+static bool expect(
+    pf_watcher_t *w, int kind, const char *path, const char *old
+) {
     return expect_ms(w, kind, path, old, 3000);
 }
 
@@ -174,7 +178,9 @@ static void recursive_body(pf_watcher_t *w, const char *dir) {
     /* Changes deep inside. */
     forget();
     put(test_path(0, dir, "a" SEP "b" SEP "deep"), "deeper");
-    PF_ASSERT_ALWAYS(expect(w, PF_WATCH_MODIFIED, "a" SEP "b" SEP "deep", NULL));
+    PF_ASSERT_ALWAYS(
+        expect(w, PF_WATCH_MODIFIED, "a" SEP "b" SEP "deep", NULL)
+    );
     forget();
     put(test_path(0, dir, "old" SEP "g"), "g");
     PF_ASSERT_ALWAYS(expect(w, PF_WATCH_CREATED, "old" SEP "g", NULL));
@@ -196,8 +202,7 @@ static void recursive_body(pf_watcher_t *w, const char *dir) {
     forget();
     PF_ASSERT_ALWAYS_EQ(
         pf_rename(
-            test_path(0, dir, "new" SEP "h"),
-            test_path(1, dir, "a" SEP "h2")
+            test_path(0, dir, "new" SEP "h"), test_path(1, dir, "a" SEP "h2")
         ),
         0
     );
@@ -246,9 +251,7 @@ static void file_body(pf_watcher_t *w, const char *dir) {
     put(f, "back");
     PF_ASSERT_ALWAYS(expect(w, PF_WATCH_CREATED, "watched.txt", NULL));
 
-    PF_ASSERT_ALWAYS_EQ(
-        pf_watcher_add(w, f, PF_WATCH_RECURSIVE), PF_ENOTDIR
-    );
+    PF_ASSERT_ALWAYS_EQ(pf_watcher_add(w, f, PF_WATCH_RECURSIVE), PF_ENOTDIR);
     PF_ASSERT_ALWAYS_EQ(pf_watcher_remove(w, id), 0);
 }
 
@@ -381,12 +384,8 @@ static int test_poller(int seed, int i) {
 }
 
 pf_test_t suite_watch[] = {
-    { test_files, "files" },
-    { test_recursive, "recursive" },
-    { test_file, "file" },
-    { test_gone, "gone" },
-    { test_small, "small" },
-    { test_overflow, "overflow" },
-    { test_poller, "poller" },
-    { 0 },
+    { test_files, "files" },   { test_recursive, "recursive" },
+    { test_file, "file" },     { test_gone, "gone" },
+    { test_small, "small" },   { test_overflow, "overflow" },
+    { test_poller, "poller" }, { 0 },
 };

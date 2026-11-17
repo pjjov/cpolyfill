@@ -33,8 +33,12 @@ static int test_anonymous(int seed, int i) {
     (void)seed, (void)i;
 
     p = (unsigned char *)pf_mmap(
-        NULL, len, PF_PROT_READ | PF_PROT_WRITE,
-        PF_MAP_PRIVATE | PF_MAP_ANONYMOUS, -1, 0
+        NULL,
+        len,
+        PF_PROT_READ | PF_PROT_WRITE,
+        PF_MAP_PRIVATE | PF_MAP_ANONYMOUS,
+        -1,
+        0
     );
     PF_ASSERT_ALWAYS(p != PF_MAP_FAILED);
     for (k = 0; k < len; k++)
@@ -55,8 +59,12 @@ static int test_anonymous(int seed, int i) {
 
     /* shared anonymous memory works too */
     p = (unsigned char *)pf_mmap(
-        NULL, len, PF_PROT_READ | PF_PROT_WRITE,
-        PF_MAP_SHARED | PF_MAP_ANONYMOUS, -1, 0
+        NULL,
+        len,
+        PF_PROT_READ | PF_PROT_WRITE,
+        PF_MAP_SHARED | PF_MAP_ANONYMOUS,
+        -1,
+        0
     );
     PF_ASSERT_ALWAYS(p != PF_MAP_FAILED);
     p[1] = 2;
@@ -68,14 +76,32 @@ static int test_invalid(int seed, int i) {
     int rw = PF_PROT_READ | PF_PROT_WRITE;
     (void)seed, (void)i;
 
-    PF_ASSERT_ALWAYS(pf_mmap(NULL, 0, rw, PF_MAP_PRIVATE | PF_MAP_ANON, -1, 0) == PF_MAP_FAILED);
+    PF_ASSERT_ALWAYS(
+        pf_mmap(NULL, 0, rw, PF_MAP_PRIVATE | PF_MAP_ANON, -1, 0)
+        == PF_MAP_FAILED
+    );
     PF_ASSERT_ALWAYS_EQ(errno, EINVAL);
-    PF_ASSERT_ALWAYS(pf_mmap(NULL, 4096, rw, PF_MAP_ANON, -1, 0) == PF_MAP_FAILED);
+    PF_ASSERT_ALWAYS(
+        pf_mmap(NULL, 4096, rw, PF_MAP_ANON, -1, 0) == PF_MAP_FAILED
+    );
     PF_ASSERT_ALWAYS_EQ(errno, EINVAL);
-    PF_ASSERT_ALWAYS(pf_mmap(NULL, 4096, rw, PF_MAP_SHARED | PF_MAP_PRIVATE | PF_MAP_ANON, -1, 0) == PF_MAP_FAILED);
-    PF_ASSERT_ALWAYS(pf_mmap(NULL, 4096, rw, PF_MAP_PRIVATE | PF_MAP_ANON | 0x4000, -1, 0) == PF_MAP_FAILED);
-    PF_ASSERT_ALWAYS(pf_mmap(NULL, 4096, rw, PF_MAP_PRIVATE | PF_MAP_ANON, -1, 1) == PF_MAP_FAILED);
-    PF_ASSERT_ALWAYS(pf_mmap(NULL, 4096, rw, PF_MAP_PRIVATE, -1, 0) == PF_MAP_FAILED);
+    PF_ASSERT_ALWAYS(
+        pf_mmap(
+            NULL, 4096, rw, PF_MAP_SHARED | PF_MAP_PRIVATE | PF_MAP_ANON, -1, 0
+        )
+        == PF_MAP_FAILED
+    );
+    PF_ASSERT_ALWAYS(
+        pf_mmap(NULL, 4096, rw, PF_MAP_PRIVATE | PF_MAP_ANON | 0x4000, -1, 0)
+        == PF_MAP_FAILED
+    );
+    PF_ASSERT_ALWAYS(
+        pf_mmap(NULL, 4096, rw, PF_MAP_PRIVATE | PF_MAP_ANON, -1, 1)
+        == PF_MAP_FAILED
+    );
+    PF_ASSERT_ALWAYS(
+        pf_mmap(NULL, 4096, rw, PF_MAP_PRIVATE, -1, 0) == PF_MAP_FAILED
+    );
     PF_ASSERT_ALWAYS_EQ(errno, EBADF);
     return 0;
 }
@@ -97,7 +123,9 @@ static int test_file(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_pwrite(fd, "second", 6, (pf_off_t)gran), 6);
 
     /* shared: writes reach the file */
-    p = (char *)pf_mmap(NULL, len, PF_PROT_READ | PF_PROT_WRITE, PF_MAP_SHARED, fd, 0);
+    p = (char *)pf_mmap(
+        NULL, len, PF_PROT_READ | PF_PROT_WRITE, PF_MAP_SHARED, fd, 0
+    );
     PF_ASSERT_ALWAYS(p != PF_MAP_FAILED);
     PF_ASSERT_ALWAYS_MEM_EQ(p, "first", 5);
     PF_ASSERT_ALWAYS_MEM_EQ(p + gran, "second", 6);
@@ -108,7 +136,9 @@ static int test_file(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_munmap(p, len), 0);
 
     /* private: they do not */
-    p = (char *)pf_mmap(NULL, len, PF_PROT_READ | PF_PROT_WRITE, PF_MAP_PRIVATE, fd, 0);
+    p = (char *)pf_mmap(
+        NULL, len, PF_PROT_READ | PF_PROT_WRITE, PF_MAP_PRIVATE, fd, 0
+    );
     PF_ASSERT_ALWAYS(p != PF_MAP_FAILED);
     memcpy(p, "xxxxx", 5);
     PF_ASSERT_ALWAYS_EQ(pf_pread(fd, buf, 5, 0), 5);
@@ -116,11 +146,16 @@ static int test_file(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_munmap(p, len), 0);
 
     /* from an offset */
-    p = (char *)pf_mmap(NULL, gran, PF_PROT_READ, PF_MAP_SHARED, fd, (pf_off_t)gran);
+    p = (char *)pf_mmap(
+        NULL, gran, PF_PROT_READ, PF_MAP_SHARED, fd, (pf_off_t)gran
+    );
     PF_ASSERT_ALWAYS(p != PF_MAP_FAILED);
     PF_ASSERT_ALWAYS_MEM_EQ(p, "second", 6);
     PF_ASSERT_ALWAYS_EQ(pf_munmap(p, gran), 0);
-    PF_ASSERT_ALWAYS(pf_mmap(NULL, gran, PF_PROT_READ, PF_MAP_SHARED, fd, (pf_off_t)gran / 2) == PF_MAP_FAILED);
+    PF_ASSERT_ALWAYS(
+        pf_mmap(NULL, gran, PF_PROT_READ, PF_MAP_SHARED, fd, (pf_off_t)gran / 2)
+        == PF_MAP_FAILED
+    );
     PF_ASSERT_ALWAYS_EQ(errno, EINVAL);
 
     PF_ASSERT_ALWAYS_EQ(pf_close(fd), 0);
@@ -157,7 +192,9 @@ static int test_map_file(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(m.size, 0u);
     PF_ASSERT_ALWAYS_EQ(pf_unmap_file(&m), 0);
 
-    PF_ASSERT_ALWAYS_EQ(pf_map_file(&m, test_path(2, dir, "none"), 0), PF_ENOENT);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_map_file(&m, test_path(2, dir, "none"), 0), PF_ENOENT
+    );
     PF_ASSERT_ALWAYS_EQ(pf_map_file(&m, dir, 0), PF_EISDIR);
     PF_ASSERT_ALWAYS_EQ(pf_map_file(&m, f, 0x80), PF_EINVAL);
     PF_ASSERT_ALWAYS_EQ(pf_remove_all(dir), 0);
@@ -165,10 +202,7 @@ static int test_map_file(int seed, int i) {
 }
 
 pf_test_t suite_mman[] = {
-    { test_sizes, "sizes" },
-    { test_anonymous, "anonymous" },
-    { test_invalid, "invalid" },
-    { test_file, "file" },
-    { test_map_file, "map_file" },
-    { 0 },
+    { test_sizes, "sizes" },       { test_anonymous, "anonymous" },
+    { test_invalid, "invalid" },   { test_file, "file" },
+    { test_map_file, "map_file" }, { 0 },
 };

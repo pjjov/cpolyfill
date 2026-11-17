@@ -52,7 +52,7 @@ PF_API pf_dir_t *pf_opendir(const char *path) {
         pf__errno_fail(rc);
         return NULL;
     }
-    for (len = 0; w.ptr[len]; len++) {}
+    for (len = 0; w.ptr[len]; len++) { }
 
     d = (pf_dir_t *)zallocate(NULL, sizeof(*d));
     if (!d) {

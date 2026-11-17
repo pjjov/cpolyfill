@@ -34,8 +34,8 @@ enum {
 };
 
 typedef struct pf__preg {
-    int id;          /* 0 while the slot is free */
-    unsigned gen;    /* of the slot, for the next id */
+    int id;       /* 0 while the slot is free */
+    unsigned gen; /* of the slot, for the next id */
     unsigned char kind;
     bool armed;      /* false: a one-shot that fired, a stopped timer, a
                         process already reported */
@@ -47,16 +47,16 @@ typedef struct pf__preg {
     void *data;
     intptr_t h;
     void *obj;
-    void *be;        /* the backend's own state, if it needs any */
-    size_t bidx;     /* the backend's index (poll) */
+    void *be;    /* the backend's own state, if it needs any */
+    size_t bidx; /* the backend's index (poll) */
     /* Timers. */
     int64_t due;
     int64_t period;
-    size_t heap;     /* index in the heap, SIZE_MAX if not scheduled */
+    size_t heap; /* index in the heap, SIZE_MAX if not scheduled */
     /* The batch being filled. */
     unsigned batch;
     size_t out;
-    int next_free;   /* free slots: the next one, -1 at the end */
+    int next_free; /* free slots: the next one, -1 at the end */
 } pf__preg;
 
 typedef struct pf__poller pf__poller;
@@ -83,7 +83,7 @@ struct pf__poller {
     size_t nregs;
     size_t cap;
     int free_head;
-    size_t nready;   /* registrations with ready_now */
+    size_t nready; /* registrations with ready_now */
     /* The timers: slot indices, a min-heap on `due`. */
     size_t *heap;
     size_t nheap;
@@ -132,12 +132,7 @@ int pf__poller_init_with(
 /* Adds a registration of a kind the public functions do not offer (the
    watcher's): its id or a PF_E* code. */
 int pf__poller_add(
-    pf_poller_t *p,
-    int kind,
-    intptr_t h,
-    void *obj,
-    unsigned events,
-    void *data
+    pf_poller_t *p, int kind, intptr_t h, void *obj, unsigned events, void *data
 );
 
 #endif /* CPOLYFILL_POLLER_IMPL_H */

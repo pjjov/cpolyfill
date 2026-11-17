@@ -81,11 +81,11 @@ ptrdiff_t pf__path_from_wide(
     ptrdiff_t n;
 
     if (len == PF_NTS)
-        for (len = 0; w[len]; len++) {}
+        for (len = 0; w[len]; len++) { }
 
-    if (len >= 8 && w[0] == '\\' && w[1] == '\\' && w[2] == '?'
-        && w[3] == '\\' && (w[4] | 0x20) == 'u' && (w[5] | 0x20) == 'n'
-        && (w[6] | 0x20) == 'c' && w[7] == '\\') {
+    if (len >= 8 && w[0] == '\\' && w[1] == '\\' && w[2] == '?' && w[3] == '\\'
+        && (w[4] | 0x20) == 'u' && (w[5] | 0x20) == 'n' && (w[6] | 0x20) == 'c'
+        && w[7] == '\\') {
         /* \\?\UNC\server\share -> \\server\share */
         n = pf__utf16_to_wtf8(w + 8, len - 8, NULL, 0);
         if (n < 0)

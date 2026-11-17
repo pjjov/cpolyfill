@@ -86,7 +86,9 @@ static int test_realloc(int seed, int i) {
         PF_ASSERT_ALWAYS(all_zero(p + old, grow - old));
 
         /* shrink */
-        p = (unsigned char *)reallocate_aligned(NULL, p, grow, old / 2 + 1, align);
+        p = (unsigned char *)reallocate_aligned(
+            NULL, p, grow, old / 2 + 1, align
+        );
         PF_ASSERT_ALWAYS(p != NULL);
         PF_ASSERT_ALWAYS(!align || is_aligned(p, align));
         for (n = 0; n < old / 2 + 1; n++)
@@ -100,7 +102,9 @@ static int test_edges(int seed, int i) {
     (void)seed, (void)i;
 
     PF_ASSERT_ALWAYS(allocate(NULL, 0) == NULL);
-    PF_ASSERT_ALWAYS(allocate_aligned(NULL, 16, 24) == NULL); /* not a power of 2 */
+    PF_ASSERT_ALWAYS(
+        allocate_aligned(NULL, 16, 24) == NULL
+    ); /* not a power of 2 */
     deallocate(NULL, NULL, 0);
     deallocate_all(NULL);
     return 0;

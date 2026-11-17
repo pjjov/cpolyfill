@@ -22,9 +22,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <tlhelp32.h>
 #include <wchar.h>
 #include <windows.h>
-#include <tlhelp32.h>
 
 PF_API pf_pid_t pf_getpid(void) { return GetCurrentProcessId(); }
 
@@ -227,9 +227,7 @@ static void pf__process_clear(pf_process_t *p) {
     p->pf__handle = (intptr_t)-1;
 }
 
-static HANDLE pf__proc(const pf_process_t *p) {
-    return (HANDLE)p->pf__handle;
-}
+static HANDLE pf__proc(const pf_process_t *p) { return (HANDLE)p->pf__handle; }
 
 /* An inheritable duplicate of `h`, or NULL. */
 static HANDLE pf__inheritable(HANDLE h) {
@@ -237,7 +235,12 @@ static HANDLE pf__inheritable(HANDLE h) {
     if (h == NULL || h == INVALID_HANDLE_VALUE)
         return NULL;
     if (!DuplicateHandle(
-            GetCurrentProcess(), h, GetCurrentProcess(), &dup, 0, TRUE,
+            GetCurrentProcess(),
+            h,
+            GetCurrentProcess(),
+            &dup,
+            0,
+            TRUE,
             DUPLICATE_SAME_ACCESS
         ))
         return NULL;
@@ -248,7 +251,8 @@ PF_API int pf_spawn(
     pf_process_t *p, const char *const argv[], const pf_spawn_opts_t *opts
 ) {
     static const pf_spawn_opts_t none;
-    static const DWORD std_ids[3] = { STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
+    static const DWORD std_ids[3] = { STD_INPUT_HANDLE,
+                                      STD_OUTPUT_HANDLE,
                                       STD_ERROR_HANDLE };
     SECURITY_ATTRIBUTES sa;
     STARTUPINFOEXW si;
@@ -334,8 +338,13 @@ PF_API int pf_spawn(
         }
         case PF_STDIO_NULL:
             child[k] = CreateFileW(
-                L"NUL", GENERIC_READ | GENERIC_WRITE,
-                FILE_SHARE_READ | FILE_SHARE_WRITE, &sa, OPEN_EXISTING, 0, NULL
+                L"NUL",
+                GENERIC_READ | GENERIC_WRITE,
+                FILE_SHARE_READ | FILE_SHARE_WRITE,
+                &sa,
+                OPEN_EXISTING,
+                0,
+                NULL
             );
             if (child[k] == INVALID_HANDLE_VALUE) {
                 child[k] = NULL;
@@ -344,7 +353,9 @@ PF_API int pf_spawn(
             }
             break;
         case PF_STDIO_FD:
-            child[k] = pf__inheritable((HANDLE)_get_osfhandle(opts->stdio[k].fd));
+            child[k] = pf__inheritable(
+                (HANDLE)_get_osfhandle(opts->stdio[k].fd)
+            );
             if (!child[k]) {
                 rc = PF_EBADF;
                 goto out;
@@ -379,8 +390,13 @@ PF_API int pf_spawn(
     }
     if (nlist > 0
         && !UpdateProcThreadAttribute(
-            attrs, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, list,
-            nlist * sizeof(HANDLE), NULL, NULL
+            attrs,
+            0,
+            PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+            list,
+            nlist * sizeof(HANDLE),
+            NULL,
+            NULL
         )) {
         rc = pf_error_last_win32();
         goto out;
@@ -400,9 +416,16 @@ PF_API int pf_spawn(
         flags |= CREATE_NO_WINDOW;
 
     if (!CreateProcessW(
-            (const wchar_t *)wpath.ptr, (wchar_t *)wcmd.ptr, NULL, NULL,
-            nlist > 0, flags, env, have_cwd ? (const wchar_t *)wcwd.ptr : NULL,
-            &si.StartupInfo, &pi
+            (const wchar_t *)wpath.ptr,
+            (wchar_t *)wcmd.ptr,
+            NULL,
+            NULL,
+            nlist > 0,
+            flags,
+            env,
+            have_cwd ? (const wchar_t *)wcwd.ptr : NULL,
+            &si.StartupInfo,
+            &pi
         )) {
         rc = pf_error_last_win32();
         goto out;
@@ -420,7 +443,7 @@ PF_API int pf_spawn(
             (intptr_t)mine[k], (k == 0 ? _O_WRONLY : _O_RDONLY) | _O_BINARY
         );
         if (fd < 0)
-            continue; /* mine[k] is closed below */
+            continue;   /* mine[k] is closed below */
         mine[k] = NULL; /* now owned by the descriptor */
         pf_stream_from_fd(s, fd, true);
     }
@@ -621,8 +644,7 @@ PF_API int pf_process_communicate(
         bool started[2] = { false, false };
         /* The first pumps get threads, the last runs here. */
         for (k = 0; k + 1 < n; k++)
-            started[k] =
-                pf_thrd_create(&threads[k], pf__pump_run, &pumps[k])
+            started[k] = pf_thrd_create(&threads[k], pf__pump_run, &pumps[k])
                 == pf_thrd_success;
         if (n > 0)
             pf__pump_run(&pumps[n - 1]);

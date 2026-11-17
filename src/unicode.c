@@ -458,7 +458,12 @@ static int pf__wstr_convert(pf__wstr *out, const char *src, unsigned flags) {
     out->heap_size = 0;
 
     n = pf__convert(
-        PF__ENC_UTF8, src, PF_NTS, PF__ENC_UTF16, out->small, PF__WSTR_SMALL,
+        PF__ENC_UTF8,
+        src,
+        PF_NTS,
+        PF__ENC_UTF16,
+        out->small,
+        PF__WSTR_SMALL,
         flags
     );
     if (n != PF_ERANGE)
@@ -477,8 +482,7 @@ static int pf__wstr_convert(pf__wstr *out, const char *src, unsigned flags) {
         return PF_ENOMEM;
     }
     n = pf__convert(
-        PF__ENC_UTF8, src, PF_NTS, PF__ENC_UTF16, out->ptr, (size_t)n + 1,
-        flags
+        PF__ENC_UTF8, src, PF_NTS, PF__ENC_UTF16, out->ptr, (size_t)n + 1, flags
     );
     return n < 0 ? (int)n : PF_OK;
 }

@@ -33,7 +33,9 @@ static int test_fd(int seed, int i) {
 #if !PF_OS_WINDOWS
     PF_ASSERT_ALWAYS(fcntl(fd, F_GETFD) & FD_CLOEXEC);
 #endif
-    PF_ASSERT_ALWAYS_EQ(pf_open(f, PF_O_RDWR | PF_O_CREAT | PF_O_EXCL, 0644), -1);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_open(f, PF_O_RDWR | PF_O_CREAT | PF_O_EXCL, 0644), -1
+    );
     PF_ASSERT_ALWAYS_EQ(errno, EEXIST);
 
     /* binary: "\n" stays one byte on Windows */
@@ -57,7 +59,9 @@ static int test_fd(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_file_size(f), 3);
 
     /* 64-bit offsets */
-    PF_ASSERT_ALWAYS_EQ(pf_lseek(fd, (pf_off_t)5 << 30, SEEK_SET), (pf_off_t)5 << 30);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_lseek(fd, (pf_off_t)5 << 30, SEEK_SET), (pf_off_t)5 << 30
+    );
     PF_ASSERT_ALWAYS_EQ(pf_lseek(fd, 0, SEEK_CUR), (pf_off_t)5 << 30);
 
     fd2 = pf_dup(fd);
@@ -74,7 +78,9 @@ static int test_fd(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_close(fd), -1);
     PF_ASSERT_ALWAYS_EQ(errno, EBADF);
 
-    PF_ASSERT_ALWAYS_EQ(pf_open(test_path(1, dir, "none/x"), PF_O_RDONLY, 0), -1);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_open(test_path(1, dir, "none/x"), PF_O_RDONLY, 0), -1
+    );
     PF_ASSERT_ALWAYS_EQ(errno, ENOENT);
     PF_ASSERT_ALWAYS_EQ(pf_remove_all(dir), 0);
     return 0;
@@ -219,7 +225,9 @@ static int test_whole_files(int seed, int i) {
     pf_read_file_free(data, size, NULL);
 #if PF_OS_LINUX
     /* /proc files report size 0 */
-    PF_ASSERT_ALWAYS_EQ(pf_read_file("/proc/self/status", &data, &size, &alloc.base), 0);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_read_file("/proc/self/status", &data, &size, &alloc.base), 0
+    );
     PF_ASSERT_ALWAYS(size > 0);
     PF_ASSERT_ALWAYS(strstr((const char *)data, "Name:") != NULL);
     PF_ASSERT_ALWAYS_EQ(alloc.bytes, size + 1);
@@ -298,7 +306,9 @@ static int test_streams(int seed, int i) {
     PF_ASSERT_ALWAYS(s.vt == NULL);
     PF_ASSERT_ALWAYS_EQ(pf_stream_close(&s), PF_EINVAL);
     PF_ASSERT_ALWAYS_STR_EQ(test_read(f), "hello world 42!");
-    PF_ASSERT_ALWAYS_EQ(pf_stream_fopen(&s, test_path(1, dir, "none/x"), "r"), PF_ENOENT);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_stream_fopen(&s, test_path(1, dir, "none/x"), "r"), PF_ENOENT
+    );
 
     /* a FILE that stays open */
     {
@@ -352,7 +362,9 @@ static int test_streams(int seed, int i) {
 
     /* fixed buffer */
     memset(fixed, '.', sizeof(fixed));
-    PF_ASSERT_ALWAYS_EQ(pf_stream_memory(&s, fixed, sizeof(fixed), true, NULL), 0);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_stream_memory(&s, fixed, sizeof(fixed), true, NULL), 0
+    );
     PF_ASSERT_ALWAYS(pf_stream_buffer_data(&s, &size) == NULL);
     PF_ASSERT_ALWAYS_EQ(pf_stream_write(&s, "0123456789", 10), 8);
     PF_ASSERT_ALWAYS_EQ(pf_stream_write(&s, "x", 1), PF_ENOSPC);
@@ -367,7 +379,9 @@ static int test_streams(int seed, int i) {
         PF_ASSERT_ALWAYS_MEM_EQ(buf, "234567", 6);
     }
     PF_ASSERT_ALWAYS_EQ(pf_stream_close(&s), 0);
-    PF_ASSERT_ALWAYS_EQ(pf_stream_memory(&s, fixed, sizeof(fixed), false, NULL), 0);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_stream_memory(&s, fixed, sizeof(fixed), false, NULL), 0
+    );
     PF_ASSERT_ALWAYS_EQ(pf_stream_write(&s, "x", 1), PF_EBADF);
     PF_ASSERT_ALWAYS_EQ(pf_stream_close(&s), 0);
 
@@ -389,7 +403,9 @@ static pf_ssize_t count_write(void *ctx, const void *buf, size_t n) {
 }
 
 static int test_custom_stream(int seed, int i) {
-    static const struct pf_stream_vt vt = { NULL, count_write, NULL, NULL, NULL };
+    static const struct pf_stream_vt vt = {
+        NULL, count_write, NULL, NULL, NULL
+    };
     pf_stream_t s;
     size_t count = 0;
     char c;

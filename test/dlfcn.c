@@ -79,7 +79,9 @@ static int test_errors(int seed, int i) {
     void *self;
     (void)seed, (void)i;
 
-    PF_ASSERT_ALWAYS(pf_dlopen("/no/such/library" PF_DL_EXT, PF_RTLD_LAZY) == NULL);
+    PF_ASSERT_ALWAYS(
+        pf_dlopen("/no/such/library" PF_DL_EXT, PF_RTLD_LAZY) == NULL
+    );
     PF_ASSERT_ALWAYS(pf_dlerror() != NULL);
     PF_ASSERT_ALWAYS(pf_dlerror() == NULL);
     PF_ASSERT_ALWAYS(pf_dlclose(NULL) != 0);

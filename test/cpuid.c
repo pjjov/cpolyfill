@@ -111,7 +111,9 @@ static const struct {
     { PF_CPU_AVX512_4FMAPS, PF_TARGET_AVX512_4FMAPS, "AVX512_4FMAPS" },
     { PF_CPU_FSRM, 0, "FSRM" },
     { PF_CPU_UINTR, PF_TARGET_UINTR, "UINTR" },
-    { PF_CPU_AVX512_VP2INTERSECT, PF_TARGET_AVX512_VP2INTERSECT, "AVX512_VP2INTERSECT" },
+    { PF_CPU_AVX512_VP2INTERSECT,
+      PF_TARGET_AVX512_VP2INTERSECT,
+      "AVX512_VP2INTERSECT" },
     { PF_CPU_MD_CLEAR, 0, "MD_CLEAR" },
     { PF_CPU_SERIALIZE, PF_TARGET_SERIALIZE, "SERIALIZE" },
     { PF_CPU_HYBRID, 0, "HYBRID" },
@@ -238,19 +240,19 @@ static int test_linux(int seed, int i) {
         pf_cpu_feature f;
     } map[] = {
     #if PF__CPU_IS_X86
-        { "sse2", PF_CPU_SSE2 },       { "ssse3", PF_CPU_SSSE3 },
-        { "sse4_1", PF_CPU_SSE4_1 },   { "sse4_2", PF_CPU_SSE4_2 },
-        { "avx", PF_CPU_AVX },         { "avx2", PF_CPU_AVX2 },
-        { "fma", PF_CPU_FMA },         { "bmi1", PF_CPU_BMI1 },
-        { "bmi2", PF_CPU_BMI2 },       { "aes", PF_CPU_AES },
-        { "popcnt", PF_CPU_POPCNT },   { "avx512f", PF_CPU_AVX512F },
+        { "sse2", PF_CPU_SSE2 },         { "ssse3", PF_CPU_SSSE3 },
+        { "sse4_1", PF_CPU_SSE4_1 },     { "sse4_2", PF_CPU_SSE4_2 },
+        { "avx", PF_CPU_AVX },           { "avx2", PF_CPU_AVX2 },
+        { "fma", PF_CPU_FMA },           { "bmi1", PF_CPU_BMI1 },
+        { "bmi2", PF_CPU_BMI2 },         { "aes", PF_CPU_AES },
+        { "popcnt", PF_CPU_POPCNT },     { "avx512f", PF_CPU_AVX512F },
         { "avx512bw", PF_CPU_AVX512BW }, { "sha_ni", PF_CPU_SHA },
-        { "abm", PF_CPU_LZCNT },       { "hypervisor", PF_CPU_HYPERVISOR },
-        { "adx", PF_CPU_ADX },         { "pclmulqdq", PF_CPU_PCLMULQDQ },
+        { "abm", PF_CPU_LZCNT },         { "hypervisor", PF_CPU_HYPERVISOR },
+        { "adx", PF_CPU_ADX },           { "pclmulqdq", PF_CPU_PCLMULQDQ },
     #else
-        { "asimd", PF_CPU_ARM_NEON },  { "aes", PF_CPU_ARM_AES },
-        { "pmull", PF_CPU_ARM_PMULL }, { "sha2", PF_CPU_ARM_SHA2 },
-        { "crc32", PF_CPU_ARM_CRC32 }, { "atomics", PF_CPU_ARM_LSE },
+        { "asimd", PF_CPU_ARM_NEON },      { "aes", PF_CPU_ARM_AES },
+        { "pmull", PF_CPU_ARM_PMULL },     { "sha2", PF_CPU_ARM_SHA2 },
+        { "crc32", PF_CPU_ARM_CRC32 },     { "atomics", PF_CPU_ARM_LSE },
         { "asimddp", PF_CPU_ARM_DOTPROD }, { "sve", PF_CPU_ARM_SVE },
     #endif
     };
@@ -263,7 +265,8 @@ static int test_linux(int seed, int i) {
     if (!f)
         return SKIP("no /proc/cpuinfo");
     while (fgets(line, sizeof(line), f))
-        if (strncmp(line, "flags", 5) == 0 || strncmp(line, "Features", 8) == 0) {
+        if (strncmp(line, "flags", 5) == 0
+            || strncmp(line, "Features", 8) == 0) {
             flags = strchr(line, ':');
             break;
         }
@@ -278,7 +281,9 @@ static int test_linux(int seed, int i) {
         snprintf(word, sizeof(word), " %s ", map[k].flag);
         listed = strstr(flags, word) != NULL;
         PF_ASSERT_ALWAYS_MSG(
-            pf_cpu_has(map[k].f) == listed, "%s: cpuinfo %d", map[k].flag,
+            pf_cpu_has(map[k].f) == listed,
+            "%s: cpuinfo %d",
+            map[k].flag,
             (int)listed
         );
     }

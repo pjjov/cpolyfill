@@ -593,7 +593,9 @@ PF_API ptrdiff_t pf_known_dir(pf_known_dir_t kind, char *buf, size_t size) {
         struct stat st;
         if (dir && *dir == '/')
             return pf__copy_dir(buf, size, dir);
-        snprintf(guess, sizeof(guess), "/run/user/%lu", (unsigned long)getuid());
+        snprintf(
+            guess, sizeof(guess), "/run/user/%lu", (unsigned long)getuid()
+        );
         if (stat(guess, &st) == 0 && S_ISDIR(st.st_mode)
             && st.st_uid == getuid())
             return pf__copy_out(buf, size, guess, strlen(guess));

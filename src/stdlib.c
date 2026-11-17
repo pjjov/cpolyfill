@@ -307,7 +307,10 @@ PF_API int pf_env_foreach(
         block = len >= 0 ? (char *)malloc((size_t)len + 1) : NULL;
         if (block)
             len = pf_utf16_to_utf8(
-                (const uint16_t *)env, units, block, (size_t)len + 1,
+                (const uint16_t *)env,
+                units,
+                block,
+                (size_t)len + 1,
                 PF_UNICODE_REPLACE
             );
         FreeEnvironmentStringsW(env);

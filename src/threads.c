@@ -20,11 +20,16 @@
 /* The PF_E* code of a pf_thrd_* result. */
 static int error_of(int rc) {
     switch (rc) {
-    case pf_thrd_success: return 0;
-    case pf_thrd_busy: return PF_EBUSY;
-    case pf_thrd_nomem: return PF_ENOMEM;
-    case pf_thrd_timedout: return PF_ETIMEDOUT;
-    default: return PF_HAS_THREADS ? PF_EINVAL : PF_EDEADLK;
+    case pf_thrd_success:
+        return 0;
+    case pf_thrd_busy:
+        return PF_EBUSY;
+    case pf_thrd_nomem:
+        return PF_ENOMEM;
+    case pf_thrd_timedout:
+        return PF_ETIMEDOUT;
+    default:
+        return PF_HAS_THREADS ? PF_EINVAL : PF_EDEADLK;
     }
 }
 
@@ -216,9 +221,7 @@ PF_API int pf_spin_init(pf_spin_t *s) {
     return 0;
 }
 
-PF_API void pf_spin_free(pf_spin_t *s) {
-    (void)s;
-}
+PF_API void pf_spin_free(pf_spin_t *s) { (void)s; }
 
 PF_API int pf_spin_lock(pf_spin_t *s) {
     if (!s)
@@ -259,20 +262,15 @@ PF_API int pf_thrd_create(pf_thrd_t *thr, pf_thrd_start_t func, void *arg) {
 }
 
 PF_API int pf_thrd_create_ex(
-    pf_thrd_t *thr, pf_thrd_start_t func, void *arg,
-    const pf_thrd_attr_t *attr
+    pf_thrd_t *thr, pf_thrd_start_t func, void *arg, const pf_thrd_attr_t *attr
 ) {
     (void)thr, (void)func, (void)arg, (void)attr;
     return PF_ENOSYS;
 }
 
-PF_API int pf_thrd_equal(pf_thrd_t a, pf_thrd_t b) {
-    return a == b;
-}
+PF_API int pf_thrd_equal(pf_thrd_t a, pf_thrd_t b) { return a == b; }
 
-PF_API pf_thrd_t pf_thrd_current(void) {
-    return MAIN_THREAD;
-}
+PF_API pf_thrd_t pf_thrd_current(void) { return MAIN_THREAD; }
 
 PF_API int pf_thrd_sleep(
     const struct timespec *duration, struct timespec *remaining
@@ -282,12 +280,9 @@ PF_API int pf_thrd_sleep(
     return errno == EINTR ? -1 : -2;
 }
 
-PF_API void pf_thrd_yield(void) {
-}
+PF_API void pf_thrd_yield(void) { }
 
-PF_NORETURN PF_API void pf_thrd_exit(int res) {
-    exit(res);
-}
+PF_NORETURN PF_API void pf_thrd_exit(int res) { exit(res); }
 
 PF_API int pf_thrd_detach(pf_thrd_t thr) {
     (void)thr;
@@ -347,9 +342,7 @@ PF_API int pf_mtx_unlock(pf_mtx_t *mtx) {
     return pf_thrd_success;
 }
 
-PF_API void pf_mtx_destroy(pf_mtx_t *mtx) {
-    (void)mtx;
-}
+PF_API void pf_mtx_destroy(pf_mtx_t *mtx) { (void)mtx; }
 
 PF_API void pf_call_once(pf_once_flag *flag, void (*func)(void)) {
     if (!flag->pf__done) {
@@ -386,9 +379,7 @@ PF_API int pf_cnd_timedwait(
     return pf_thrd_timedout;
 }
 
-PF_API void pf_cnd_destroy(pf_cnd_t *cnd) {
-    (void)cnd;
-}
+PF_API void pf_cnd_destroy(pf_cnd_t *cnd) { (void)cnd; }
 
     #define TSS_MAX 128
 
@@ -444,9 +435,7 @@ PF_API int pf_thrd_get_name(char *buf, size_t size) {
     return pf__copy_name(buf, size, thread_name);
 }
 
-PF_API uint64_t pf_thrd_id(void) {
-    return MAIN_THREAD;
-}
+PF_API uint64_t pf_thrd_id(void) { return MAIN_THREAD; }
 
 PF_API int pf_thrd_set_affinity(const uint64_t *mask, size_t ncpus) {
     (void)mask, (void)ncpus;

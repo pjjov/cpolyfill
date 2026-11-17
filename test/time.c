@@ -35,7 +35,9 @@ static int test_clocks(int seed, int i) {
 
     /* The wall clock agrees with time(). */
     PF_ASSERT_ALWAYS_EQ(pf_clock_gettime(PF_CLOCK_REALTIME, &ts), 0);
-    PF_ASSERT_ALWAYS(ts.tv_sec - time(NULL) <= 1 && time(NULL) - ts.tv_sec <= 1);
+    PF_ASSERT_ALWAYS(
+        ts.tv_sec - time(NULL) <= 1 && time(NULL) - ts.tv_sec <= 1
+    );
 
     /* The monotonic clock never goes back. */
     PF_ASSERT_ALWAYS_EQ(pf_clock_gettime(PF_CLOCK_MONOTONIC, &prev), 0);
@@ -108,7 +110,9 @@ static int test_sleep(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_deadline_ns(&req, 2000000000LL), 0);
     PF_ASSERT_ALWAYS_EQ(pf_timespec_get(&ts, PF_TIME_UTC), PF_TIME_UTC);
     PF_ASSERT_ALWAYS(pf_timespec_cmp(ts, req) < 0);
-    PF_ASSERT_ALWAYS_LE(pf_timespec_to_ns(pf_timespec_sub(req, ts)), 2000000000LL);
+    PF_ASSERT_ALWAYS_LE(
+        pf_timespec_to_ns(pf_timespec_sub(req, ts)), 2000000000LL
+    );
     PF_ASSERT_ALWAYS_EQ(pf_deadline_ns(NULL, 0), PF_EINVAL);
     return 0;
 }
@@ -138,13 +142,22 @@ static int test_helpers(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_timespec_cmp(a, a), 0);
     PF_ASSERT_ALWAYS_EQ(pf_timespec_cmp(b, a), -1);
     PF_ASSERT_ALWAYS_EQ(pf_timespec_cmp(a, b), 1);
-    PF_ASSERT_ALWAYS_EQ(pf_timespec_cmp(a, pf_timespec_from_ns(1500000001LL)), -1);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_timespec_cmp(a, pf_timespec_from_ns(1500000001LL)), -1
+    );
     return 0;
 }
 
 static void check_tm(
-    const struct tm *tm, int year, int mon, int mday, int hour, int min,
-    int sec, int wday, int yday
+    const struct tm *tm,
+    int year,
+    int mon,
+    int mday,
+    int hour,
+    int min,
+    int sec,
+    int wday,
+    int yday
 ) {
     PF_ASSERT_ALWAYS_EQ(tm->tm_year + 1900, year);
     PF_ASSERT_ALWAYS_EQ(tm->tm_mon + 1, mon);
@@ -209,8 +222,8 @@ static void check_timegm(timegm_fn fn, unsigned *rng) {
 
     /* Round trips through gmtime, before and after 1970. */
     for (n = 0; n < 2000; n++) {
-        int64_t v = ((int64_t)test_rand(rng) << 30) ^ ((int64_t)test_rand(rng) << 15)
-                  ^ test_rand(rng);
+        int64_t v = ((int64_t)test_rand(rng) << 30)
+            ^ ((int64_t)test_rand(rng) << 15) ^ test_rand(rng);
         if (n & 1)
             v = -v;
         t = (time_t)(v % 20000000000LL);
@@ -222,8 +235,17 @@ static void check_timegm(timegm_fn fn, unsigned *rng) {
         back = tm;
         back.tm_wday = back.tm_yday = -1;
         PF_ASSERT_ALWAYS_EQ(fn(&back), t);
-        check_tm(&back, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                 tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_wday, tm.tm_yday);
+        check_tm(
+            &back,
+            tm.tm_year + 1900,
+            tm.tm_mon + 1,
+            tm.tm_mday,
+            tm.tm_hour,
+            tm.tm_min,
+            tm.tm_sec,
+            tm.tm_wday,
+            tm.tm_yday
+        );
     }
 }
 

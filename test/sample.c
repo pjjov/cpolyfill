@@ -53,15 +53,9 @@ static int t_seed(int seed, int i) {
 }
 
 static const pf_test_t sample[] = {
-    { t_pass, "pass" },
-    { t_fail, "fail" },
-    { t_assert, "assert" },
-    { t_crash, "crash" },
-    { t_skip, "skip" },
-    { NULL, "todo" },
-    { t_slow, "slow" },
-    { t_seed, "seed" },
-    { 0 },
+    { t_pass, "pass" },   { t_fail, "fail" }, { t_assert, "assert" },
+    { t_crash, "crash" }, { t_skip, "skip" }, { NULL, "todo" },
+    { t_slow, "slow" },   { t_seed, "seed" }, { 0 },
 };
 
 static const pf_test_t other[] = {

@@ -133,8 +133,13 @@ static struct pf__thrd *self(void) {
     t->refs = 1;
     t->foreign = 1;
     if (!DuplicateHandle(
-            GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(),
-            &t->handle, 0, FALSE, DUPLICATE_SAME_ACCESS
+            GetCurrentProcess(),
+            GetCurrentThread(),
+            GetCurrentProcess(),
+            &t->handle,
+            0,
+            FALSE,
+            DUPLICATE_SAME_ACCESS
         ))
         t->handle = NULL;
     self_block = t;
@@ -155,8 +160,7 @@ static unsigned __stdcall trampoline(void *raw) {
 }
 
 PF_API int pf_thrd_create_ex(
-    pf_thrd_t *thr, pf_thrd_start_t func, void *arg,
-    const pf_thrd_attr_t *attr
+    pf_thrd_t *thr, pf_thrd_start_t func, void *arg, const pf_thrd_attr_t *attr
 ) {
     struct pf__thrd *t;
     uintptr_t h;
@@ -184,8 +188,12 @@ PF_API int pf_thrd_create_ex(
     t->refs = 2; /* the thread and the joining / detaching side */
 
     h = _beginthreadex(
-        NULL, attr ? (unsigned)attr->stack_size : 0, trampoline, t,
-        CREATE_SUSPENDED, (unsigned *)&t->id
+        NULL,
+        attr ? (unsigned)attr->stack_size : 0,
+        trampoline,
+        t,
+        CREATE_SUSPENDED,
+        (unsigned *)&t->id
     );
     if (h == 0) {
         int err = errno;
@@ -201,9 +209,12 @@ PF_API int pf_thrd_create_ex(
 
 PF_API int pf_thrd_create(pf_thrd_t *thr, pf_thrd_start_t func, void *arg) {
     switch (pf_thrd_create_ex(thr, func, arg, NULL)) {
-    case 0: return pf_thrd_success;
-    case PF_ENOMEM: return pf_thrd_nomem;
-    default: return pf_thrd_error;
+    case 0:
+        return pf_thrd_success;
+    case PF_ENOMEM:
+        return pf_thrd_nomem;
+    default:
+        return pf_thrd_error;
     }
 }
 
@@ -211,9 +222,7 @@ PF_API int pf_thrd_equal(pf_thrd_t a, pf_thrd_t b) {
     return a == b || (a && b && a->id == b->id);
 }
 
-PF_API pf_thrd_t pf_thrd_current(void) {
-    return self();
-}
+PF_API pf_thrd_t pf_thrd_current(void) { return self(); }
 
 PF_API int pf_thrd_sleep(
     const struct timespec *duration, struct timespec *remaining
@@ -221,9 +230,7 @@ PF_API int pf_thrd_sleep(
     return pf_nanosleep(duration, remaining) == 0 ? 0 : -2;
 }
 
-PF_API void pf_thrd_yield(void) {
-    SwitchToThread();
-}
+PF_API void pf_thrd_yield(void) { SwitchToThread(); }
 
 PF_NORETURN PF_API void pf_thrd_exit(int res) {
     struct pf__thrd *t = self();
@@ -350,7 +357,7 @@ PF_API int pf_mtx_trylock(pf_mtx_t *mtx) {
         return timed_lock(mtx, NULL, 1);
     if ((mtx->pf__type & pf_mtx_recursive)
         && InterlockedCompareExchange((volatile LONG *)&mtx->pf__owner, 0, 0)
-               == (LONG)me) {
+            == (LONG)me) {
         mtx->pf__count++;
         return pf_thrd_success;
     }
@@ -459,7 +466,9 @@ static int cnd_wait(pf_cnd_t *c, pf_mtx_t *m, const struct timespec *deadline) {
         m->pf__owner = 0;
         m->pf__count = 0;
         WakeConditionVariable(MTX_CV(m));
-        ok = SleepConditionVariableSRW(CND_CV(c), SRW(m), ms_until(deadline), 0);
+        ok = SleepConditionVariableSRW(
+            CND_CV(c), SRW(m), ms_until(deadline), 0
+        );
         while (m->pf__locked)
             SleepConditionVariableSRW(MTX_CV(m), SRW(m), INFINITE, 0);
         m->pf__locked = 1;
@@ -471,7 +480,9 @@ static int cnd_wait(pf_cnd_t *c, pf_mtx_t *m, const struct timespec *deadline) {
             return pf_thrd_error;
         count = m->pf__count;
         InterlockedExchange((volatile LONG *)&m->pf__owner, 0);
-        ok = SleepConditionVariableSRW(CND_CV(c), SRW(m), ms_until(deadline), 0);
+        ok = SleepConditionVariableSRW(
+            CND_CV(c), SRW(m), ms_until(deadline), 0
+        );
         m->pf__owner = me;
         m->pf__count = count;
     }
@@ -490,9 +501,7 @@ PF_API int pf_cnd_timedwait(
     return cnd_wait(cnd, mtx, deadline);
 }
 
-PF_API void pf_cnd_destroy(pf_cnd_t *cnd) {
-    (void)cnd;
-}
+PF_API void pf_cnd_destroy(pf_cnd_t *cnd) { (void)cnd; }
 
 /* ---- Thread-specific storage ------------------------------------------- */
 
@@ -547,9 +556,7 @@ PF_API void pf_tss_delete(pf_tss_t key) {
     TlsFree(key);
 }
 
-PF_API void *pf_tss_get(pf_tss_t key) {
-    return TlsGetValue(key);
-}
+PF_API void *pf_tss_get(pf_tss_t key) { return TlsGetValue(key); }
 
 PF_API int pf_tss_set(pf_tss_t key, void *value) {
     /* Make sure the exit callback runs for this thread. */
@@ -622,9 +629,7 @@ PF_API int pf_thrd_get_name(char *buf, size_t size) {
     return rc;
 }
 
-PF_API uint64_t pf_thrd_id(void) {
-    return GetCurrentThreadId();
-}
+PF_API uint64_t pf_thrd_id(void) { return GetCurrentThreadId(); }
 
 /* CPUs are numbered group by group. */
 static int group_of(size_t cpu, WORD *group, DWORD *index) {
@@ -691,8 +696,8 @@ PF_API int pf_thrd_get_affinity(uint64_t *mask, size_t ncpus) {
 
 PF_API int pf_thrd_set_priority(int priority) {
     static const int levels[] = {
-        THREAD_PRIORITY_LOWEST,       THREAD_PRIORITY_BELOW_NORMAL,
-        THREAD_PRIORITY_NORMAL,       THREAD_PRIORITY_ABOVE_NORMAL,
+        THREAD_PRIORITY_LOWEST,  THREAD_PRIORITY_BELOW_NORMAL,
+        THREAD_PRIORITY_NORMAL,  THREAD_PRIORITY_ABOVE_NORMAL,
         THREAD_PRIORITY_HIGHEST,
     };
     if (priority < PF_THRD_PRIORITY_LOWEST

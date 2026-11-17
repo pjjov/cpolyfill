@@ -136,7 +136,9 @@ static int test_resolve(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(n, 1); /* one, though once per socket type */
     PF_ASSERT_ALWAYS_STR_EQ(fmt(&out[0]), "127.0.0.1:0");
 
-    n = pf_resolve(NULL, "99", AF_INET, SOCK_STREAM, PF_RESOLVE_PASSIVE, out, 8);
+    n = pf_resolve(
+        NULL, "99", AF_INET, SOCK_STREAM, PF_RESOLVE_PASSIVE, out, 8
+    );
     PF_ASSERT_ALWAYS_EQ(n, 1);
     PF_ASSERT_ALWAYS_STR_EQ(fmt(&out[0]), "0.0.0.0:99");
 
@@ -159,7 +161,11 @@ static int test_resolve(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_sockaddr_ip(&out[0], "127.0.0.1", 443), 0);
     PF_ASSERT_ALWAYS_EQ(
         pf_getnameinfo(
-            &out[0], host, sizeof(host), serv, sizeof(serv),
+            &out[0],
+            host,
+            sizeof(host),
+            serv,
+            sizeof(serv),
             NI_NUMERICHOST | NI_NUMERICSERV
         ),
         0
@@ -288,7 +294,9 @@ static int test_nonblocking(int seed, int i) {
         pf_socket(&c, AF_INET, SOCK_STREAM, 0, PF_SOCK_NONBLOCK), 0
     );
     rc = pf_connect(c, &addr, NULL);
-    PF_ASSERT_ALWAYS_MSG(rc == 0 || rc == PF_EINPROGRESS, "%s", pf_error_name(rc));
+    PF_ASSERT_ALWAYS_MSG(
+        rc == 0 || rc == PF_EINPROGRESS, "%s", pf_error_name(rc)
+    );
     {
         struct timespec dl = after_ms(5000);
         rc = pf_socket_wait(c, POLLOUT, &dl);
@@ -362,7 +370,12 @@ static int test_unix(int seed, int i) {
 #if PF_OS_LINUX
     {
         char name[64];
-        snprintf(name, sizeof(name), "@cpolyfill-test-%lu", (unsigned long)pf_random_u32());
+        snprintf(
+            name,
+            sizeof(name),
+            "@cpolyfill-test-%lu",
+            (unsigned long)pf_random_u32()
+        );
         PF_ASSERT_ALWAYS_EQ(pf_unix_listen(&lst, name, 0), 0);
         PF_ASSERT_ALWAYS_EQ(pf_unix_connect(&c, name), 0);
         PF_ASSERT_ALWAYS_EQ(pf_accept(lst, &a, NULL, 0), 0);

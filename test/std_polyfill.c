@@ -48,33 +48,41 @@
 #include <errno.h>
 
 #ifndef __cplusplus
-    #define CHECK_STDBIT(sfx, type, bits)                                  \
-        do {                                                               \
-            type x = (type)v;                                              \
-            PF_ASSERT_ALWAYS_EQ(stdc_leading_zeros##sfx(x), pf_clz##bits(x)); \
-            PF_ASSERT_ALWAYS_EQ(stdc_leading_ones##sfx(x), pf_clo##bits(x)); \
+    #define CHECK_STDBIT(sfx, type, bits)                                      \
+        do {                                                                   \
+            type x = (type)v;                                                  \
+            PF_ASSERT_ALWAYS_EQ(stdc_leading_zeros##sfx(x), pf_clz##bits(x));  \
+            PF_ASSERT_ALWAYS_EQ(stdc_leading_ones##sfx(x), pf_clo##bits(x));   \
             PF_ASSERT_ALWAYS_EQ(stdc_trailing_zeros##sfx(x), pf_ctz##bits(x)); \
-            PF_ASSERT_ALWAYS_EQ(stdc_trailing_ones##sfx(x), pf_cto##bits(x)); \
-            PF_ASSERT_ALWAYS_EQ(                                           \
-                stdc_first_leading_zero##sfx(x), pf_flz##bits(x)           \
-            );                                                             \
-            PF_ASSERT_ALWAYS_EQ(                                           \
-                stdc_first_leading_one##sfx(x), pf_flo##bits(x)            \
-            );                                                             \
-            PF_ASSERT_ALWAYS_EQ(                                           \
-                stdc_first_trailing_zero##sfx(x), pf_ftz##bits(x)          \
-            );                                                             \
-            PF_ASSERT_ALWAYS_EQ(                                           \
-                stdc_first_trailing_one##sfx(x), pf_fto##bits(x)           \
-            );                                                             \
-            PF_ASSERT_ALWAYS_EQ(stdc_count_zeros##sfx(x), pf_zerocount##bits(x)); \
-            PF_ASSERT_ALWAYS_EQ(stdc_count_ones##sfx(x), pf_popcount##bits(x)); \
-            PF_ASSERT_ALWAYS_EQ(stdc_has_single_bit##sfx(x), pf_ispow2##bits(x)); \
+            PF_ASSERT_ALWAYS_EQ(stdc_trailing_ones##sfx(x), pf_cto##bits(x));  \
+            PF_ASSERT_ALWAYS_EQ(                                               \
+                stdc_first_leading_zero##sfx(x), pf_flz##bits(x)               \
+            );                                                                 \
+            PF_ASSERT_ALWAYS_EQ(                                               \
+                stdc_first_leading_one##sfx(x), pf_flo##bits(x)                \
+            );                                                                 \
+            PF_ASSERT_ALWAYS_EQ(                                               \
+                stdc_first_trailing_zero##sfx(x), pf_ftz##bits(x)              \
+            );                                                                 \
+            PF_ASSERT_ALWAYS_EQ(                                               \
+                stdc_first_trailing_one##sfx(x), pf_fto##bits(x)               \
+            );                                                                 \
+            PF_ASSERT_ALWAYS_EQ(                                               \
+                stdc_count_zeros##sfx(x), pf_zerocount##bits(x)                \
+            );                                                                 \
+            PF_ASSERT_ALWAYS_EQ(                                               \
+                stdc_count_ones##sfx(x), pf_popcount##bits(x)                  \
+            );                                                                 \
+            PF_ASSERT_ALWAYS_EQ(                                               \
+                stdc_has_single_bit##sfx(x), pf_ispow2##bits(x)                \
+            );                                                                 \
             PF_ASSERT_ALWAYS_EQ(stdc_bit_width##sfx(x), pf_bitwidth##bits(x)); \
-            PF_ASSERT_ALWAYS_EQ(stdc_bit_floor##sfx(x), pf_pow2floor##bits(x)); \
-            PF_ASSERT_ALWAYS_EQ(                                           \
-                stdc_bit_ceil##sfx(x), x <= 1 ? 1 : pf_pow2ceil##bits(x)   \
-            );                                                             \
+            PF_ASSERT_ALWAYS_EQ(                                               \
+                stdc_bit_floor##sfx(x), pf_pow2floor##bits(x)                  \
+            );                                                                 \
+            PF_ASSERT_ALWAYS_EQ(                                               \
+                stdc_bit_ceil##sfx(x), x <= 1 ? 1 : pf_pow2ceil##bits(x)       \
+            );                                                                 \
         } while (0)
 #endif
 
@@ -95,8 +103,7 @@ static int test_stdbit(int seed, int i) {
     for (k = 0; k < 2000; k++) {
         unsigned long long v = ((unsigned long long)test_rand(&state) << 45)
             ^ ((unsigned long long)test_rand(&state) << 30)
-            ^ ((unsigned long long)test_rand(&state) << 15)
-            ^ test_rand(&state);
+            ^ ((unsigned long long)test_rand(&state) << 15) ^ test_rand(&state);
         v >>= test_rand(&state) % 64;
         CHECK_STDBIT(_uc, unsigned char, 8);
         CHECK_STDBIT(_us, unsigned short, 16);

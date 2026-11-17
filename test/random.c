@@ -58,8 +58,9 @@ static int test_helpers(int seed, int i) {
     for (k = 0; k < 64; k++)
         or64 |= pf_random_u64();
     PF_ASSERT_ALWAYS(or64 >> 63 && (uint32_t)or64 != 0);
-    PF_ASSERT_ALWAYS(pf_random_u32() != pf_random_u32()
-                     || pf_random_u32() != pf_random_u32());
+    PF_ASSERT_ALWAYS(
+        pf_random_u32() != pf_random_u32() || pf_random_u32() != pf_random_u32()
+    );
 
     PF_ASSERT_ALWAYS_EQ(pf_random_uniform(0), 0);
     PF_ASSERT_ALWAYS_EQ(pf_random_uniform(1), 0);

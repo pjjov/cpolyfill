@@ -154,10 +154,10 @@ PF_API int pf_mprotect(void *addr, size_t len, int prot) {
     if ((prot & ~PF__PROT_ALL) || !VirtualQuery(addr, &mbi, sizeof(mbi)))
         return pf__errno_fail(PF_EINVAL);
     cow = mbi.AllocationProtect == PAGE_WRITECOPY
-       || mbi.AllocationProtect == PAGE_EXECUTE_WRITECOPY;
+        || mbi.AllocationProtect == PAGE_EXECUTE_WRITECOPY;
     return VirtualProtect(addr, len, pf__page_prot(prot, cow), &old)
-             ? 0
-             : pf__errno_win32();
+        ? 0
+        : pf__errno_win32();
 }
 
 PF_API int pf_msync(void *addr, size_t len, int flags) {
@@ -185,8 +185,8 @@ PF_API size_t pf_map_granularity(void) { return pf_page_size(); }
 
 static int pf__native_prot(int prot) {
     return ((prot & PF_PROT_READ) ? PROT_READ : 0)
-         | ((prot & PF_PROT_WRITE) ? PROT_WRITE : 0)
-         | ((prot & PF_PROT_EXEC) ? PROT_EXEC : 0);
+        | ((prot & PF_PROT_WRITE) ? PROT_WRITE : 0)
+        | ((prot & PF_PROT_EXEC) ? PROT_EXEC : 0);
 }
 
 PF_API void *pf_mmap(
@@ -270,8 +270,12 @@ PF_API int pf_map_file(pf_mapped_file_t *m, const char *path, unsigned flags) {
         return PF_EFBIG;
     }
     p = pf_mmap(
-        NULL, (size_t)st.size, PF_PROT_READ | (write ? PF_PROT_WRITE : 0),
-        PF_MAP_SHARED, fd, 0
+        NULL,
+        (size_t)st.size,
+        PF_PROT_READ | (write ? PF_PROT_WRITE : 0),
+        PF_MAP_SHARED,
+        fd,
+        0
     );
     rc = p == PF_MAP_FAILED ? pf_error_from_errno(errno) : PF_OK;
     pf_close(fd);

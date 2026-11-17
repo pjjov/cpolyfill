@@ -26,10 +26,9 @@ static const unsigned bit_width[T_COUNT] = {
 };
 
 static const char *const op_name[OP_COUNT] = {
-    "clz",      "ctz",       "clo",    "cto",      "flz",
-    "flo",      "ftz",       "fto",    "popcount", "zerocount",
-    "parity",   "ispow2",    "pow2ceil", "pow2floor", "bitwidth",
-    "bitreverse", "rotl",    "rotr",
+    "clz",      "ctz",       "clo",      "cto",        "flz",    "flo",
+    "ftz",      "fto",       "popcount", "zerocount",  "parity", "ispow2",
+    "pow2ceil", "pow2floor", "bitwidth", "bitreverse", "rotl",   "rotr",
 };
 
 static uint64_t mask_of(unsigned w) {
@@ -52,8 +51,10 @@ static uint64_t reference(unsigned w, int op, uint64_t x, unsigned n) {
         for (i = 0; i < w && !bit(x, i); i++)
             r++;
         return r;
-    case OP_CLO: return reference(w, OP_CLZ, ~x, 0);
-    case OP_CTO: return reference(w, OP_CTZ, ~x, 0);
+    case OP_CLO:
+        return reference(w, OP_CLZ, ~x, 0);
+    case OP_CTO:
+        return reference(w, OP_CTZ, ~x, 0);
     case OP_FLZ:
         for (i = w; i > 0; i--)
             if (!bit(x, i - 1))
@@ -78,9 +79,12 @@ static uint64_t reference(unsigned w, int op, uint64_t x, unsigned n) {
         for (i = 0; i < w; i++)
             r += bit(x, i);
         return r;
-    case OP_ZEROCOUNT: return w - reference(w, OP_POPCOUNT, x, 0);
-    case OP_PARITY: return reference(w, OP_POPCOUNT, x, 0) & 1u;
-    case OP_ISPOW2: return reference(w, OP_POPCOUNT, x, 0) == 1;
+    case OP_ZEROCOUNT:
+        return w - reference(w, OP_POPCOUNT, x, 0);
+    case OP_PARITY:
+        return reference(w, OP_POPCOUNT, x, 0) & 1u;
+    case OP_ISPOW2:
+        return reference(w, OP_POPCOUNT, x, 0) == 1;
     case OP_POW2CEIL:
         for (i = 0; i < w; i++)
             if (((uint64_t)1 << i) >= x && x != 0)
@@ -91,7 +95,8 @@ static uint64_t reference(unsigned w, int op, uint64_t x, unsigned n) {
             if (bit(x, i - 1))
                 return (uint64_t)1 << (i - 1);
         return 0;
-    case OP_BITWIDTH: return w - reference(w, OP_CLZ, x, 0);
+    case OP_BITWIDTH:
+        return w - reference(w, OP_CLZ, x, 0);
     case OP_BITREVERSE:
         for (i = 0; i < w; i++)
             r |= bit(x, i) << (w - 1 - i);
@@ -191,7 +196,7 @@ static int test_random(int seed, int i) {
 
 #if PF_HAS_BITWISE_GENERIC
 /* Two expressions of the same type, by size and signedness. */
-    #define SAME_TYPE(a, b) \
+    #define SAME_TYPE(a, b)                                                \
         (sizeof(a) == sizeof(b) && ((a) * 0 - 1 > 0) == ((b) * 0 - 1 > 0))
 #endif
 

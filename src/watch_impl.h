@@ -33,20 +33,20 @@ typedef struct pf__wentry {
     int64_t ctime;
     uint32_t perm;
     bool dir;
-    bool reg;     /* a regular file */
-    intptr_t bh;  /* the backend's handle (kqueue: a descriptor), -1 */
+    bool reg;    /* a regular file */
+    intptr_t bh; /* the backend's handle (kqueue: a descriptor), -1 */
 } pf__wentry;
 
 typedef struct pf__wdir {
-    int node;     /* unique, for the backends */
-    int watch;    /* the watch's id */
-    char *rel;    /* relative to the watch's root ("" for the root),
+    int node;  /* unique, for the backends */
+    int watch; /* the watch's id */
+    char *rel; /* relative to the watch's root ("" for the root),
                      with the system's separator */
     size_t rel_len;
     pf__wentry *ents; /* sorted by name */
     size_t n;
     size_t cap;
-    intptr_t bh;  /* the backend's handle (inotify: a watch descriptor;
+    intptr_t bh; /* the backend's handle (inotify: a watch descriptor;
                      kqueue: a descriptor; Windows: its state), -1 */
     bool dirty;
     bool dead;
@@ -54,7 +54,7 @@ typedef struct pf__wdir {
 
 typedef struct pf__watch {
     int id;
-    char *root;   /* the directory scanned (a file's directory) */
+    char *root; /* the directory scanned (a file's directory) */
     size_t root_len;
     char *filter; /* a watched file's name, NULL for a directory */
     size_t filter_len;
@@ -82,8 +82,7 @@ typedef struct pf__wbackend {
     int (*dir_add)(pf__watcher *w, pf__watch *wt, pf__wdir *d);
     void (*dir_remove)(pf__watcher *w, pf__wdir *d);
     /* Files, for backends that watch each (may be NULL). */
-    void (*file_add)(pf__watcher *w, pf__watch *wt, pf__wdir *d,
-                     pf__wentry *e);
+    void (*file_add)(pf__watcher *w, pf__watch *wt, pf__wdir *d, pf__wentry *e);
     void (*file_remove)(pf__watcher *w, pf__wentry *e);
     /* Waits up to `timeout_ns` (negative: forever) for the system to
        report something, and marks the directories it names dirty (or
@@ -133,8 +132,11 @@ void pf__watch_overflow(pf__watcher *w, pf__watch *wt);
    NULL), in new memory from the watcher's allocator; release with
    pf__watch_path_free. */
 char *pf__watch_path(
-    pf__watcher *w, const pf__watch *wt, const pf__wdir *d,
-    const char *name, size_t *len
+    pf__watcher *w,
+    const pf__watch *wt,
+    const pf__wdir *d,
+    const char *name,
+    size_t *len
 );
 void pf__watch_path_free(pf__watcher *w, char *path, size_t len);
 
@@ -146,8 +148,7 @@ extern const pf__wbackend *const pf__watch_scan;
 
 /* pf_watcher_init with a chosen backend, and the scanning interval. */
 int pf__watcher_init_with(
-    pf_watcher_t *w, struct allocator_t *alloc, int backend,
-    int64_t interval_ns
+    pf_watcher_t *w, struct allocator_t *alloc, int backend, int64_t interval_ns
 );
 
 #endif /* CPOLYFILL_WATCH_IMPL_H */

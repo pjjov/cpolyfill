@@ -70,11 +70,28 @@ typedef struct pf__afd_info {
 } pf__afd_info;
 
 typedef pf__ntstatus(NTAPI *pf__NtCreateFile_t)(
-    HANDLE *, ACCESS_MASK, pf__oattr *, pf__iosb *, LARGE_INTEGER *, ULONG,
-    ULONG, ULONG, ULONG, void *, ULONG
+    HANDLE *,
+    ACCESS_MASK,
+    pf__oattr *,
+    pf__iosb *,
+    LARGE_INTEGER *,
+    ULONG,
+    ULONG,
+    ULONG,
+    ULONG,
+    void *,
+    ULONG
 );
 typedef pf__ntstatus(NTAPI *pf__NtDeviceIoControlFile_t)(
-    HANDLE, HANDLE, void *, void *, pf__iosb *, ULONG, void *, ULONG, void *,
+    HANDLE,
+    HANDLE,
+    void *,
+    void *,
+    pf__iosb *,
+    ULONG,
+    void *,
+    ULONG,
+    void *,
     ULONG
 );
 typedef pf__ntstatus(NTAPI *pf__NtCancelIoFileEx_t)(
@@ -126,25 +143,19 @@ static BOOL CALLBACK pf__nt_load(INIT_ONCE *once, void *arg, void **ctx) {
     pf__NtCreateFile = (pf__NtCreateFile_t)(void (*)(void))GetProcAddress(
         nt, "NtCreateFile"
     );
-    pf__NtDeviceIoControlFile =
-        (pf__NtDeviceIoControlFile_t)(void (*)(void))GetProcAddress(
-            nt, "NtDeviceIoControlFile"
-        );
-    pf__NtCancelIoFileEx =
-        (pf__NtCancelIoFileEx_t)(void (*)(void))GetProcAddress(
-            nt, "NtCancelIoFileEx"
-        );
-    pf__RtlNtStatusToDosError =
-        (pf__RtlNtStatusToDosError_t)(void (*)(void))GetProcAddress(
-            nt, "RtlNtStatusToDosError"
-        );
+    pf__NtDeviceIoControlFile = (pf__NtDeviceIoControlFile_t)(void (*)(void))
+        GetProcAddress(nt, "NtDeviceIoControlFile");
+    pf__NtCancelIoFileEx = (pf__NtCancelIoFileEx_t)(void (*)(void))
+        GetProcAddress(nt, "NtCancelIoFileEx");
+    pf__RtlNtStatusToDosError = (pf__RtlNtStatusToDosError_t)(void (*)(void))
+        GetProcAddress(nt, "RtlNtStatusToDosError");
     return TRUE;
 }
 
 static bool pf__nt_ready(void) {
     InitOnceExecuteOnce(&pf__nt_once, pf__nt_load, NULL, NULL);
-    return pf__NtCreateFile && pf__NtDeviceIoControlFile
-        && pf__NtCancelIoFileEx && pf__RtlNtStatusToDosError;
+    return pf__NtCreateFile && pf__NtDeviceIoControlFile && pf__NtCancelIoFileEx
+        && pf__RtlNtStatusToDosError;
 }
 
 static int pf__nt_error(pf__ntstatus status) {
@@ -159,13 +170,13 @@ static int pf__nt_error(pf__ntstatus status) {
 #define PF__KEY_WAKE 3
 
 typedef struct pf__wreg {
-    int id;          /* 0 once removed */
-    int post_id;     /* the id the wait callback posts (never changes) */
+    int id;      /* 0 once removed */
+    int post_id; /* the id the wait callback posts (never changes) */
     int kind;
     HANDLE iocp;
-    bool queued;     /* in the arm queue */
-    bool pending;    /* an AFD poll or zero-byte read is in flight */
-    bool closed;     /* the socket was closed: no more polls */
+    bool queued;  /* in the arm queue */
+    bool pending; /* an AFD poll or zero-byte read is in flight */
+    bool closed;  /* the socket was closed: no more polls */
     /* Sockets. */
     SOCKET base;
     pf__afd_info info;
@@ -174,17 +185,17 @@ typedef struct pf__wreg {
     OVERLAPPED ov;
     HANDLE event;
     /* Registered waits. */
-    HANDLE wait;     /* NULL if none */
+    HANDLE wait; /* NULL if none */
     HANDLE object;
 } pf__wreg;
 
 typedef struct pf__wbe {
     HANDLE iocp;
-    HANDLE afd;          /* NULL until the first socket */
+    HANDLE afd; /* NULL until the first socket */
     pf__wreg **queue;
     size_t nqueue;
     size_t qcap;
-    pf__wreg **dead;     /* removed sockets whose poll is being cancelled */
+    pf__wreg **dead; /* removed sockets whose poll is being cancelled */
     size_t ndead;
     size_t dcap;
     volatile LONG wake_pending;
@@ -248,8 +259,17 @@ static int pf__afd_open(pf__wbe *b) {
     oa.Length = sizeof(oa);
     oa.ObjectName = &us;
     st = pf__NtCreateFile(
-        &h, SYNCHRONIZE, &oa, &iosb, NULL, 0,
-        FILE_SHARE_READ | FILE_SHARE_WRITE, PF__FILE_OPEN, 0, NULL, 0
+        &h,
+        SYNCHRONIZE,
+        &oa,
+        &iosb,
+        NULL,
+        0,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        PF__FILE_OPEN,
+        0,
+        NULL,
+        0
     );
     if (!PF__NT_SUCCESS(st))
         return pf__nt_error(st);
@@ -278,8 +298,7 @@ static SOCKET pf__base_socket(SOCKET s) {
         SOCKET base = INVALID_SOCKET;
         DWORD bytes;
         if (WSAIoctl(
-                s, ioctls[i], NULL, 0, &base, sizeof(base), &bytes, NULL,
-                NULL
+                s, ioctls[i], NULL, 0, &base, sizeof(base), &bytes, NULL, NULL
             ) != SOCKET_ERROR
             && base != INVALID_SOCKET)
             return base;
@@ -310,8 +329,16 @@ static void pf__afd_submit(pf__poller *p, pf__preg *r, pf__wreg *w) {
     w->info.Handles[0].Events = mask;
     w->iosb.u.Status = PF__STATUS_PENDING;
     st = pf__NtDeviceIoControlFile(
-        b->afd, NULL, NULL, &w->iosb, &w->iosb, PF__IOCTL_AFD_POLL, &w->info,
-        sizeof(w->info), &w->info, sizeof(w->info)
+        b->afd,
+        NULL,
+        NULL,
+        &w->iosb,
+        &w->iosb,
+        PF__IOCTL_AFD_POLL,
+        &w->info,
+        sizeof(w->info),
+        &w->info,
+        sizeof(w->info)
     );
     if (st == PF__STATUS_PENDING || st == PF__STATUS_SUCCESS) {
         /* Either way the completion comes through the port. */
@@ -376,17 +403,14 @@ static void pf__afd_done(pf__poller *p, pf__wreg *w) {
 static VOID CALLBACK pf__wait_cb(void *ctx, BOOLEAN timed_out) {
     pf__wreg *w = (pf__wreg *)ctx;
     (void)timed_out;
-    PostQueuedCompletionStatus(
-        w->iocp, (DWORD)w->post_id, PF__KEY_WAIT, NULL
-    );
+    PostQueuedCompletionStatus(w->iocp, (DWORD)w->post_id, PF__KEY_WAIT, NULL);
 }
 
 static void pf__wait_start(pf__poller *p, pf__preg *r, pf__wreg *w) {
     if (w->wait)
         return;
     if (!RegisterWaitForSingleObject(
-            &w->wait, w->object, pf__wait_cb, w, INFINITE,
-            WT_EXECUTEONLYONCE
+            &w->wait, w->object, pf__wait_cb, w, INFINITE, WT_EXECUTEONLYONCE
         )) {
         w->wait = NULL;
         pf__poller_emit(p, r->id, PF_POLL_ERR);
@@ -703,8 +727,12 @@ static int pf__iocp_wait(pf__poller *p, int64_t timeout_ns) {
         return PF_OK;
     ms = p->count ? 0 : pf__poller_ms(timeout_ns);
     if (!GetQueuedCompletionStatusEx(
-            b->iocp, e, (ULONG)(room < 64 ? room : 64), &n,
-            ms < 0 ? INFINITE : (DWORD)ms, FALSE
+            b->iocp,
+            e,
+            (ULONG)(room < 64 ? room : 64),
+            &n,
+            ms < 0 ? INFINITE : (DWORD)ms,
+            FALSE
         )) {
         DWORD err = GetLastError();
         return err == WAIT_TIMEOUT ? PF_OK : pf_error_from_win32(err);
@@ -713,8 +741,9 @@ static int pf__iocp_wait(pf__poller *p, int64_t timeout_ns) {
         switch (e[i].lpCompletionKey) {
         case PF__KEY_AFD:
             pf__afd_done(
-                p, (pf__wreg *)((char *)e[i].lpOverlapped
-                                - offsetof(pf__wreg, iosb))
+                p,
+                (pf__wreg *)((char *)e[i].lpOverlapped
+                             - offsetof(pf__wreg, iosb))
             );
             break;
         case PF__KEY_WAIT:

@@ -5,8 +5,8 @@
 
 #include "../internal.h"
 
-#include <winsock2.h>
 #include <windows.h>
+#include <winsock2.h>
 
 PF_API int pf_error_from_win32(unsigned long err) {
     switch (err) {
@@ -209,4 +209,6 @@ PF_API int pf_error_from_wsa(int err) {
     }
 }
 
-PF_API int pf_error_last_win32(void) { return pf_error_from_win32(GetLastError()); }
+PF_API int pf_error_last_win32(void) {
+    return pf_error_from_win32(GetLastError());
+}

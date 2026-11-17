@@ -21,8 +21,8 @@
 
     #include <sys/inotify.h>
 
-    #define PF__IN_MASK                                                   \
-        (IN_CREATE | IN_DELETE | IN_MODIFY | IN_ATTRIB | IN_MOVED_FROM     \
+    #define PF__IN_MASK                                                 \
+        (IN_CREATE | IN_DELETE | IN_MODIFY | IN_ATTRIB | IN_MOVED_FROM  \
          | IN_MOVED_TO | IN_CLOSE_WRITE | IN_DELETE_SELF | IN_MOVE_SELF \
          | IN_EXCL_UNLINK | IN_ONLYDIR)
 
@@ -75,9 +75,9 @@ static int pf__in_collect(pf__watcher *w, int64_t timeout_ns) {
     if (timeout_ns != 0) {
         struct pollfd p;
         int ms = timeout_ns < 0 ? -1
-               : timeout_ns / 1000000 >= 0x7FFFFFFF
-                   ? 0x7FFFFFFF
-                   : (int)((timeout_ns + 999999) / 1000000);
+            : timeout_ns / 1000000 >= 0x7FFFFFFF
+            ? 0x7FFFFFFF
+            : (int)((timeout_ns + 999999) / 1000000);
         p.fd = fd;
         p.events = POLLIN;
         p.revents = 0;
@@ -119,8 +119,8 @@ static int pf__in_collect(pf__watcher *w, int64_t timeout_ns) {
 static intptr_t pf__in_handle(pf__watcher *w) { return pf__in_fd(w); }
 
 static const pf__wbackend pf__in_backend = {
-    pf__in_init,    pf__in_free, pf__in_dir_add, pf__in_dir_remove, NULL,
-    NULL,           pf__in_collect, pf__in_handle,
+    pf__in_init, pf__in_free, pf__in_dir_add, pf__in_dir_remove,
+    NULL,        NULL,        pf__in_collect, pf__in_handle,
 };
 
 const pf__wbackend *const pf__watch_native = &pf__in_backend;
@@ -146,7 +146,7 @@ const pf__wbackend *const pf__watch_native = &pf__in_backend;
         #define PF__UDATA_ID(u) ((int)(intptr_t)(u))
     #endif
 
-    #define PF__KQ_NOTES                                                 \
+    #define PF__KQ_NOTES                                                    \
         (NOTE_WRITE | NOTE_DELETE | NOTE_RENAME | NOTE_EXTEND | NOTE_ATTRIB \
          | NOTE_LINK | NOTE_REVOKE)
 
@@ -171,8 +171,13 @@ static int pf__kqw_open(pf__watcher *w, const char *path, int flags, int node) {
     if (fd < 0)
         return pf_error_from_errno(errno);
     EV_SET(
-        &kev, (uintptr_t)fd, EVFILT_VNODE, EV_ADD | EV_CLEAR, PF__KQ_NOTES,
-        0, PF__UDATA(node)
+        &kev,
+        (uintptr_t)fd,
+        EVFILT_VNODE,
+        EV_ADD | EV_CLEAR,
+        PF__KQ_NOTES,
+        0,
+        PF__UDATA(node)
     );
     if (kevent(pf__kqw_fd(w), &kev, 1, NULL, 0, NULL) != 0) {
         int rc = pf_error_from_errno(errno);
@@ -246,9 +251,8 @@ static int pf__kqw_collect(pf__watcher *w, int64_t timeout_ns) {
 static intptr_t pf__kqw_handle(pf__watcher *w) { return pf__kqw_fd(w); }
 
 static const pf__wbackend pf__kqw_backend = {
-    pf__kqw_init,        pf__kqw_free,     pf__kqw_dir_add,
-    pf__kqw_dir_remove,  pf__kqw_file_add, pf__kqw_file_remove,
-    pf__kqw_collect,     pf__kqw_handle,
+    pf__kqw_init,     pf__kqw_free,        pf__kqw_dir_add, pf__kqw_dir_remove,
+    pf__kqw_file_add, pf__kqw_file_remove, pf__kqw_collect, pf__kqw_handle,
 };
 
 const pf__wbackend *const pf__watch_native = &pf__kqw_backend;

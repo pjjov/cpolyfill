@@ -16,7 +16,7 @@
 #include <stdint.h>
 
 #ifndef BITWISE_OPS_ENUM
-#define BITWISE_OPS_ENUM
+    #define BITWISE_OPS_ENUM
 
 enum bit_op {
     OP_CLZ,
@@ -57,30 +57,48 @@ enum bit_type {
 
 #endif
 
-#define BITWISE_OPS_FN(name, sfx, type)                          \
-    static uint64_t name(int op, uint64_t v, unsigned n) {       \
-        type x = (type)v;                                        \
-        switch (op) {                                            \
-        case OP_CLZ: return (uint64_t)pf_clz##sfx(x);            \
-        case OP_CTZ: return (uint64_t)pf_ctz##sfx(x);            \
-        case OP_CLO: return (uint64_t)pf_clo##sfx(x);            \
-        case OP_CTO: return (uint64_t)pf_cto##sfx(x);            \
-        case OP_FLZ: return (uint64_t)pf_flz##sfx(x);            \
-        case OP_FLO: return (uint64_t)pf_flo##sfx(x);            \
-        case OP_FTZ: return (uint64_t)pf_ftz##sfx(x);            \
-        case OP_FTO: return (uint64_t)pf_fto##sfx(x);            \
-        case OP_POPCOUNT: return (uint64_t)pf_popcount##sfx(x);  \
-        case OP_ZEROCOUNT: return (uint64_t)pf_zerocount##sfx(x); \
-        case OP_PARITY: return (uint64_t)pf_parity##sfx(x);      \
-        case OP_ISPOW2: return (uint64_t)pf_ispow2##sfx(x);      \
-        case OP_POW2CEIL: return (uint64_t)pf_pow2ceil##sfx(x);  \
-        case OP_POW2FLOOR: return (uint64_t)pf_pow2floor##sfx(x); \
-        case OP_BITWIDTH: return (uint64_t)pf_bitwidth##sfx(x);  \
-        case OP_BITREVERSE: return (uint64_t)pf_bitreverse##sfx(x); \
-        case OP_ROTL: return (uint64_t)pf_rotl##sfx(x, n);       \
-        case OP_ROTR: return (uint64_t)pf_rotr##sfx(x, n);       \
-        }                                                        \
-        return 0;                                                \
+#define BITWISE_OPS_FN(name, sfx, type)                    \
+    static uint64_t name(int op, uint64_t v, unsigned n) { \
+        type x = (type)v;                                  \
+        switch (op) {                                      \
+        case OP_CLZ:                                       \
+            return (uint64_t)pf_clz##sfx(x);               \
+        case OP_CTZ:                                       \
+            return (uint64_t)pf_ctz##sfx(x);               \
+        case OP_CLO:                                       \
+            return (uint64_t)pf_clo##sfx(x);               \
+        case OP_CTO:                                       \
+            return (uint64_t)pf_cto##sfx(x);               \
+        case OP_FLZ:                                       \
+            return (uint64_t)pf_flz##sfx(x);               \
+        case OP_FLO:                                       \
+            return (uint64_t)pf_flo##sfx(x);               \
+        case OP_FTZ:                                       \
+            return (uint64_t)pf_ftz##sfx(x);               \
+        case OP_FTO:                                       \
+            return (uint64_t)pf_fto##sfx(x);               \
+        case OP_POPCOUNT:                                  \
+            return (uint64_t)pf_popcount##sfx(x);          \
+        case OP_ZEROCOUNT:                                 \
+            return (uint64_t)pf_zerocount##sfx(x);         \
+        case OP_PARITY:                                    \
+            return (uint64_t)pf_parity##sfx(x);            \
+        case OP_ISPOW2:                                    \
+            return (uint64_t)pf_ispow2##sfx(x);            \
+        case OP_POW2CEIL:                                  \
+            return (uint64_t)pf_pow2ceil##sfx(x);          \
+        case OP_POW2FLOOR:                                 \
+            return (uint64_t)pf_pow2floor##sfx(x);         \
+        case OP_BITWIDTH:                                  \
+            return (uint64_t)pf_bitwidth##sfx(x);          \
+        case OP_BITREVERSE:                                \
+            return (uint64_t)pf_bitreverse##sfx(x);        \
+        case OP_ROTL:                                      \
+            return (uint64_t)pf_rotl##sfx(x, n);           \
+        case OP_ROTR:                                      \
+            return (uint64_t)pf_rotr##sfx(x, n);           \
+        }                                                  \
+        return 0;                                          \
     }
 
 BITWISE_OPS_FN(bit_uint, , unsigned int)
@@ -98,16 +116,26 @@ BITWISE_OPS_FN(bit_max, max, uintmax_t)
 uint64_t BITWISE_OPS_NAME(int type, int op, uint64_t v, unsigned n);
 uint64_t BITWISE_OPS_NAME(int type, int op, uint64_t v, unsigned n) {
     switch (type) {
-    case T_UINT: return bit_uint(op, v, n);
-    case T_ULONG: return bit_ulong(op, v, n);
-    case T_ULLONG: return bit_ullong(op, v, n);
-    case T_8: return bit_8(op, v, n);
-    case T_16: return bit_16(op, v, n);
-    case T_32: return bit_32(op, v, n);
-    case T_64: return bit_64(op, v, n);
-    case T_SIZE: return bit_size(op, v, n);
-    case T_PTR: return bit_ptr(op, v, n);
-    case T_MAX: return bit_max(op, v, n);
+    case T_UINT:
+        return bit_uint(op, v, n);
+    case T_ULONG:
+        return bit_ulong(op, v, n);
+    case T_ULLONG:
+        return bit_ullong(op, v, n);
+    case T_8:
+        return bit_8(op, v, n);
+    case T_16:
+        return bit_16(op, v, n);
+    case T_32:
+        return bit_32(op, v, n);
+    case T_64:
+        return bit_64(op, v, n);
+    case T_SIZE:
+        return bit_size(op, v, n);
+    case T_PTR:
+        return bit_ptr(op, v, n);
+    case T_MAX:
+        return bit_max(op, v, n);
     }
     return 0;
 }

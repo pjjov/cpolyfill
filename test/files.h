@@ -17,14 +17,14 @@
 static inline void test_tmpdir(char *buf, size_t size) {
     char tmp[PF_PATH_MAX];
     PF_ASSERT_ALWAYS(pf_known_dir(PF_DIR_TEMP, tmp, sizeof(tmp)) > 0);
-    PF_ASSERT_ALWAYS(
-        pf_path_join(buf, size, tmp, "cpolyfill-test-XXXXXX") > 0
-    );
+    PF_ASSERT_ALWAYS(pf_path_join(buf, size, tmp, "cpolyfill-test-XXXXXX") > 0);
     PF_ASSERT_ALWAYS(pf_mkdtemp(buf) == buf);
 }
 
 /* `dir` joined with `name`, in a static buffer (one per `slot`). */
-static inline const char *test_path(int slot, const char *dir, const char *name) {
+static inline const char *test_path(
+    int slot, const char *dir, const char *name
+) {
     static char bufs[4][PF_PATH_MAX];
     PF_ASSERT_ALWAYS(
         pf_path_join(bufs[slot], sizeof(bufs[slot]), dir, name) > 0

@@ -61,7 +61,7 @@
    the default alignment must be reallocated with the same alignment. */
 void *pf__default_allocate(void *ptr, size_t old, size_t size, size_t zalign);
 
-#define allocator_default(m_ptr, m_old, m_size, m_zalign)    \
+#define allocator_default(m_ptr, m_old, m_size, m_zalign)        \
     pf__default_allocate((m_ptr), (m_old), (m_size), (m_zalign))
 
 #include "allocator.h"
@@ -113,10 +113,10 @@ int pf__wstr_from_wtf8(pf__wstr *out, const char *src);
    mbstate_t. All zero is the initial state. */
 enum {
     PF__MBEXT_NONE = 0,
-    PF__MBEXT_C16_OUT,  /* mbrtoc16: low surrogate `value` still to give */
-    PF__MBEXT_C16_IN,   /* c16rtomb: high surrogate `value` received */
-    PF__MBEXT_C8_OUT,   /* mbrtoc8: byte `count` of `value` still to give */
-    PF__MBEXT_UTF8_IN   /* partial UTF-8 input: `seen` bytes of `lead`,
+    PF__MBEXT_C16_OUT, /* mbrtoc16: low surrogate `value` still to give */
+    PF__MBEXT_C16_IN,  /* c16rtomb: high surrogate `value` received */
+    PF__MBEXT_C8_OUT,  /* mbrtoc8: byte `count` of `value` still to give */
+    PF__MBEXT_UTF8_IN  /* partial UTF-8 input: `seen` bytes of `lead`,
                            `count` to go, bits so far in `value` */
 };
 
@@ -131,7 +131,7 @@ typedef struct pf__mbext {
 typedef struct pf__mbconv {
     mbstate_t *inner; /* the mbrtowc / wcrtomb state (wc backend) */
     pf__mbext ext;
-    int utf8;         /* 1: assume UTF-8, 0: through mbrtowc / wcrtomb */
+    int utf8; /* 1: assume UTF-8, 0: through mbrtowc / wcrtomb */
 } pf__mbconv;
 
 size_t pf__mbrtoc8_with(
@@ -151,9 +151,7 @@ size_t pf__c32rtomb_with(pf__mbconv *cv, char *s, uint32_t c32);
 
 #include <cpolyfill/stdlib.h>
 
-pf_ssize_t pf__getdelim_portable(
-    char **line, size_t *cap, int delim, FILE *f
-);
+pf_ssize_t pf__getdelim_portable(char **line, size_t *cap, int delim, FILE *f);
 void pf__qsort_r_portable(
     void *base,
     size_t n,
@@ -199,7 +197,9 @@ void pf__atomic_wake_fallback(const volatile void *addr, bool all);
 struct pf__sem_local;
 int pf__sem_local_init(struct pf__sem_local *s, unsigned value);
 int pf__sem_local_destroy(struct pf__sem_local *s);
-int pf__sem_local_wait(struct pf__sem_local *s, const struct timespec *deadline);
+int pf__sem_local_wait(
+    struct pf__sem_local *s, const struct timespec *deadline
+);
 int pf__sem_local_trywait(struct pf__sem_local *s);
 int pf__sem_local_post(struct pf__sem_local *s);
 int pf__sem_local_getvalue(struct pf__sem_local *s, int *value);

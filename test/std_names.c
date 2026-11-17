@@ -154,9 +154,7 @@ static int test_atomic(int seed, int i) {
 
 static int once_calls;
 
-static void once_fn(void) {
-    once_calls++;
-}
+static void once_fn(void) { once_calls++; }
 
 /* From <threads.h> where the system has it, else from the polyfill. */
 static int test_threads(int seed, int i) {
@@ -177,10 +175,7 @@ static int test_threads(int seed, int i) {
 }
 
 pf_test_t suite_std_names[] = {
-    { test_keywords, "keywords" },
-    { test_assert, "assert" },
-    { test_integers, "integers" },
-    { test_atomic, "atomic" },
-    { test_threads, "threads" },
-    { 0 },
+    { test_keywords, "keywords" }, { test_assert, "assert" },
+    { test_integers, "integers" }, { test_atomic, "atomic" },
+    { test_threads, "threads" },   { 0 },
 };

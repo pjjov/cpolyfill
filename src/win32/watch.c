@@ -17,10 +17,10 @@
 
 #define PF__RDCW_SIZE 65536
 
-#define PF__RDCW_FILTER                                                    \
-    (FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME            \
-     | FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE             \
-     | FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_CREATION         \
+#define PF__RDCW_FILTER                                            \
+    (FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME    \
+     | FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE     \
+     | FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_CREATION \
      | FILE_NOTIFY_CHANGE_SECURITY)
 
 /* A root's read, in its pf__wdir.bh. */
@@ -48,8 +48,14 @@ static int pf__rd_issue(pf__watcher *w, pf__rdcw *r) {
     memset(&r->ov, 0, sizeof(r->ov));
     r->ov.hEvent = pf__rd_event(w);
     if (!ReadDirectoryChangesW(
-            r->h, r->buf, PF__RDCW_SIZE, r->recursive, PF__RDCW_FILTER, NULL,
-            &r->ov, NULL
+            r->h,
+            r->buf,
+            PF__RDCW_SIZE,
+            r->recursive,
+            PF__RDCW_FILTER,
+            NULL,
+            &r->ov,
+            NULL
         )) {
         r->pending = false;
         return pf_error_last_win32();
@@ -86,9 +92,13 @@ static int pf__rd_dir_add(pf__watcher *w, pf__watch *wt, pf__wdir *d) {
         return PF_ENOMEM;
     }
     r->h = CreateFileW(
-        (const wchar_t *)ws.ptr, FILE_LIST_DIRECTORY,
-        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
-        OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL
+        (const wchar_t *)ws.ptr,
+        FILE_LIST_DIRECTORY,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+        NULL
     );
     pf__wstr_free(&ws);
     if (r->h == INVALID_HANDLE_VALUE) {
@@ -170,9 +180,9 @@ static void pf__rd_parse(pf__watcher *w, pf__wdir *root, DWORD bytes) {
 static int pf__rd_collect(pf__watcher *w, int64_t timeout_ns) {
     HANDLE ev = pf__rd_event(w);
     int64_t ms64 = timeout_ns < 0 ? -1 : (timeout_ns + 999999) / 1000000;
-    DWORD ms = ms64 < 0 ? INFINITE
-             : ms64 >= (int64_t)INFINITE ? INFINITE - 1
-                                         : (DWORD)ms64;
+    DWORD ms = ms64 < 0             ? INFINITE
+        : ms64 >= (int64_t)INFINITE ? INFINITE - 1
+                                    : (DWORD)ms64;
     DWORD r = WaitForSingleObject(ev, ms);
     size_t i;
 
@@ -214,8 +224,8 @@ static intptr_t pf__rd_handle(pf__watcher *w) {
 }
 
 static const pf__wbackend pf__rd_backend = {
-    pf__rd_init,    pf__rd_free, pf__rd_dir_add, pf__rd_dir_remove, NULL,
-    NULL,           pf__rd_collect, pf__rd_handle,
+    pf__rd_init, pf__rd_free, pf__rd_dir_add, pf__rd_dir_remove,
+    NULL,        NULL,        pf__rd_collect, pf__rd_handle,
 };
 
 const pf__wbackend *const pf__watch_native = &pf__rd_backend;

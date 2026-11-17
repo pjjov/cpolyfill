@@ -106,8 +106,9 @@ static void sockets_body(pf_poller_t *p) {
     PF_ASSERT_ALWAYS_EQ(pf_sleep_ns(10 * MS), 0);
     n = pf_poller_wait_ns(p, ev, 8, 1000 * MS);
     PF_ASSERT_ALWAYS_EQ(n, 1);
-    PF_ASSERT_ALWAYS_EQ(ev[0].events & (PF_POLL_IN | PF_POLL_OUT),
-                        PF_POLL_IN | PF_POLL_OUT);
+    PF_ASSERT_ALWAYS_EQ(
+        ev[0].events & (PF_POLL_IN | PF_POLL_OUT), PF_POLL_IN | PF_POLL_OUT
+    );
     PF_ASSERT_ALWAYS_EQ(pf_recv(s[0], buf, sizeof(buf), 0), 1);
 
     /* OUT only: IN is not reported. */
@@ -317,12 +318,9 @@ static void ids_body(pf_poller_t *p) {
     /* Timers cannot be modified like sockets. */
     PF_ASSERT_ALWAYS_EQ(pf_poller_modify(p, b, PF_POLL_IN), PF_EINVAL);
     PF_ASSERT_ALWAYS_EQ(
-        pf_poller_add_socket(p, PF_SOCKET_INVALID, PF_POLL_IN, NULL),
-        PF_EINVAL
+        pf_poller_add_socket(p, PF_SOCKET_INVALID, PF_POLL_IN, NULL), PF_EINVAL
     );
-    PF_ASSERT_ALWAYS_EQ(
-        pf_poller_add_timer(p, 0, 0, NULL) > 0, true
-    );
+    PF_ASSERT_ALWAYS_EQ(pf_poller_add_timer(p, 0, 0, NULL) > 0, true);
     /* Freed with registrations left. */
 }
 
@@ -355,8 +353,11 @@ static int test_shutdown(int seed, int i) {
 static const char *pipe_name(void) {
     static char buf[64];
     snprintf(
-        buf, sizeof(buf), "cpolyfill-poll-%lu-%08lx",
-        (unsigned long)pf_getpid(), (unsigned long)pf_random_u32()
+        buf,
+        sizeof(buf),
+        "cpolyfill-poll-%lu-%08lx",
+        (unsigned long)pf_getpid(),
+        (unsigned long)pf_random_u32()
     );
     return buf;
 }
@@ -427,9 +428,7 @@ static void fd_body(pf_poller_t *p) {
     PF_ASSERT_ALWAYS_EQ(pf_poller_remove(p, id), 0);
     close(fds[0]);
     PF_ASSERT_ALWAYS_EQ(pf_poller_add_fd(p, -1, PF_POLL_IN, NULL), PF_EINVAL);
-    PF_ASSERT_ALWAYS_EQ(
-        pf_poller_add_handle(p, (void *)1, NULL), PF_ENOSYS
-    );
+    PF_ASSERT_ALWAYS_EQ(pf_poller_add_handle(p, (void *)1, NULL), PF_ENOSYS);
 #endif
 }
 
@@ -481,16 +480,10 @@ static int test_process(int seed, int i) {
 }
 
 pf_test_t suite_poller[] = {
-    { test_sockets, "sockets" },
-    { test_oneshot, "oneshot" },
-    { test_timers, "timers" },
-    { test_many, "many" },
-    { test_wake, "wake" },
-    { test_deadline, "deadline" },
-    { test_ids, "ids" },
-    { test_shutdown, "shutdown" },
-    { test_pipes, "pipes" },
-    { test_fd, "fd" },
-    { test_process, "process" },
-    { 0 },
+    { test_sockets, "sockets" }, { test_oneshot, "oneshot" },
+    { test_timers, "timers" },   { test_many, "many" },
+    { test_wake, "wake" },       { test_deadline, "deadline" },
+    { test_ids, "ids" },         { test_shutdown, "shutdown" },
+    { test_pipes, "pipes" },     { test_fd, "fd" },
+    { test_process, "process" }, { 0 },
 };

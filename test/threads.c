@@ -98,7 +98,9 @@ static int test_create(int seed, int i) {
     while (!PF_ATOMIC_LOAD(&detached_ran))
         pf_thrd_yield();
 
-    PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&created, compare_self, NULL), pf_thrd_success);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_thrd_create(&created, compare_self, NULL), pf_thrd_success
+    );
     PF_ATOMIC_STORE(&detached_ran, 2);
     PF_ASSERT_ALWAYS_EQ(pf_thrd_join(created, &res), pf_thrd_success);
     PF_ASSERT_ALWAYS_EQ(res, 5);
@@ -144,7 +146,9 @@ static int test_mutex_counter(int seed, int i) {
 
     for (type = 0; type < NTYPES; type++) {
         int recursive = mtx_types[type] & pf_mtx_recursive;
-        PF_ASSERT_ALWAYS_EQ(pf_mtx_init(&counter_mtx, mtx_types[type]), pf_thrd_success);
+        PF_ASSERT_ALWAYS_EQ(
+            pf_mtx_init(&counter_mtx, mtx_types[type]), pf_thrd_success
+        );
         counter = 0;
         for (k = 0; k < NTHREADS; k++)
             PF_ASSERT_ALWAYS_EQ(
@@ -194,18 +198,24 @@ static int test_mutex_contention(int seed, int i) {
         int recursive = mtx_types[type] & pf_mtx_recursive;
         struct timespec d;
 
-        PF_ASSERT_ALWAYS_EQ(pf_mtx_init(&held, mtx_types[type]), pf_thrd_success);
+        PF_ASSERT_ALWAYS_EQ(
+            pf_mtx_init(&held, mtx_types[type]), pf_thrd_success
+        );
         PF_ASSERT_ALWAYS_EQ(pf_mtx_lock(&held), pf_thrd_success);
         if (recursive) {
             PF_ASSERT_ALWAYS_EQ(pf_mtx_trylock(&held), pf_thrd_success);
             PF_ASSERT_ALWAYS_EQ(pf_mtx_unlock(&held), pf_thrd_success);
         }
-        PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&t, try_held, timed ? &held : NULL), pf_thrd_success);
+        PF_ASSERT_ALWAYS_EQ(
+            pf_thrd_create(&t, try_held, timed ? &held : NULL), pf_thrd_success
+        );
         join_all(&t, 1);
 
         /* A waiter gets the mutex once it is released. */
         if (timed) {
-            PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&t, lock_later, NULL), pf_thrd_success);
+            PF_ASSERT_ALWAYS_EQ(
+                pf_thrd_create(&t, lock_later, NULL), pf_thrd_success
+            );
             pf_sleep_ns(10000000);
         }
         PF_ASSERT_ALWAYS_EQ(pf_mtx_unlock(&held), pf_thrd_success);
@@ -236,7 +246,9 @@ static int consumer(void *arg) {
     pf_mtx_lock(&queue_mtx);
     for (;;) {
         while (queue_items == 0 && !queue_done)
-            PF_ASSERT_ALWAYS_EQ(pf_cnd_wait(&queue_cnd, &queue_mtx), pf_thrd_success);
+            PF_ASSERT_ALWAYS_EQ(
+                pf_cnd_wait(&queue_cnd, &queue_mtx), pf_thrd_success
+            );
         if (queue_items == 0)
             break;
         queue_items--;
@@ -255,11 +267,15 @@ static int test_condition(int seed, int i) {
         struct timespec d;
         uint64_t start;
 
-        PF_ASSERT_ALWAYS_EQ(pf_mtx_init(&queue_mtx, mtx_types[type]), pf_thrd_success);
+        PF_ASSERT_ALWAYS_EQ(
+            pf_mtx_init(&queue_mtx, mtx_types[type]), pf_thrd_success
+        );
         PF_ASSERT_ALWAYS_EQ(pf_cnd_init(&queue_cnd), pf_thrd_success);
         queue_items = queue_done = 0;
         for (k = 0; k < 4; k++)
-            PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&t[k], consumer, NULL), pf_thrd_success);
+            PF_ASSERT_ALWAYS_EQ(
+                pf_thrd_create(&t[k], consumer, NULL), pf_thrd_success
+            );
         for (k = 0; k < 1000; k++) {
             pf_mtx_lock(&queue_mtx);
             queue_items++;
@@ -311,7 +327,9 @@ static int test_once(int seed, int i) {
     (void)seed, (void)i;
 
     for (k = 0; k < NTHREADS; k++)
-        PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&t[k], call_once_thread, NULL), pf_thrd_success);
+        PF_ASSERT_ALWAYS_EQ(
+            pf_thrd_create(&t[k], call_once_thread, NULL), pf_thrd_success
+        );
     PF_ASSERT_ALWAYS_EQ(join_all(t, NTHREADS), NTHREADS); /* each saw 1 */
     pf_call_once(&once, once_fn);
     PF_ASSERT_ALWAYS_EQ(PF_ATOMIC_LOAD(&once_calls), 1);
@@ -359,7 +377,9 @@ static int test_tss(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_tss_create(&again_key, dtor_again), pf_thrd_success);
     PF_ASSERT_ALWAYS_EQ(pf_tss_set(key, &local), pf_thrd_success);
     for (k = 0; k < NTHREADS; k++)
-        PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&t[k], use_tss, NULL), pf_thrd_success);
+        PF_ASSERT_ALWAYS_EQ(
+            pf_thrd_create(&t[k], use_tss, NULL), pf_thrd_success
+        );
     join_all(t, NTHREADS);
     PF_ASSERT_ALWAYS_EQ(PF_ATOMIC_LOAD(&dtor_calls), NTHREADS);
     PF_ASSERT_ALWAYS_EQ(PF_ATOMIC_LOAD(&again_calls), 3 * NTHREADS);
@@ -416,12 +436,21 @@ static int test_attributes(int seed, int i) {
         return SKIP("thread names are not supported");
     PF_ASSERT_ALWAYS_EQ(rc, 0);
     PF_ASSERT_ALWAYS_EQ(pf_thrd_get_name(buf, sizeof(buf)), 0);
-#if PF_OS_LINUX
-    PF_ASSERT_ALWAYS_STR_EQ(buf, "main-\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9");
-    PF_ASSERT_ALWAYS_EQ(pf_thrd_set_name("main-\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"), 0);
+    #if PF_OS_LINUX
+    PF_ASSERT_ALWAYS_STR_EQ(
+        buf, "main-\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+    );
+    PF_ASSERT_ALWAYS_EQ(
+        pf_thrd_set_name(
+            "main-\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+        ),
+        0
+    );
     PF_ASSERT_ALWAYS_EQ(pf_thrd_get_name(buf, sizeof(buf)), 0);
-    PF_ASSERT_ALWAYS_STR_EQ(buf, "main-\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9");
-#endif
+    PF_ASSERT_ALWAYS_STR_EQ(
+        buf, "main-\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+    );
+    #endif
     PF_ASSERT_ALWAYS_EQ(pf_thrd_get_name(small, sizeof(small)), PF_ERANGE);
     PF_ASSERT_ALWAYS_STR_EQ(small, "mai");
     PF_ASSERT_ALWAYS_EQ(pf_thrd_get_name(buf, 0), PF_EINVAL);
@@ -440,8 +469,7 @@ static int test_affinity(int seed, int i) {
     if (rc == PF_ENOTSUP)
         return SKIP("no thread affinity");
     PF_ASSERT_ALWAYS_EQ(rc, 0);
-    for (cpu = 0; cpu < 1024 && !(saved[cpu / 64] >> (cpu % 64) & 1); cpu++) {
-    }
+    for (cpu = 0; cpu < 1024 && !(saved[cpu / 64] >> (cpu % 64) & 1); cpu++) { }
     PF_ASSERT_ALWAYS_LT(cpu, 1024);
 
     memset(one, 0, sizeof(one));
@@ -469,7 +497,9 @@ static int test_priority(int seed, int i) {
     (void)seed, (void)i;
 
     /* Lowering is always allowed; do it in a thread of its own. */
-    PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&t, lower_priority, NULL), pf_thrd_success);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_thrd_create(&t, lower_priority, NULL), pf_thrd_success
+    );
     rc = join_all(&t, 1);
     PF_ASSERT_ALWAYS(rc == 0 || rc == PF_ENOTSUP);
     PF_ASSERT_ALWAYS_EQ(pf_thrd_set_priority(3), PF_EINVAL);
@@ -532,7 +562,8 @@ static int test_rwlock(int seed, int i) {
     rw_value = 0;
     for (k = 0; k < NTHREADS; k++)
         PF_ASSERT_ALWAYS_EQ(
-            pf_thrd_create(&t[k], rw_worker, k % 2 ? &rw : NULL), pf_thrd_success
+            pf_thrd_create(&t[k], rw_worker, k % 2 ? &rw : NULL),
+            pf_thrd_success
         );
     join_all(t, NTHREADS);
     PF_ASSERT_ALWAYS_EQ(rw_value, NTHREADS / 2 * 500L);
@@ -577,7 +608,9 @@ static int test_spin(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_spin_init(&spin), 0);
     counter = 0;
     for (k = 0; k < NTHREADS; k++)
-        PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&t[k], spin_up, NULL), pf_thrd_success);
+        PF_ASSERT_ALWAYS_EQ(
+            pf_thrd_create(&t[k], spin_up, NULL), pf_thrd_success
+        );
     join_all(t, NTHREADS);
     PF_ASSERT_ALWAYS_EQ(counter, NTHREADS * 20000L);
     PF_ASSERT_ALWAYS_EQ(pf_spin_trylock(&spin), 0);
@@ -587,7 +620,7 @@ static int test_spin(int seed, int i) {
     return 0;
 }
 
-#define ROUNDS 200
+    #define ROUNDS 200
 
 static pf_barrier_t barrier;
 static PF_ATOMIC(int) phase_count[ROUNDS], serials;
@@ -618,7 +651,9 @@ static int test_barrier(int seed, int i) {
     PF_ATOMIC_STORE(&serials, 0);
     PF_ASSERT_ALWAYS_EQ(pf_barrier_init(&barrier, NTHREADS), 0);
     for (k = 0; k < NTHREADS; k++)
-        PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&t[k], barrier_worker, NULL), pf_thrd_success);
+        PF_ASSERT_ALWAYS_EQ(
+            pf_thrd_create(&t[k], barrier_worker, NULL), pf_thrd_success
+        );
     join_all(t, NTHREADS);
     PF_ASSERT_ALWAYS_EQ(PF_ATOMIC_LOAD(&serials), ROUNDS);
     pf_barrier_free(&barrier);
@@ -651,7 +686,9 @@ static int test_no_threads(int seed, int i) {
     (void)seed, (void)i;
 
     PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&t, no_thread, NULL), pf_thrd_error);
-    PF_ASSERT_ALWAYS_EQ(pf_thrd_create_ex(&t, no_thread, NULL, NULL), PF_ENOSYS);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_thrd_create_ex(&t, no_thread, NULL, NULL), PF_ENOSYS
+    );
     PF_ASSERT_ALWAYS(pf_thrd_equal(pf_thrd_current(), pf_thrd_current()));
     PF_ASSERT_ALWAYS_EQ(pf_thrd_set_affinity(&mask, 1), PF_ENOSYS);
     PF_ASSERT_ALWAYS_EQ(pf_thrd_set_priority(0), PF_ENOSYS);
@@ -698,9 +735,7 @@ static int test_no_threads(int seed, int i) {
 
 static int once_count;
 
-static void count_once(void) {
-    once_count++;
-}
+static void count_once(void) { once_count++; }
 
 static int test_single_thread(int seed, int i) {
     static pf_once_flag flag = PF_ONCE_FLAG_INIT;

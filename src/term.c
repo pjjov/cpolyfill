@@ -39,9 +39,7 @@ static bool pf__env(const char *name, char *buf, size_t size) {
 
 #if PF_OS_WINDOWS
 
-static HANDLE pf__term_handle(int fd) {
-    return (HANDLE)_get_osfhandle(fd);
-}
+static HANDLE pf__term_handle(int fd) { return (HANDLE)_get_osfhandle(fd); }
 
 /* The console mode of `fd`: 0, or PF_EBADF / PF_ENOTTY. */
 static int pf__console_mode(int fd, HANDLE *h, DWORD *mode) {
@@ -78,8 +76,11 @@ static bool pf__is_mintty(HANDLE h) {
     if (!GetFileInformationByHandleEx(h, FileNameInfo, &info, sizeof(info)))
         return false;
     n = pf_utf16_to_utf8(
-        (const uint16_t *)info.name, info.len / sizeof(WCHAR), name,
-        sizeof(name), PF_UNICODE_REPLACE
+        (const uint16_t *)info.name,
+        info.len / sizeof(WCHAR),
+        name,
+        sizeof(name),
+        PF_UNICODE_REPLACE
     );
     if (n < 0)
         return false;
@@ -110,8 +111,13 @@ PF_API int pf_term_size(int fd, int *cols, int *rows) {
     if (!ok) {
         /* An input handle: ask the console's screen buffer. */
         HANDLE out = CreateFileW(
-            L"CONOUT$", GENERIC_READ | GENERIC_WRITE,
-            FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL
+            L"CONOUT$",
+            GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            OPEN_EXISTING,
+            0,
+            NULL
         );
         if (out != INVALID_HANDLE_VALUE) {
             ok = GetConsoleScreenBufferInfo(out, &info) != 0;

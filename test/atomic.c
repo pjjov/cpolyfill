@@ -71,7 +71,9 @@ static int test_lock_table(int seed, int i) {
 
 /* ---- Waiting ----------------------------------------------------------- */
 
-typedef int (*wait_fn)(const volatile void *, uint32_t, const struct timespec *);
+typedef int (*wait_fn)(
+    const volatile void *, uint32_t, const struct timespec *
+);
 typedef void (*wake_fn)(const volatile void *);
 
 static int fallback_wait(
@@ -153,7 +155,9 @@ static int test_wait(int seed, int i) {
             PF_ATOMIC_STORE(&word, 0);
             PF_ATOMIC_STORE(&woken, 0);
             for (k = 0; k < 4; k++)
-                PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&th[k], waiter, NULL), pf_thrd_success);
+                PF_ASSERT_ALWAYS_EQ(
+                    pf_thrd_create(&th[k], waiter, NULL), pf_thrd_success
+                );
             pf_sleep_ns(10000000);
             PF_ATOMIC_STORE(&word, 1);
             waiters[w].all(&word);
@@ -162,8 +166,12 @@ static int test_wait(int seed, int i) {
             PF_ASSERT_ALWAYS_EQ(PF_ATOMIC_LOAD(&woken), 4);
 
             PF_ATOMIC_STORE(&word, 0);
-            PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&th[0], ping, (void *)0), pf_thrd_success);
-            PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&th[1], ping, (void *)1), pf_thrd_success);
+            PF_ASSERT_ALWAYS_EQ(
+                pf_thrd_create(&th[0], ping, (void *)0), pf_thrd_success
+            );
+            PF_ASSERT_ALWAYS_EQ(
+                pf_thrd_create(&th[1], ping, (void *)1), pf_thrd_success
+            );
             PF_ASSERT_ALWAYS_EQ(pf_thrd_join(th[0], NULL), pf_thrd_success);
             PF_ASSERT_ALWAYS_EQ(pf_thrd_join(th[1], NULL), pf_thrd_success);
             PF_ASSERT_ALWAYS_EQ(PF_ATOMIC_LOAD(&word), 1000);

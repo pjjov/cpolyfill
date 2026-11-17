@@ -410,13 +410,13 @@ static int pf__file_close(void *ctx) {
 }
 
 static const struct pf_stream_vt pf__file_vt = {
-    pf__file_read, pf__file_write, pf__file_seek, pf__file_flush,
-    pf__file_flush, /* not owned: closing flushes */
+    pf__file_read,  pf__file_write, pf__file_seek,
+    pf__file_flush, pf__file_flush, /* not owned: closing flushes */
 };
 
 static const struct pf_stream_vt pf__file_own_vt = {
-    pf__file_read, pf__file_write, pf__file_seek, pf__file_flush,
-    pf__file_close,
+    pf__file_read,  pf__file_write, pf__file_seek,
+    pf__file_flush, pf__file_close,
 };
 
 PF_API int pf_stream_from_file(pf_stream_t *s, FILE *f, bool own) {
@@ -551,7 +551,7 @@ static pf_ssize_t pf__mem_write(void *ctx, const void *buf, size_t n) {
 static int64_t pf__mem_seek(void *ctx, int64_t off, int whence) {
     pf__mem *m = (pf__mem *)ctx;
     int64_t base = whence == SEEK_SET ? 0
-                 : whence == SEEK_CUR ? (int64_t)m->pos
+        : whence == SEEK_CUR          ? (int64_t)m->pos
                                       : (int64_t)m->size;
 
     if ((off < 0 && base + off < 0) || (off > 0 && base > INT64_MAX - off))
@@ -585,7 +585,9 @@ static const struct pf_stream_vt pf__buffer_vt = {
 };
 
 static int pf__mem_new(
-    pf_stream_t *s, const struct pf_stream_vt *vt, struct allocator_t *alloc,
+    pf_stream_t *s,
+    const struct pf_stream_vt *vt,
+    struct allocator_t *alloc,
     pf__mem **out
 ) {
     pf__mem *m;

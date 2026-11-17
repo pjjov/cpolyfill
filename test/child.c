@@ -94,8 +94,10 @@ int main(int argc, char *argv[]) {
         long left = atol(arg);
         memset(block, 'x', sizeof(block));
         while (left > 0) {
-            size_t n = left < (long)sizeof(block) ? (size_t)left : sizeof(block);
-            if (fwrite(block, 1, n, stdout) != n || fwrite(block, 1, n, stderr) != n)
+            size_t n = left < (long)sizeof(block) ? (size_t)left
+                                                  : sizeof(block);
+            if (fwrite(block, 1, n, stdout) != n
+                || fwrite(block, 1, n, stderr) != n)
                 return 1;
             left -= (long)n;
         }
@@ -114,7 +116,9 @@ int main(int argc, char *argv[]) {
         return 0;
     }
     if (strcmp(mode, "ids") == 0) {
-        printf("%lu %lu", (unsigned long)pf_getpid(), (unsigned long)pf_getppid());
+        printf(
+            "%lu %lu", (unsigned long)pf_getpid(), (unsigned long)pf_getppid()
+        );
         return 0;
     }
     if (strcmp(mode, "pgid") == 0) {

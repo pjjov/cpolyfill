@@ -46,8 +46,9 @@ static void pf__dl_fail(const char *what, const char *name) {
         NULL
     );
     /* FormatMessage ends the text with "\r\n". */
-    while (n > 0 && (wmsg[n - 1] == L'\r' || wmsg[n - 1] == L'\n'
-                     || wmsg[n - 1] == L' ' || wmsg[n - 1] == L'.'))
+    while (n > 0
+           && (wmsg[n - 1] == L'\r' || wmsg[n - 1] == L'\n'
+               || wmsg[n - 1] == L' ' || wmsg[n - 1] == L'.'))
         n--;
     if (n == 0
         || pf_utf16_to_utf8(
@@ -55,8 +56,13 @@ static void pf__dl_fail(const char *what, const char *name) {
            ) < 0)
         snprintf(msg, sizeof(msg), "error %lu", (unsigned long)err);
     snprintf(
-        pf__dl_msg, sizeof(pf__dl_msg), "%s%s%s: %s", what, name ? " " : "",
-        name ? name : "", msg
+        pf__dl_msg,
+        sizeof(pf__dl_msg),
+        "%s%s%s: %s",
+        what,
+        name ? " " : "",
+        name ? name : "",
+        msg
     );
     pf__dl_failed = true;
 }
@@ -96,7 +102,9 @@ PF_API void *pf_dlsym(void *handle, const char *name) {
     if (handle == PF_RTLD_DEFAULT) {
         HMODULE mods[1024];
         DWORD bytes, k, count;
-        if (!EnumProcessModules(GetCurrentProcess(), mods, sizeof(mods), &bytes)) {
+        if (!EnumProcessModules(
+                GetCurrentProcess(), mods, sizeof(mods), &bytes
+            )) {
             pf__dl_fail("cannot list the modules for", name);
             return NULL;
         }

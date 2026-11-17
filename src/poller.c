@@ -114,7 +114,9 @@ static int pf__heap_push(pf__poller *p, size_t slot) {
     if (p->nheap == p->heap_cap) {
         size_t ncap = p->heap_cap ? p->heap_cap * 2 : 16;
         size_t *nh = (size_t *)reallocate(
-            p->alloc, p->heap, p->heap_cap * sizeof(size_t),
+            p->alloc,
+            p->heap,
+            p->heap_cap * sizeof(size_t),
             ncap * sizeof(size_t)
         );
         if (!nh)
@@ -175,7 +177,9 @@ static int pf__reg_new(pf__poller *p, pf__preg **out) {
         if (p->nregs == p->cap) {
             size_t ncap = p->cap ? p->cap * 2 : 16;
             pf__preg *nr = (pf__preg *)reallocate(
-                p->alloc, p->regs, p->cap * sizeof(pf__preg),
+                p->alloc,
+                p->regs,
+                p->cap * sizeof(pf__preg),
                 ncap * sizeof(pf__preg)
             );
             if (!nr)
@@ -293,9 +297,7 @@ PF_API int pf_poller_add_pipe_server(
     rc = pf__pipe_server_poll_handle(srv, &h);
     if (rc)
         return rc;
-    return pf__poller_add(
-        p, PF__PK_PIPE_SERVER, h, srv, PF_POLL_IN, data
-    );
+    return pf__poller_add(p, PF__PK_PIPE_SERVER, h, srv, PF_POLL_IN, data);
 }
 
 PF_API int pf_poller_add_timer(

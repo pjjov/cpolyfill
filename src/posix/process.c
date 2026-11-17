@@ -348,8 +348,11 @@ PF_API int pf_spawn(
             }
             c.src[k] = devnull;
             break;
-        case PF_STDIO_FD: c.src[k] = opts->stdio[k].fd; break;
-        default: break;
+        case PF_STDIO_FD:
+            c.src[k] = opts->stdio[k].fd;
+            break;
+        default:
+            break;
         }
     }
     if (rc == PF_OK)
@@ -486,8 +489,15 @@ static void pf__wait_some(pf_process_t *p, int ms, int *backoff) {
             int rc;
             ts.tv_sec = ms / 1000;
             ts.tv_nsec = (long)(ms % 1000) * 1000000;
-            EV_SET(&ev, p->pid, EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT,
-                   0, NULL);
+            EV_SET(
+                &ev,
+                p->pid,
+                EVFILT_PROC,
+                EV_ADD | EV_ONESHOT,
+                NOTE_EXIT,
+                0,
+                NULL
+            );
             rc = kevent(kq, &ev, 1, &ev, 1, &ts);
             close(kq);
             if (rc >= 0 || errno != ESRCH)

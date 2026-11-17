@@ -80,8 +80,7 @@ static int test_load_store(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_load_le64(bytes + 1), UINT64_C(0x0807060504030201));
     PF_ASSERT_ALWAYS_EQ(pf_load_be64(bytes + 1), UINT64_C(0x0102030405060708));
     PF_ASSERT_ALWAYS_EQ(
-        pf_load32(bytes + 1),
-        PF_ENDIAN_LITTLE ? 0x04030201u : 0x01020304u
+        pf_load32(bytes + 1), PF_ENDIAN_LITTLE ? 0x04030201u : 0x01020304u
     );
 
     for (off = 1; off < 4; off++) {

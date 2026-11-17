@@ -33,7 +33,7 @@
     < 0
     #error "Standard macros"
 #endif
-#if PF_HAS_BUILTIN(__pf_none) || PF_HAS_ATTRIBUTE(__pf_none)       \
+#if PF_HAS_BUILTIN(__pf_none) || PF_HAS_ATTRIBUTE(__pf_none)      \
     || PF_HAS_C_ATTRIBUTE(__pf_none) || PF_HAS_FEATURE(__pf_none) \
     || PF_HAS_EXTENSION(__pf_none)
     #error "Detection of something that does not exist"
@@ -49,9 +49,10 @@ static int test_os(int seed, int i) {
     PF_ASSERT_ALWAYS(!PF_OS_APPLE || PF_OS_POSIX);
     PF_ASSERT_ALWAYS(PF_OS_APPLE == (PF_OS_MACOS || PF_OS_IOS));
     PF_ASSERT_ALWAYS(!(PF_OS_MACOS && PF_OS_IOS));
-    PF_ASSERT_ALWAYS(PF_OS_BSD
-          == (PF_OS_FREEBSD || PF_OS_NETBSD || PF_OS_OPENBSD
-              || PF_OS_DRAGONFLY));
+    PF_ASSERT_ALWAYS(
+        PF_OS_BSD
+        == (PF_OS_FREEBSD || PF_OS_NETBSD || PF_OS_OPENBSD || PF_OS_DRAGONFLY)
+    );
     PF_ASSERT_ALWAYS(!(PF_OS_BSD && PF_OS_APPLE));
 
 #ifdef _WIN32
@@ -91,8 +92,8 @@ static int test_compiler(int seed, int i) {
 
 static int test_arch(int seed, int i) {
     int count = PF_ARCH_X86 + PF_ARCH_X86_64 + PF_ARCH_ARM + PF_ARCH_ARM64
-              + PF_ARCH_RISCV + PF_ARCH_PPC + PF_ARCH_PPC64 + PF_ARCH_MIPS
-              + PF_ARCH_LOONGARCH64 + PF_ARCH_S390X + PF_ARCH_WASM;
+        + PF_ARCH_RISCV + PF_ARCH_PPC + PF_ARCH_PPC64 + PF_ARCH_MIPS
+        + PF_ARCH_LOONGARCH64 + PF_ARCH_S390X + PF_ARCH_WASM;
     (void)seed, (void)i;
 
     PF_ASSERT_ALWAYS(count <= 1);

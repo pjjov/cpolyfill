@@ -16,7 +16,7 @@
 #include <stdint.h>
 
 #ifndef OVERFLOW_OPS_ENUM
-#define OVERFLOW_OPS_ENUM
+    #define OVERFLOW_OPS_ENUM
 
 enum ovf_op { OP_ADD, OP_SUB, OP_MUL, OP_COUNT };
 
@@ -52,27 +52,27 @@ enum ovf_type {
 
 /* Values travel as the bits of the type, sign-extended for signed
    types. */
-#define OVERFLOW_OPS_FN(name, s, sfx, type, wide)                        \
+#define OVERFLOW_OPS_FN(name, s, sfx, type, wide)                             \
     static int name(int fam, int op, uint64_t ua, uint64_t ub, uint64_t *o) { \
-        type a = (type)(wide)ua, b = (type)(wide)ub, r = 0;              \
-        int f = 0;                                                       \
-        if (fam == FAM_OVERFLOW) {                                       \
-            if (op == OP_ADD)                                            \
-                f = pf_overflow_##s##add##sfx(a, b, &r);                 \
-            else if (op == OP_SUB)                                       \
-                f = pf_overflow_##s##sub##sfx(a, b, &r);                 \
-            else                                                         \
-                f = pf_overflow_##s##mul##sfx(a, b, &r);                 \
-        } else {                                                         \
-            if (op == OP_ADD)                                            \
-                r = pf_saturated_##s##add##sfx(a, b);                    \
-            else if (op == OP_SUB)                                       \
-                r = pf_saturated_##s##sub##sfx(a, b);                    \
-            else                                                         \
-                r = pf_saturated_##s##mul##sfx(a, b);                    \
-        }                                                                \
-        *o = (uint64_t)(wide)r;                                          \
-        return f;                                                        \
+        type a = (type)(wide)ua, b = (type)(wide)ub, r = 0;                   \
+        int f = 0;                                                            \
+        if (fam == FAM_OVERFLOW) {                                            \
+            if (op == OP_ADD)                                                 \
+                f = pf_overflow_##s##add##sfx(a, b, &r);                      \
+            else if (op == OP_SUB)                                            \
+                f = pf_overflow_##s##sub##sfx(a, b, &r);                      \
+            else                                                              \
+                f = pf_overflow_##s##mul##sfx(a, b, &r);                      \
+        } else {                                                              \
+            if (op == OP_ADD)                                                 \
+                r = pf_saturated_##s##add##sfx(a, b);                         \
+            else if (op == OP_SUB)                                            \
+                r = pf_saturated_##s##sub##sfx(a, b);                         \
+            else                                                              \
+                r = pf_saturated_##s##mul##sfx(a, b);                         \
+        }                                                                     \
+        *o = (uint64_t)(wide)r;                                               \
+        return f;                                                             \
     }
 
 OVERFLOW_OPS_FN(ovf_int, s, , int, int64_t)
@@ -102,10 +102,12 @@ int OVERFLOW_OPS_NAME(
 int OVERFLOW_OPS_NAME(
     int type, int fam, int op, uint64_t a, uint64_t b, uint64_t *out
 ) {
-    static int (*const fns[T_COUNT])(int, int, uint64_t, uint64_t, uint64_t *) = {
-        ovf_int,  ovf_long,  ovf_llong,  ovf_i8,  ovf_i16, ovf_i32,  ovf_i64,
-        ovf_imax, ovf_iptr,  ovf_diff,   ovf_uint, ovf_ulong, ovf_ullong,
-        ovf_u8,   ovf_u16,   ovf_u32,    ovf_u64, ovf_umax, ovf_uptr, ovf_size,
+    static int (*const fns[T_COUNT])(
+        int, int, uint64_t, uint64_t, uint64_t *
+    ) = {
+        ovf_int,  ovf_long, ovf_llong, ovf_i8,   ovf_i16,   ovf_i32,    ovf_i64,
+        ovf_imax, ovf_iptr, ovf_diff,  ovf_uint, ovf_ulong, ovf_ullong, ovf_u8,
+        ovf_u16,  ovf_u32,  ovf_u64,   ovf_umax, ovf_uptr,  ovf_size,
     };
     return fns[type](fam, op, a, b, out);
 }

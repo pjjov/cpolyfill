@@ -59,31 +59,25 @@ static int pf__net_init(void) {
     return pf__wsa_rc;
 }
 
-static int pf__neterr(void) {
-    return pf_error_from_wsa(WSAGetLastError());
-}
+static int pf__neterr(void) { return pf_error_from_wsa(WSAGetLastError()); }
 
     #define PF__SOCK(s) ((SOCKET)(s))
 
 #else
 
-static int pf__net_init(void) {
-    return PF_OK;
-}
+static int pf__net_init(void) { return PF_OK; }
 
-static int pf__neterr(void) {
-    return pf_error_from_errno(errno);
-}
+static int pf__neterr(void) { return pf_error_from_errno(errno); }
 
     #define PF__SOCK(s) (s)
 
 #endif
 
-#define PF__INIT()                                                          \
-    do {                                                                    \
-        int pf__rc = pf__net_init();                                        \
-        if (pf__rc)                                                         \
-            return pf__rc;                                                  \
+#define PF__INIT()                   \
+    do {                             \
+        int pf__rc = pf__net_init(); \
+        if (pf__rc)                  \
+            return pf__rc;           \
     } while (0)
 
 /* ---- Addresses --------------------------------------------------------- */
@@ -221,14 +215,12 @@ PF_API bool pf_sockaddr_equal(const pf_sockaddr_t *a, const pf_sockaddr_t *b) {
             && memcmp(a->u.un.sun_path, b->u.un.sun_path, n) == 0;
     }
     default:
-        return a->len == b->len
-            && memcmp(&a->u, &b->u, (size_t)a->len) == 0;
+        return a->len == b->len && memcmp(&a->u, &b->u, (size_t)a->len) == 0;
     }
 }
 
-PF_API ptrdiff_t pf_sockaddr_format(
-    const pf_sockaddr_t *a, char *buf, size_t size
-) {
+PF_API ptrdiff_t
+pf_sockaddr_format(const pf_sockaddr_t *a, char *buf, size_t size) {
     char tmp[160];
     size_t len;
 
@@ -251,11 +243,17 @@ PF_API ptrdiff_t pf_sockaddr_format(
             return PF_EINVAL;
         if (a->u.in6.sin6_scope_id)
             snprintf(
-                scope, sizeof(scope), "%%%lu",
+                scope,
+                sizeof(scope),
+                "%%%lu",
                 (unsigned long)a->u.in6.sin6_scope_id
             );
         len = (size_t)snprintf(
-            tmp, sizeof(tmp), "[%s%s]:%u", ip, scope,
+            tmp,
+            sizeof(tmp),
+            "[%s%s]:%u",
+            ip,
+            scope,
             (unsigned)ntohs(a->u.in6.sin6_port)
         );
         break;
@@ -336,7 +334,11 @@ PF_API int pf_socket(
 #if PF_OS_WINDOWS
     {
         SOCKET h = WSASocketW(
-            family, type, protocol, NULL, 0,
+            family,
+            type,
+            protocol,
+            NULL,
+            0,
             WSA_FLAG_OVERLAPPED | WSA_FLAG_NO_HANDLE_INHERIT
         );
         if (h == INVALID_SOCKET)
@@ -355,7 +357,8 @@ PF_API int pf_socket(
     #if defined(SOCK_CLOEXEC) && defined(SOCK_NONBLOCK)
         fd = socket(
             family,
-            type | SOCK_CLOEXEC | ((flags & PF_SOCK_NONBLOCK) ? SOCK_NONBLOCK : 0),
+            type | SOCK_CLOEXEC
+                | ((flags & PF_SOCK_NONBLOCK) ? SOCK_NONBLOCK : 0),
             protocol
         );
         atomic = true;
@@ -426,8 +429,12 @@ static int pf__pair_unix(pf_socket_t s[2]) {
     if (pf_known_dir(PF_DIR_TEMP, dir, sizeof(dir)) < 0)
         return PF_ENOENT;
     snprintf(
-        path, sizeof(path), "%s\\pf-%lu-%08lx.sock", dir,
-        (unsigned long)pf_getpid(), (unsigned long)pf_random_u32()
+        path,
+        sizeof(path),
+        "%s\\pf-%lu-%08lx.sock",
+        dir,
+        (unsigned long)pf_getpid(),
+        (unsigned long)pf_random_u32()
     );
     rc = pf_sockaddr_unix(&addr, path);
     if (rc)
@@ -478,7 +485,8 @@ PF_API int pf_socketpair(
                 family,
                 type | SOCK_CLOEXEC
                     | ((flags & PF_SOCK_NONBLOCK) ? SOCK_NONBLOCK : 0),
-                0, fds
+                0,
+                fds
             )
             != 0)
             return pf__neterr();
@@ -550,7 +558,9 @@ PF_API int pf_accept(
         for (;;) {
     #if PF__HAVE_ACCEPT4
             fd = accept4(
-                s, &pa->u.sa, &pa->len,
+                s,
+                &pa->u.sa,
+                &pa->len,
                 SOCK_CLOEXEC | ((flags & PF_SOCK_NONBLOCK) ? SOCK_NONBLOCK : 0)
             );
             atomic = true;
@@ -744,9 +754,7 @@ static int pf__io_err(void) {
     return e == WSAETIMEDOUT ? PF_EAGAIN : pf_error_from_wsa(e);
 }
 
-static int pf__cap(size_t n) {
-    return n > INT_MAX ? INT_MAX : (int)n;
-}
+static int pf__cap(size_t n) { return n > INT_MAX ? INT_MAX : (int)n; }
 #endif
 
 #ifdef MSG_NOSIGNAL
@@ -764,18 +772,16 @@ PF_API pf_ssize_t pf_recv(pf_socket_t s, void *buf, size_t n, int flags) {
 }
 
 PF_API pf_ssize_t pf_sendto(
-    pf_socket_t s,
-    const void *buf,
-    size_t n,
-    int flags,
-    const pf_sockaddr_t *to
+    pf_socket_t s, const void *buf, size_t n, int flags, const pf_sockaddr_t *to
 ) {
     const struct sockaddr *sa = to ? &to->u.sa : NULL;
     pf_socklen_t len = to ? to->len : 0;
     PF__INIT();
 #if PF_OS_WINDOWS
     {
-        int r = sendto(PF__SOCK(s), (const char *)buf, pf__cap(n), flags, sa, len);
+        int r = sendto(
+            PF__SOCK(s), (const char *)buf, pf__cap(n), flags, sa, len
+        );
         return r == SOCKET_ERROR ? pf__io_err() : r;
     }
 #else
@@ -1028,7 +1034,9 @@ static char *pf__utf8_dup(const wchar_t *w) {
     if (n < 0)
         return NULL;
     s = (char *)malloc((size_t)n + 1);
-    if (s && pf_utf16_to_utf8((const uint16_t *)w, PF_NTS, s, (size_t)n + 1, 0) < 0) {
+    if (s
+        && pf_utf16_to_utf8((const uint16_t *)w, PF_NTS, s, (size_t)n + 1, 0)
+            < 0) {
         free(s);
         s = NULL;
     }
@@ -1119,7 +1127,8 @@ PF_API int pf_getaddrinfo(
         e = GetAddrInfoW(
             host ? (const wchar_t *)wh.ptr : NULL,
             service ? (const wchar_t *)ws.ptr : NULL,
-            hints ? &whints : NULL, &wres
+            hints ? &whints : NULL,
+            &wres
         );
         if (host)
             pf__wstr_free(&wh);
@@ -1173,16 +1182,23 @@ PF_API int pf_getnameinfo(
     {
         wchar_t wh[NI_MAXHOST], ws[NI_MAXSERV];
         int e = GetNameInfoW(
-            &a->u.sa, a->len, host ? wh : NULL, host ? NI_MAXHOST : 0,
-            serv ? ws : NULL, serv ? NI_MAXSERV : 0, flags
+            &a->u.sa,
+            a->len,
+            host ? wh : NULL,
+            host ? NI_MAXHOST : 0,
+            serv ? ws : NULL,
+            serv ? NI_MAXSERV : 0,
+            flags
         );
         if (e)
             return pf__gai_error(e);
         if (host && hostlen
-            && pf_utf16_to_utf8((const uint16_t *)wh, PF_NTS, host, hostlen, 0) < 0)
+            && pf_utf16_to_utf8((const uint16_t *)wh, PF_NTS, host, hostlen, 0)
+                < 0)
             return PF_ERANGE;
         if (serv && servlen
-            && pf_utf16_to_utf8((const uint16_t *)ws, PF_NTS, serv, servlen, 0) < 0)
+            && pf_utf16_to_utf8((const uint16_t *)ws, PF_NTS, serv, servlen, 0)
+                < 0)
             return PF_ERANGE;
         return PF_OK;
     }
@@ -1193,8 +1209,13 @@ PF_API int pf_getnameinfo(
             return PF_EINVAL;
         errno = 0;
         e = getnameinfo(
-            &a->u.sa, a->len, host, (socklen_t)(host ? hostlen : 0), serv,
-            (socklen_t)(serv ? servlen : 0), flags
+            &a->u.sa,
+            a->len,
+            host,
+            (socklen_t)(host ? hostlen : 0),
+            serv,
+            (socklen_t)(serv ? servlen : 0),
+            flags
         );
         return pf__gai_error(e);
     }

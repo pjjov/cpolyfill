@@ -108,7 +108,7 @@ static int test_symlink_type(int seed, int i) {
 /* The walk, recorded as "depth:name/" (directories) or "depth:name". */
 typedef struct {
     char log[1024];
-    size_t base;   /* the length of the walked path plus the separator */
+    size_t base; /* the length of the walked path plus the separator */
     const char *stop_at;
     const char *skip;
 } walk_log;
@@ -121,7 +121,11 @@ static int record(
     size_t k;
 
     snprintf(
-        item, sizeof(item), "%d:%s%s ", depth, path + w->base,
+        item,
+        sizeof(item),
+        "%d:%s%s ",
+        depth,
+        path + w->base,
         e->d_type == PF_DT_DIR ? "/" : ""
     );
     for (k = 0; item[k]; k++)
@@ -160,7 +164,9 @@ static int test_walk(int seed, int i) {
     PF_ASSERT_ALWAYS(pos(&w, "1:b/ ") < pos(&w, "2:b/d/ "));
     PF_ASSERT_ALWAYS(pos(&w, "2:b/d/ ") < pos(&w, "3:b/d/e "));
     pos(&w, "1:a ");
-    PF_ASSERT_ALWAYS_EQ(strlen(w.log), strlen("1:a 1:b/ 2:b/c 2:b/d/ 3:b/d/e "));
+    PF_ASSERT_ALWAYS_EQ(
+        strlen(w.log), strlen("1:a 1:b/ 2:b/c 2:b/d/ 3:b/d/e ")
+    );
 
     /* postorder */
     memset(w.log, 0, sizeof(w.log));
@@ -201,7 +207,9 @@ static int test_walk(int seed, int i) {
         pos(&w, "1:a ");
     }
 
-    PF_ASSERT_ALWAYS_EQ(pf_dir_walk(test_path(0, dir, "none"), 0, 0, record, &w), PF_ENOENT);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_dir_walk(test_path(0, dir, "none"), 0, 0, record, &w), PF_ENOENT
+    );
     PF_ASSERT_ALWAYS_EQ(pf_dir_walk(dir, 0, 0, NULL, &w), PF_EINVAL);
     PF_ASSERT_ALWAYS_EQ(pf_remove_all(dir), 0);
     return 0;

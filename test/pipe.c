@@ -37,8 +37,11 @@ static struct timespec after_ms(long ms) {
 static const char *pipe_name(void) {
     static char buf[64];
     snprintf(
-        buf, sizeof(buf), "cpolyfill-test-%lu-%08lx",
-        (unsigned long)pf_getpid(), (unsigned long)pf_random_u32()
+        buf,
+        sizeof(buf),
+        "cpolyfill-test-%lu-%08lx",
+        (unsigned long)pf_getpid(),
+        (unsigned long)pf_random_u32()
     );
     return buf;
 }

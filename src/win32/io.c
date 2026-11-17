@@ -220,7 +220,8 @@ PF_API FILE *pf_fmemopen(void *buf, size_t size, const char *mode) {
         errno = EINVAL;
         return NULL;
     }
-    if (!GetTempPathW(MAX_PATH + 1, dir) || !GetTempFileNameW(dir, L"pfm", 0, name)) {
+    if (!GetTempPathW(MAX_PATH + 1, dir)
+        || !GetTempFileNameW(dir, L"pfm", 0, name)) {
         pf__errno_win32();
         return NULL;
     }

@@ -50,7 +50,8 @@ void *pf__default_allocate(void *ptr, size_t old, size_t size, size_t zalign) {
     }
 
 #if PF_OS_WINDOWS
-    res = ptr ? _aligned_realloc(ptr, size, align) : _aligned_malloc(size, align);
+    res = ptr ? _aligned_realloc(ptr, size, align)
+              : _aligned_malloc(size, align);
 #else
     if (align == PF__MALLOC_ALIGN) {
         if (!ptr)

@@ -100,9 +100,8 @@ PF_API bool pf_path_is_absolute(const char *p) {
 #endif
 }
 
-PF_API ptrdiff_t pf_path_join(
-    char *buf, size_t size, const char *a, const char *b
-) {
+PF_API ptrdiff_t
+pf_path_join(char *buf, size_t size, const char *a, const char *b) {
     size_t la, lb, need;
     bool sep;
 
@@ -175,8 +174,8 @@ PF_API ptrdiff_t pf_path_normalize(char *buf, size_t size, const char *path) {
             size_t q = out;
             while (q > base && tmp[q - 1] != PF_PATH_SEP)
                 q--;
-            if (out > base && !(out - q == 2 && tmp[q] == '.'
-                                && tmp[q + 1] == '.')) {
+            if (out > base
+                && !(out - q == 2 && tmp[q] == '.' && tmp[q + 1] == '.')) {
                 out = q > base ? q - 1 : base; /* pop the last component */
                 continue;
             }
@@ -390,8 +389,8 @@ PF_API int pf_remove_all(const char *path) {
    tests. The names need not be unpredictable: creation is exclusive
    (O_EXCL, which on POSIX also refuses symbolic links). */
 int pf__mktemp(char *tmpl, bool dir, unsigned mode) {
-    static const char chars[] =
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    static const char chars
+        [] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     static unsigned long long counter;
     size_t len;
     char *x;
@@ -406,7 +405,7 @@ int pf__mktemp(char *tmpl, bool dir, unsigned mode) {
 
     for (attempt = 0; attempt < 1000; attempt++) {
         unsigned long long v = pf_time_ns() ^ (uintptr_t)tmpl
-                             ^ (++counter * 0x9E3779B97F4A7C15ull);
+            ^ (++counter * 0x9E3779B97F4A7C15ull);
         int k, fd;
 
         for (k = 0; k < 6; k++) {
@@ -419,7 +418,8 @@ int pf__mktemp(char *tmpl, bool dir, unsigned mode) {
                 return 0;
         } else {
             fd = pf_open(
-                tmpl, PF_O_RDWR | PF_O_CREAT | PF_O_EXCL | PF_O_CLOEXEC,
+                tmpl,
+                PF_O_RDWR | PF_O_CREAT | PF_O_EXCL | PF_O_CLOEXEC,
                 (pf_mode_t)mode
             );
             if (fd >= 0)

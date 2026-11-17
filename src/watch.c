@@ -58,7 +58,11 @@ static int pf__grow(
 
 /* `a` and `b` joined with the separator ("" + b is b). */
 static char *pf__wjoin(
-    pf__watcher *w, const char *a, size_t al, const char *b, size_t bl,
+    pf__watcher *w,
+    const char *a,
+    size_t al,
+    const char *b,
+    size_t bl,
     size_t *len
 ) {
     bool sep = al > 0 && bl > 0 && !pf_path_is_sep((unsigned char)a[al - 1]);
@@ -76,8 +80,11 @@ static char *pf__wjoin(
 }
 
 char *pf__watch_path(
-    pf__watcher *w, const pf__watch *wt, const pf__wdir *d,
-    const char *name, size_t *len
+    pf__watcher *w,
+    const pf__watch *wt,
+    const pf__wdir *d,
+    const char *name,
+    size_t *len
 ) {
     size_t dl;
     char *dp = pf__wjoin(w, wt->root, wt->root_len, d->rel, d->rel_len, &dl);
@@ -149,8 +156,14 @@ static void pf__event_drop(pf__watcher *w, pf__wevent *e) {
 }
 
 static int pf__queue(
-    pf__watcher *w, int id, int kind, const char *path, size_t len,
-    const char *old, size_t old_len, bool dir
+    pf__watcher *w,
+    int id,
+    int kind,
+    const char *path,
+    size_t len,
+    const char *old,
+    size_t old_len,
+    bool dir
 ) {
     pf__wevent *e;
     int rc = pf__grow(w, (void **)&w->queue, w->qn, &w->qcap, sizeof(*e));
@@ -184,7 +197,9 @@ static void pf__given_free(pf__watcher *w) {
 
 /* ---- Snapshots --------------------------------------------------------- */
 
-static void pf__entries_free(pf__watcher *w, pf__wentry *e, size_t n, size_t cap) {
+static void pf__entries_free(
+    pf__watcher *w, pf__wentry *e, size_t n, size_t cap
+) {
     size_t i;
     for (i = 0; i < n; i++)
         pf__wstr_drop(w, e[i].name, e[i].len);
@@ -198,8 +213,12 @@ static int pf__entry_cmp(const void *a, const void *b) {
 /* Reads directory `d` into a new sorted list: 0, or a PF_E* code if it
    cannot be read. */
 static int pf__scan(
-    pf__watcher *w, pf__watch *wt, pf__wdir *d, pf__wentry **out,
-    size_t *nout, size_t *cout
+    pf__watcher *w,
+    pf__watch *wt,
+    pf__wdir *d,
+    pf__wentry **out,
+    size_t *nout,
+    size_t *cout
 ) {
     pf__wentry *ents = NULL;
     size_t n = 0, cap = 0, dl, bufsize;
@@ -388,7 +407,9 @@ static int pf__tree_add(
         if (!path)
             return PF_ENOMEM;
         if (report)
-            rc = pf__queue(w, wt->id, PF_WATCH_CREATED, path, pl, NULL, 0, e->dir);
+            rc = pf__queue(
+                w, wt->id, PF_WATCH_CREATED, path, pl, NULL, 0, e->dir
+            );
         if (!rc && e->dir && wt->recursive)
             rc = pf__tree_add(w, wt, path, pl, report);
         pf__wstr_drop(w, path, pl);
@@ -422,8 +443,13 @@ typedef struct pf__wbatch {
 } pf__wbatch;
 
 static int pf__item(
-    pf__watcher *w, pf__witem **arr, size_t *n, size_t *cap, int watch,
-    const pf__wdir *d, const pf__wentry *e
+    pf__watcher *w,
+    pf__witem **arr,
+    size_t *n,
+    size_t *cap,
+    int watch,
+    const pf__wdir *d,
+    const pf__wentry *e
 ) {
     pf__witem *it;
     int rc = pf__grow(w, (void **)arr, *n, cap, sizeof(**arr));
@@ -462,7 +488,9 @@ static bool pf__entry_changed(const pf__wentry *a, const pf__wentry *b) {
 }
 
 /* Scans `d` again and records the differences in `b`. */
-static int pf__rescan(pf__watcher *w, pf__watch *wt, pf__wdir *d, pf__wbatch *b) {
+static int pf__rescan(
+    pf__watcher *w, pf__watch *wt, pf__wdir *d, pf__wbatch *b
+) {
     pf__wentry *ne;
     size_t nn, nc, i = 0, j = 0;
     int rc = pf__scan(w, wt, d, &ne, &nn, &nc);
@@ -472,18 +500,20 @@ static int pf__rescan(pf__watcher *w, pf__watch *wt, pf__wdir *d, pf__wbatch *b)
         pf__wentry *o = i < d->n ? &d->ents[i] : NULL;
         pf__wentry *e = j < nn ? &ne[j] : NULL;
         int c = !o ? 1 : !e ? -1 : strcmp(o->name, e->name);
-        if (c < 0 || (c == 0
-                      && (o->ino != e->ino || o->dev != e->dev
-                          || o->dir != e->dir))) {
+        if (c < 0
+            || (c == 0
+                && (o->ino != e->ino || o->dev != e->dev
+                    || o->dir != e->dir))) {
             rc = pf__item(w, &b->gone, &b->ng, &b->cg, wt->id, d, o);
             if (o->bh != -1) {
                 w->be->file_remove(w, o);
                 o->bh = -1;
             }
         }
-        if (c > 0 || (c == 0
-                      && (o->ino != e->ino || o->dev != e->dev
-                          || o->dir != e->dir))) {
+        if (c > 0
+            || (c == 0
+                && (o->ino != e->ino || o->dev != e->dev
+                    || o->dir != e->dir))) {
             if (!rc)
                 rc = pf__item(w, &b->news, &b->nn, &b->cn, wt->id, d, e);
             if (e->reg && w->be->file_add)
@@ -555,7 +585,13 @@ static int pf__report(pf__watcher *w, pf__wbatch *b) {
         if (same) {
             same->done = true;
             rc = pf__queue(
-                w, wt->id, PF_WATCH_MODIFIED, g->path, g->len, NULL, 0,
+                w,
+                wt->id,
+                PF_WATCH_MODIFIED,
+                g->path,
+                g->len,
+                NULL,
+                0,
                 same->dir
             );
         } else {
@@ -576,7 +612,13 @@ static int pf__report(pf__watcher *w, pf__wbatch *b) {
             continue;
         g = &b->gone[n->pair];
         rc = pf__queue(
-            w, wt->id, PF_WATCH_RENAMED, n->path, n->len, g->path, g->len,
+            w,
+            wt->id,
+            PF_WATCH_RENAMED,
+            n->path,
+            n->len,
+            g->path,
+            g->len,
             n->dir
         );
         if (g->dir && wt->recursive)
@@ -716,9 +758,8 @@ static intptr_t pf__scan_handle(pf__watcher *w) {
 }
 
 static const pf__wbackend pf__scan_backend = {
-    pf__scan_init,    pf__scan_free,       pf__scan_dir_add,
-    pf__scan_dir_remove, NULL,             NULL,
-    pf__scan_collect, pf__scan_handle,
+    pf__scan_init, pf__scan_free, pf__scan_dir_add, pf__scan_dir_remove,
+    NULL,          NULL,          pf__scan_collect, pf__scan_handle,
 };
 
 const pf__wbackend *const pf__watch_scan = &pf__scan_backend;
@@ -726,7 +767,9 @@ const pf__wbackend *const pf__watch_scan = &pf__scan_backend;
 /* ---- API ---------------------------------------------------------------- */
 
 int pf__watcher_init_with(
-    pf_watcher_t *ww, struct allocator_t *alloc, int backend,
+    pf_watcher_t *ww,
+    struct allocator_t *alloc,
+    int backend,
     int64_t interval_ns
 ) {
     pf__watcher *w;
@@ -874,9 +917,7 @@ static int pf__deliver(pf__watcher *w, pf_watch_event_t *ev, size_t n) {
     size_t k = 0;
     while (k < n && w->qhead < w->qn) {
         pf__wevent *e;
-        if (pf__grow(
-                w, (void **)&w->given, w->ngiven, &w->gcap, sizeof(*e)
-            ))
+        if (pf__grow(w, (void **)&w->given, w->ngiven, &w->gcap, sizeof(*e)))
             break;
         e = &w->given[w->ngiven++];
         *e = w->queue[w->qhead++];
@@ -910,8 +951,11 @@ static int64_t pf__left(const struct timespec *deadline, int64_t end) {
 }
 
 static int pf__read(
-    pf_watcher_t *ww, pf_watch_event_t *ev, size_t n,
-    const struct timespec *deadline, int64_t end
+    pf_watcher_t *ww,
+    pf_watch_event_t *ev,
+    size_t n,
+    const struct timespec *deadline,
+    int64_t end
 ) {
     pf__watcher *w = pf__impl(ww);
 
@@ -958,9 +1002,7 @@ PF_API int pf_watcher_read_ns(
     return pf__read(w, ev, n, NULL, end);
 }
 
-PF_API int pf_poller_add_watcher(
-    pf_poller_t *p, pf_watcher_t *ww, void *data
-) {
+PF_API int pf_poller_add_watcher(pf_poller_t *p, pf_watcher_t *ww, void *data) {
     pf__watcher *w = pf__impl(ww);
     intptr_t h;
     if (!w)

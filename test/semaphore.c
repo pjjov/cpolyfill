@@ -28,25 +28,57 @@ typedef struct {
     int (*getvalue)(void *s, int *value);
 } sem_ops;
 
-static int pub_init(void *s, unsigned v) { return pf_sem_init((pf_sem_t *)s, 0, v); }
+static int pub_init(void *s, unsigned v) {
+    return pf_sem_init((pf_sem_t *)s, 0, v);
+}
 static int pub_destroy(void *s) { return pf_sem_destroy((pf_sem_t *)s); }
 static int pub_wait(void *s) { return pf_sem_wait((pf_sem_t *)s); }
 static int pub_trywait(void *s) { return pf_sem_trywait((pf_sem_t *)s); }
-static int pub_timedwait(void *s, const struct timespec *d) { return pf_sem_timedwait((pf_sem_t *)s, d); }
+static int pub_timedwait(void *s, const struct timespec *d) {
+    return pf_sem_timedwait((pf_sem_t *)s, d);
+}
 static int pub_post(void *s) { return pf_sem_post((pf_sem_t *)s); }
-static int pub_getvalue(void *s, int *v) { return pf_sem_getvalue((pf_sem_t *)s, v); }
+static int pub_getvalue(void *s, int *v) {
+    return pf_sem_getvalue((pf_sem_t *)s, v);
+}
 
-static int loc_init(void *s, unsigned v) { return pf__sem_local_init((struct pf__sem_local *)s, v); }
-static int loc_destroy(void *s) { return pf__sem_local_destroy((struct pf__sem_local *)s); }
-static int loc_wait(void *s) { return pf__sem_local_wait((struct pf__sem_local *)s, NULL); }
-static int loc_trywait(void *s) { return pf__sem_local_trywait((struct pf__sem_local *)s); }
-static int loc_timedwait(void *s, const struct timespec *d) { return pf__sem_local_wait((struct pf__sem_local *)s, d); }
-static int loc_post(void *s) { return pf__sem_local_post((struct pf__sem_local *)s); }
-static int loc_getvalue(void *s, int *v) { return pf__sem_local_getvalue((struct pf__sem_local *)s, v); }
+static int loc_init(void *s, unsigned v) {
+    return pf__sem_local_init((struct pf__sem_local *)s, v);
+}
+static int loc_destroy(void *s) {
+    return pf__sem_local_destroy((struct pf__sem_local *)s);
+}
+static int loc_wait(void *s) {
+    return pf__sem_local_wait((struct pf__sem_local *)s, NULL);
+}
+static int loc_trywait(void *s) {
+    return pf__sem_local_trywait((struct pf__sem_local *)s);
+}
+static int loc_timedwait(void *s, const struct timespec *d) {
+    return pf__sem_local_wait((struct pf__sem_local *)s, d);
+}
+static int loc_post(void *s) {
+    return pf__sem_local_post((struct pf__sem_local *)s);
+}
+static int loc_getvalue(void *s, int *v) {
+    return pf__sem_local_getvalue((struct pf__sem_local *)s, v);
+}
 
 static const sem_ops implementations[] = {
-    { pub_init, pub_destroy, pub_wait, pub_trywait, pub_timedwait, pub_post, pub_getvalue },
-    { loc_init, loc_destroy, loc_wait, loc_trywait, loc_timedwait, loc_post, loc_getvalue },
+    { pub_init,
+      pub_destroy,
+      pub_wait,
+      pub_trywait,
+      pub_timedwait,
+      pub_post,
+      pub_getvalue },
+    { loc_init,
+      loc_destroy,
+      loc_wait,
+      loc_trywait,
+      loc_timedwait,
+      loc_post,
+      loc_getvalue },
 };
 
 static union {
@@ -119,7 +151,9 @@ static int test_clockwait(int seed, int i) {
 
     PF_ASSERT_ALWAYS_EQ(pf_deadline_ns(&d, 10000000), 0);
     check_errno(pf_sem_clockwait(&sem.pub, PF_CLOCK_REALTIME, &d), ETIMEDOUT);
-    check_errno(pf_sem_clockwait(&sem.pub, PF_CLOCK_THREAD_CPUTIME_ID, &d), EINVAL);
+    check_errno(
+        pf_sem_clockwait(&sem.pub, PF_CLOCK_THREAD_CPUTIME_ID, &d), EINVAL
+    );
 
     PF_ASSERT_ALWAYS_EQ(pf_sem_post(&sem.pub), 0);
     PF_ASSERT_ALWAYS_EQ(pf_clock_gettime(PF_CLOCK_MONOTONIC, &d), 0);
@@ -152,7 +186,9 @@ static int test_threads(int seed, int i) {
         ops = &implementations[k];
         PF_ASSERT_ALWAYS_EQ(ops->init(&sem, 0), 0);
         for (n = 0; n < CONSUMERS; n++)
-            PF_ASSERT_ALWAYS_EQ(pf_thrd_create(&t[n], consume, NULL), pf_thrd_success);
+            PF_ASSERT_ALWAYS_EQ(
+                pf_thrd_create(&t[n], consume, NULL), pf_thrd_success
+            );
         for (n = 0; n < CONSUMERS * ITEMS; n++)
             PF_ASSERT_ALWAYS_EQ(ops->post(&sem), 0);
         for (n = 0; n < CONSUMERS; n++)
@@ -168,13 +204,17 @@ static int test_named(int seed, int i) {
     pf_sem_t *a, *b;
     (void)seed, (void)i;
 
-    snprintf(name, sizeof(name), "/cpolyfill-test-%lu", (unsigned long)pf_thrd_id());
+    snprintf(
+        name, sizeof(name), "/cpolyfill-test-%lu", (unsigned long)pf_thrd_id()
+    );
     pf_sem_unlink(name);
 
     a = pf_sem_open(name, PF_O_CREAT | PF_O_EXCL, 0600u, 1u);
     PF_ASSERT_ALWAYS(a != PF_SEM_FAILED);
     errno = 0;
-    PF_ASSERT_ALWAYS(pf_sem_open(name, PF_O_CREAT | PF_O_EXCL, 0600u, 1u) == PF_SEM_FAILED);
+    PF_ASSERT_ALWAYS(
+        pf_sem_open(name, PF_O_CREAT | PF_O_EXCL, 0600u, 1u) == PF_SEM_FAILED
+    );
     PF_ASSERT_ALWAYS_EQ(errno, EEXIST);
     b = pf_sem_open(name, 0);
     PF_ASSERT_ALWAYS(b != PF_SEM_FAILED);
@@ -194,7 +234,9 @@ static int test_named(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_sem_unlink(name), 0);
 
     errno = 0;
-    PF_ASSERT_ALWAYS(pf_sem_open("/cpolyfill-test-missing-sem", 0) == PF_SEM_FAILED);
+    PF_ASSERT_ALWAYS(
+        pf_sem_open("/cpolyfill-test-missing-sem", 0) == PF_SEM_FAILED
+    );
     PF_ASSERT_ALWAYS_EQ(errno, ENOENT);
     return 0;
 }
@@ -207,7 +249,9 @@ static int test_no_threads(int seed, int i) {
     check_errno(pf_sem_wait(&sem.pub), EDEADLK);
     PF_ASSERT_ALWAYS_EQ(pf_sem_destroy(&sem.pub), 0);
     errno = 0;
-    PF_ASSERT_ALWAYS(pf_sem_open("/cpolyfill-test", PF_O_CREAT, 0600u, 1u) == PF_SEM_FAILED);
+    PF_ASSERT_ALWAYS(
+        pf_sem_open("/cpolyfill-test", PF_O_CREAT, 0600u, 1u) == PF_SEM_FAILED
+    );
     PF_ASSERT_ALWAYS_EQ(errno, ENOSYS);
     return 0;
 }

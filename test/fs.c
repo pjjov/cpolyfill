@@ -147,23 +147,32 @@ static int test_normalize(int seed, int i) {
         const char *want = native(cases[k][1]);
         ptrdiff_t n = pf_path_normalize(buf, sizeof(buf), cases[k][0]);
         PF_ASSERT_ALWAYS_MSG(n >= 0, "%s", cases[k][0]);
-        PF_ASSERT_ALWAYS_MSG(strcmp(buf, want) == 0, "%s -> %s", cases[k][0], buf);
+        PF_ASSERT_ALWAYS_MSG(
+            strcmp(buf, want) == 0, "%s -> %s", cases[k][0], buf
+        );
         PF_ASSERT_ALWAYS_EQ((size_t)n, strlen(want));
         PF_ASSERT_ALWAYS_EQ(pf_path_normalize(NULL, 0, cases[k][0]), n);
-        PF_ASSERT_ALWAYS_EQ(pf_path_normalize(buf, (size_t)n, cases[k][0]), PF_ERANGE);
+        PF_ASSERT_ALWAYS_EQ(
+            pf_path_normalize(buf, (size_t)n, cases[k][0]), PF_ERANGE
+        );
     }
     PF_ASSERT_ALWAYS_EQ(pf_path_normalize(buf, sizeof(buf), NULL), PF_EINVAL);
     return 0;
 }
 
 static void check_part(
-    const char *(*fn)(const char *, size_t *), const char *path, const char *want
+    const char *(*fn)(const char *, size_t *),
+    const char *path,
+    const char *want
 ) {
     size_t len = 99;
     const char *p = fn(path, &len);
     PF_ASSERT_ALWAYS_MSG(
         len == strlen(want) && memcmp(p, want, len) == 0,
-        "'%s' -> '%.*s'", path, (int)len, p
+        "'%s' -> '%.*s'",
+        path,
+        (int)len,
+        p
     );
 }
 
@@ -553,7 +562,9 @@ static int test_copy(int seed, int i) {
     PF_ASSERT_ALWAYS_EQ(pf_copy_file(c, b, 0), PF_EEXIST);
     PF_ASSERT_ALWAYS_EQ(pf_copy_file(c, b, PF_COPY_OVERWRITE), 0);
     PF_ASSERT_ALWAYS_STR_EQ(test_read(b), "small");
-    PF_ASSERT_ALWAYS_EQ(pf_copy_file(test_path(3, dir, "none"), b, 0), PF_ENOENT);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_copy_file(test_path(3, dir, "none"), b, 0), PF_ENOENT
+    );
     PF_ASSERT_ALWAYS(pf_copy_file(dir, test_path(3, dir, "d"), 0) < 0);
 #if !PF_OS_WINDOWS
     /* onto itself */
@@ -577,8 +588,12 @@ static int test_lock(int seed, int i) {
     PF_ASSERT_ALWAYS(a >= 0 && b >= 0);
 
     PF_ASSERT_ALWAYS_EQ(pf_lock_file(a, PF_LOCK_EX), 0);
-    PF_ASSERT_ALWAYS_EQ(pf_lock_file(b, PF_LOCK_EX | PF_LOCK_NB), PF_EWOULDBLOCK);
-    PF_ASSERT_ALWAYS_EQ(pf_lock_file(b, PF_LOCK_SH | PF_LOCK_NB), PF_EWOULDBLOCK);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_lock_file(b, PF_LOCK_EX | PF_LOCK_NB), PF_EWOULDBLOCK
+    );
+    PF_ASSERT_ALWAYS_EQ(
+        pf_lock_file(b, PF_LOCK_SH | PF_LOCK_NB), PF_EWOULDBLOCK
+    );
     PF_ASSERT_ALWAYS_EQ(pf_lock_file(a, PF_LOCK_UN), 0);
 
     PF_ASSERT_ALWAYS_EQ(pf_lock_file(a, PF_LOCK_SH), 0);
@@ -621,13 +636,17 @@ static int test_known(int seed, int i) {
         }
 #endif
         PF_ASSERT_ALWAYS_MSG(n > 0, "kind %d: %d", kind, (int)n);
-        PF_ASSERT_ALWAYS_MSG(pf_path_is_absolute(buf), "kind %d: %s", kind, buf);
+        PF_ASSERT_ALWAYS_MSG(
+            pf_path_is_absolute(buf), "kind %d: %s", kind, buf
+        );
         PF_ASSERT_ALWAYS(n == 1 || !pf_path_is_sep(buf[n - 1]));
     }
     PF_ASSERT_ALWAYS(pf_is_dir(home));
     n = pf_known_dir(PF_DIR_TEMP, buf, sizeof(buf));
     PF_ASSERT_ALWAYS(pf_is_dir(buf));
-    PF_ASSERT_ALWAYS_EQ(pf_known_dir((pf_known_dir_t)99, buf, sizeof(buf)), PF_EINVAL);
+    PF_ASSERT_ALWAYS_EQ(
+        pf_known_dir((pf_known_dir_t)99, buf, sizeof(buf)), PF_EINVAL
+    );
     return 0;
 }
 
@@ -685,11 +704,13 @@ static int test_xdg(int seed, int i) {
 
     f = pf_fopen(test_path(0, dir, "user-dirs.dirs"), "w");
     PF_ASSERT_ALWAYS(f != NULL);
-    fputs("# comment\n"
-          "XDG_DESKTOP_DIR=\"$HOME/Schreibtisch\"\n"
-          "  XDG_MUSIC_DIR = \"/srv/music\"\n"
-          "XDG_VIDEOS_DIR=\"$HOME/\"\n",
-          f);
+    fputs(
+        "# comment\n"
+        "XDG_DESKTOP_DIR=\"$HOME/Schreibtisch\"\n"
+        "  XDG_MUSIC_DIR = \"/srv/music\"\n"
+        "XDG_VIDEOS_DIR=\"$HOME/\"\n",
+        f
+    );
     fclose(f);
     PF_ASSERT_ALWAYS(pf_known_dir(PF_DIR_DESKTOP, buf, sizeof(buf)) > 0);
     PF_ASSERT_ALWAYS_STR_EQ(buf, "/home/someone/Schreibtisch");

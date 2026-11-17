@@ -18,10 +18,10 @@
 #include <stdlib.h>
 #include <string.h>
 #if PF_OS_WINDOWS
-    #include <windows.h>
     #include <fcntl.h>
     #include <io.h>
     #include <sddl.h>
+    #include <windows.h>
 #else
     #include <fcntl.h>
     #include <sys/stat.h>
@@ -43,7 +43,9 @@ PF_API int pf_pipe(int fds[2], unsigned flags) {
     {
         int raw[2];
     #if defined(O_CLOEXEC) && !PF_OS_APPLE
-        if (pipe2(raw, O_CLOEXEC | ((flags & PF_PIPE_NONBLOCK) ? O_NONBLOCK : 0))
+        if (pipe2(
+                raw, O_CLOEXEC | ((flags & PF_PIPE_NONBLOCK) ? O_NONBLOCK : 0)
+            )
             != 0)
             return pf_error_from_errno(errno);
     #else
@@ -77,11 +79,11 @@ PF_API int pf_pipe(int fds[2], unsigned flags) {
 #if PF_OS_WINDOWS
 
 typedef struct pf__pipe_srv {
-    wchar_t *name;      /* \\.\pipe\... */
-    HANDLE pending;     /* the instance the next client connects to */
+    wchar_t *name;  /* \\.\pipe\... */
+    HANDLE pending; /* the instance the next client connects to */
     HANDLE event;
     OVERLAPPED ov;
-    bool waiting;       /* ConnectNamedPipe is in progress on `pending` */
+    bool waiting; /* ConnectNamedPipe is in progress on `pending` */
 } pf__pipe_srv;
 
 /* The full pipe name in new memory (malloc). */
@@ -136,12 +138,16 @@ static HANDLE pf__np_create(const wchar_t *name, bool first, int *rc) {
             | (first ? FILE_FLAG_FIRST_PIPE_INSTANCE : 0),
         PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT
             | PIPE_REJECT_REMOTE_CLIENTS,
-        PIPE_UNLIMITED_INSTANCES, 65536, 65536, 0, &sa
+        PIPE_UNLIMITED_INSTANCES,
+        65536,
+        65536,
+        0,
+        &sa
     );
     if (h == INVALID_HANDLE_VALUE) {
         DWORD e = GetLastError();
         *rc = (first && e == ERROR_ACCESS_DENIED) ? PF_EADDRINUSE
-                                                   : pf_error_from_win32(e);
+                                                  : pf_error_from_win32(e);
     } else {
         *rc = PF_OK;
     }
@@ -302,7 +308,11 @@ PF_API int pf_pipe_connect(
         /* Overlapped, so a poller can wait on it (pf__np_io waits for each
            call). */
         HANDLE h = CreateFileW(
-            wname, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
+            wname,
+            GENERIC_READ | GENERIC_WRITE,
+            0,
+            NULL,
+            OPEN_EXISTING,
             FILE_FLAG_OVERLAPPED | SECURITY_SQOS_PRESENT
                 | SECURITY_IDENTIFICATION,
             NULL
@@ -464,8 +474,10 @@ PF_API int pf_pipe_listen(pf_pipe_server_t *srv, const char *name) {
             int crc = pf_unix_connect(&c, impl->path);
             if (crc == PF_OK)
                 pf_socket_close(c);
-            else if (crc == PF_ECONNREFUSED && lstat(impl->path, &st) == 0
-                     && S_ISSOCK(st.st_mode) && unlink(impl->path) == 0)
+            else if (
+                crc == PF_ECONNREFUSED && lstat(impl->path, &st) == 0
+                && S_ISSOCK(st.st_mode) && unlink(impl->path) == 0
+            )
                 rc = pf_bind(impl->fd, &addr);
         }
         if (!rc) {

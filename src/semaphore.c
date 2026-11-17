@@ -91,9 +91,12 @@ int pf__sem_local_wait(
     }
     pf_mtx_unlock(&s->mtx);
     switch (rc) {
-    case pf_thrd_success: return 0;
-    case pf_thrd_timedout: return fail(ETIMEDOUT);
-    default: return fail(PF_HAS_THREADS ? EINVAL : EDEADLK);
+    case pf_thrd_success:
+        return 0;
+    case pf_thrd_timedout:
+        return fail(ETIMEDOUT);
+    default:
+        return fail(PF_HAS_THREADS ? EINVAL : EDEADLK);
     }
 }
 
@@ -136,17 +139,11 @@ PF_API int pf_sem_init(pf_sem_t *sem, int pshared, unsigned value) {
     return sem_init(sem, pshared, value);
 }
 
-PF_API int pf_sem_destroy(pf_sem_t *sem) {
-    return sem_destroy(sem);
-}
+PF_API int pf_sem_destroy(pf_sem_t *sem) { return sem_destroy(sem); }
 
-PF_API int pf_sem_wait(pf_sem_t *sem) {
-    return sem_wait(sem);
-}
+PF_API int pf_sem_wait(pf_sem_t *sem) { return sem_wait(sem); }
 
-PF_API int pf_sem_trywait(pf_sem_t *sem) {
-    return sem_trywait(sem);
-}
+PF_API int pf_sem_trywait(pf_sem_t *sem) { return sem_trywait(sem); }
 
 PF_API int pf_sem_timedwait(pf_sem_t *sem, const struct timespec *deadline) {
     return sem_timedwait(sem, deadline);
@@ -168,9 +165,7 @@ PF_API int pf_sem_clockwait(
     return sem_timedwait(sem, &utc);
 }
 
-PF_API int pf_sem_post(pf_sem_t *sem) {
-    return sem_post(sem);
-}
+PF_API int pf_sem_post(pf_sem_t *sem) { return sem_post(sem); }
 
 PF_API int pf_sem_getvalue(pf_sem_t *sem, int *value) {
     return sem_getvalue(sem, value);
@@ -194,13 +189,9 @@ PF_API pf_sem_t *pf_sem_open(const char *name, int oflag, ...) {
     return sem_open(name, oflag);
 }
 
-PF_API int pf_sem_close(pf_sem_t *sem) {
-    return sem_close(sem);
-}
+PF_API int pf_sem_close(pf_sem_t *sem) { return sem_close(sem); }
 
-PF_API int pf_sem_unlink(const char *name) {
-    return sem_unlink(name);
-}
+PF_API int pf_sem_unlink(const char *name) { return sem_unlink(name); }
 
 /* ---- Our own unnamed ones, the system's named ones (macOS, Windows) ---- */
 
@@ -282,9 +273,12 @@ PF_API int pf_sem_trywait(pf_sem_t *sem) {
         return pf__sem_local_trywait(&sem->pf__local);
     #if PF_OS_WINDOWS
     switch (WaitForSingleObject(NAMED(sem), 0)) {
-    case WAIT_OBJECT_0: return 0;
-    case WAIT_TIMEOUT: return fail(EAGAIN);
-    default: return fail(EINVAL);
+    case WAIT_OBJECT_0:
+        return 0;
+    case WAIT_TIMEOUT:
+        return fail(EAGAIN);
+    default:
+        return fail(EINVAL);
     }
     #elif defined(NAMED)
     return sem_trywait(NAMED(sem));
@@ -302,9 +296,12 @@ PF_API int pf_sem_timedwait(pf_sem_t *sem, const struct timespec *deadline) {
     for (;;) {
         struct timespec now;
         switch (WaitForSingleObject(NAMED(sem), ms_until(deadline))) {
-        case WAIT_OBJECT_0: return 0;
-        case WAIT_TIMEOUT: break;
-        default: return fail(EINVAL);
+        case WAIT_OBJECT_0:
+            return 0;
+        case WAIT_TIMEOUT:
+            break;
+        default:
+            return fail(EINVAL);
         }
         /* The wait is in whole milliseconds: make sure the time is up. */
         if (pf_timespec_get(&now, PF_TIME_UTC)
@@ -430,8 +427,8 @@ PF_API pf_sem_t *pf_sem_open(const char *name, int oflag, ...) {
     #elif defined(NAMED)
     {
         sem_t *s = oflag & PF_O_CREAT
-                     ? sem_open(name, oflag, (mode_t)mode, value)
-                     : sem_open(name, oflag);
+            ? sem_open(name, oflag, (mode_t)mode, value)
+            : sem_open(name, oflag);
         if (s == SEM_FAILED)
             return PF_SEM_FAILED;
         if (!(sem = (pf_sem_t *)calloc(1, sizeof(*sem)))) {

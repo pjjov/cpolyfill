@@ -67,72 +67,115 @@ extern int __ulock_wake(uint32_t op, void *addr, uint64_t wake_value);
    to 64 bits. */
 static uint64_t get_n(const void *p, size_t size) {
     switch (size) {
-    case 1: { uint8_t v; memcpy(&v, p, 1); return v; }
-    case 2: { uint16_t v; memcpy(&v, p, 2); return v; }
-    case 4: { uint32_t v; memcpy(&v, p, 4); return v; }
-    default: { uint64_t v; memcpy(&v, p, 8); return v; }
+    case 1: {
+        uint8_t v;
+        memcpy(&v, p, 1);
+        return v;
+    }
+    case 2: {
+        uint16_t v;
+        memcpy(&v, p, 2);
+        return v;
+    }
+    case 4: {
+        uint32_t v;
+        memcpy(&v, p, 4);
+        return v;
+    }
+    default: {
+        uint64_t v;
+        memcpy(&v, p, 8);
+        return v;
+    }
     }
 }
 
 static void put_n(void *p, size_t size, uint64_t v) {
     switch (size) {
-    case 1: { uint8_t x = (uint8_t)v; memcpy(p, &x, 1); break; }
-    case 2: { uint16_t x = (uint16_t)v; memcpy(p, &x, 2); break; }
-    case 4: { uint32_t x = (uint32_t)v; memcpy(p, &x, 4); break; }
-    default: memcpy(p, &v, 8); break;
+    case 1: {
+        uint8_t x = (uint8_t)v;
+        memcpy(p, &x, 1);
+        break;
+    }
+    case 2: {
+        uint16_t x = (uint16_t)v;
+        memcpy(p, &x, 2);
+        break;
+    }
+    case 4: {
+        uint32_t x = (uint32_t)v;
+        memcpy(p, &x, 4);
+        break;
+    }
+    default:
+        memcpy(p, &v, 8);
+        break;
     }
 }
 
 #if PF_CC_GNU
 
-    #define CAS_N(type, p, e, d)                                           \
-        do {                                                               \
-            type pf__e = (type)*(e);                                       \
-            bool pf__ok = __atomic_compare_exchange_n(                     \
-                (volatile type *)(p), &pf__e, (type)(d), 0,                \
-                __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST                         \
-            );                                                             \
-            *(e) = pf__e;                                                  \
-            return pf__ok;                                                 \
+    #define CAS_N(type, p, e, d)                       \
+        do {                                           \
+            type pf__e = (type) * (e);                 \
+            bool pf__ok = __atomic_compare_exchange_n( \
+                (volatile type *)(p),                  \
+                &pf__e,                                \
+                (type)(d),                             \
+                0,                                     \
+                __ATOMIC_SEQ_CST,                      \
+                __ATOMIC_SEQ_CST                       \
+            );                                         \
+            *(e) = pf__e;                              \
+            return pf__ok;                             \
         } while (0)
 
 static bool native(size_t size) {
     switch (size) {
-    case 1: return __atomic_always_lock_free(1, 0);
-    case 2: return __atomic_always_lock_free(2, 0);
-    case 4: return __atomic_always_lock_free(4, 0);
-    case 8: return __atomic_always_lock_free(8, 0);
-    default: return false;
+    case 1:
+        return __atomic_always_lock_free(1, 0);
+    case 2:
+        return __atomic_always_lock_free(2, 0);
+    case 4:
+        return __atomic_always_lock_free(4, 0);
+    case 8:
+        return __atomic_always_lock_free(8, 0);
+    default:
+        return false;
     }
 }
 
 static bool raw_cas(volatile void *p, size_t size, uint64_t *e, uint64_t d) {
     switch (size) {
-    case 1: CAS_N(uint8_t, p, e, d);
-    case 2: CAS_N(uint16_t, p, e, d);
-    case 4: CAS_N(uint32_t, p, e, d);
-    default: CAS_N(uint64_t, p, e, d);
+    case 1:
+        CAS_N(uint8_t, p, e, d);
+    case 2:
+        CAS_N(uint16_t, p, e, d);
+    case 4:
+        CAS_N(uint32_t, p, e, d);
+    default:
+        CAS_N(uint64_t, p, e, d);
     }
 }
 
 static uint64_t raw_load(const volatile void *p, size_t size) {
     switch (size) {
-    case 1: return __atomic_load_n((const volatile uint8_t *)p, __ATOMIC_SEQ_CST);
-    case 2: return __atomic_load_n((const volatile uint16_t *)p, __ATOMIC_SEQ_CST);
-    case 4: return __atomic_load_n((const volatile uint32_t *)p, __ATOMIC_SEQ_CST);
-    default: return __atomic_load_n((const volatile uint64_t *)p, __ATOMIC_SEQ_CST);
+    case 1:
+        return __atomic_load_n((const volatile uint8_t *)p, __ATOMIC_SEQ_CST);
+    case 2:
+        return __atomic_load_n((const volatile uint16_t *)p, __ATOMIC_SEQ_CST);
+    case 4:
+        return __atomic_load_n((const volatile uint32_t *)p, __ATOMIC_SEQ_CST);
+    default:
+        return __atomic_load_n((const volatile uint64_t *)p, __ATOMIC_SEQ_CST);
     }
 }
 
-PF_API void pf__atomic_fence(void) {
-    __atomic_thread_fence(__ATOMIC_SEQ_CST);
-}
+PF_API void pf__atomic_fence(void) { __atomic_thread_fence(__ATOMIC_SEQ_CST); }
 
 #elif PF__ATOMIC_MSVC
 
-static bool native(size_t size) {
-    return pf__atomic_msvc_is_lock_free(size);
-}
+static bool native(size_t size) { return pf__atomic_msvc_is_lock_free(size); }
 
 static bool raw_cas(volatile void *p, size_t size, uint64_t *e, uint64_t d) {
     uint64_t seen = pf__atomic_msvc_cas_raw(p, size, *e, d);
@@ -145,22 +188,20 @@ static uint64_t raw_load(const volatile void *p, size_t size) {
     return pf__atomic_msvc_cas_raw((volatile void *)p, size, 0, 0);
 }
 
-PF_API void pf__atomic_fence(void) {
-    pf__atomic_msvc_fence();
-}
+PF_API void pf__atomic_fence(void) { pf__atomic_msvc_fence(); }
 
 #else /* C11 <stdatomic.h> */
 
     #include <stdatomic.h>
 
-    #define CAS_N(type, p, e, d)                                           \
-        do {                                                               \
-            type pf__e = (type)*(e);                                       \
-            bool pf__ok = atomic_compare_exchange_strong(                  \
-                (volatile _Atomic(type) *)(p), &pf__e, (type)(d)           \
-            );                                                             \
-            *(e) = pf__e;                                                  \
-            return pf__ok;                                                 \
+    #define CAS_N(type, p, e, d)                                 \
+        do {                                                     \
+            type pf__e = (type) * (e);                           \
+            bool pf__ok = atomic_compare_exchange_strong(        \
+                (volatile _Atomic(type) *)(p), &pf__e, (type)(d) \
+            );                                                   \
+            *(e) = pf__e;                                        \
+            return pf__ok;                                       \
         } while (0)
 
 static bool native(size_t size) {
@@ -169,29 +210,42 @@ static bool native(size_t size) {
     static _Atomic(uint32_t) a32;
     static _Atomic(uint64_t) a64;
     switch (size) {
-    case 1: return atomic_is_lock_free(&a8);
-    case 2: return atomic_is_lock_free(&a16);
-    case 4: return atomic_is_lock_free(&a32);
-    case 8: return atomic_is_lock_free(&a64);
-    default: return false;
+    case 1:
+        return atomic_is_lock_free(&a8);
+    case 2:
+        return atomic_is_lock_free(&a16);
+    case 4:
+        return atomic_is_lock_free(&a32);
+    case 8:
+        return atomic_is_lock_free(&a64);
+    default:
+        return false;
     }
 }
 
 static bool raw_cas(volatile void *p, size_t size, uint64_t *e, uint64_t d) {
     switch (size) {
-    case 1: CAS_N(uint8_t, p, e, d);
-    case 2: CAS_N(uint16_t, p, e, d);
-    case 4: CAS_N(uint32_t, p, e, d);
-    default: CAS_N(uint64_t, p, e, d);
+    case 1:
+        CAS_N(uint8_t, p, e, d);
+    case 2:
+        CAS_N(uint16_t, p, e, d);
+    case 4:
+        CAS_N(uint32_t, p, e, d);
+    default:
+        CAS_N(uint64_t, p, e, d);
     }
 }
 
 static uint64_t raw_load(const volatile void *p, size_t size) {
     switch (size) {
-    case 1: return atomic_load((volatile _Atomic(uint8_t) *)p);
-    case 2: return atomic_load((volatile _Atomic(uint16_t) *)p);
-    case 4: return atomic_load((volatile _Atomic(uint32_t) *)p);
-    default: return atomic_load((volatile _Atomic(uint64_t) *)p);
+    case 1:
+        return atomic_load((volatile _Atomic(uint8_t) *)p);
+    case 2:
+        return atomic_load((volatile _Atomic(uint16_t) *)p);
+    case 4:
+        return atomic_load((volatile _Atomic(uint32_t) *)p);
+    default:
+        return atomic_load((volatile _Atomic(uint64_t) *)p);
     }
 }
 
@@ -315,11 +369,16 @@ bool pf__atomic_cas_locked(
 
 static uint64_t apply(int op, uint64_t old, uint64_t arg) {
     switch (op) {
-    case PF__ATOMIC_OP_ADD: return old + arg;
-    case PF__ATOMIC_OP_SUB: return old - arg;
-    case PF__ATOMIC_OP_OR: return old | arg;
-    case PF__ATOMIC_OP_XOR: return old ^ arg;
-    default: return old & arg;
+    case PF__ATOMIC_OP_ADD:
+        return old + arg;
+    case PF__ATOMIC_OP_SUB:
+        return old - arg;
+    case PF__ATOMIC_OP_OR:
+        return old | arg;
+    case PF__ATOMIC_OP_XOR:
+        return old ^ arg;
+    default:
+        return old & arg;
     }
 }
 
@@ -338,9 +397,7 @@ void *pf__atomic_fetch_locked(
 
 /* ---- Backend of <cpolyfill/atomic.h> ----------------------------------- */
 
-PF_API bool pf__atomic_is_lock_free(size_t size) {
-    return native(size);
-}
+PF_API bool pf__atomic_is_lock_free(size_t size) { return native(size); }
 
 PF_API void *pf__atomic_load(const volatile void *obj, size_t size, void *ret) {
     if (!native(size))
@@ -357,8 +414,7 @@ PF_API void *pf__atomic_exchange(
         return pf__atomic_exchange_locked(obj, size, val, ret);
     v = get_n(val, size);
     old = raw_load(obj, size);
-    while (!raw_cas(obj, size, &old, v)) {
-    }
+    while (!raw_cas(obj, size, &old, v)) { }
     put_n(ret, size, old);
     return ret;
 }
@@ -391,8 +447,7 @@ PF_API void *pf__atomic_fetch(
     if (!native(size))
         return pf__atomic_fetch_locked(obj, size, op, arg, ret);
     old = raw_load(obj, size);
-    while (!raw_cas(obj, size, &old, apply(op, old, arg))) {
-    }
+    while (!raw_cas(obj, size, &old, apply(op, old, arg))) { }
     put_n(ret, size, old);
     return ret;
 }
@@ -400,7 +455,8 @@ PF_API void *pf__atomic_fetch(
 /* ---- Waiting ----------------------------------------------------------- */
 
 static int valid_timeout(const struct timespec *t) {
-    return !t || (t->tv_sec >= 0 && t->tv_nsec >= 0 && t->tv_nsec < 1000000000L);
+    return !t
+        || (t->tv_sec >= 0 && t->tv_nsec >= 0 && t->tv_nsec < 1000000000L);
 }
 
 static uint32_t load32(const volatile void *addr) {
@@ -460,8 +516,9 @@ int pf__atomic_wait_fallback(
     b = bucket_of(addr);
     pf_mtx_lock(&buckets[b].mtx);
     if (load32(addr) == expected) {
-        rc = timeout ? pf_cnd_timedwait(&buckets[b].cnd, &buckets[b].mtx, &deadline)
-                     : pf_cnd_wait(&buckets[b].cnd, &buckets[b].mtx);
+        rc = timeout
+            ? pf_cnd_timedwait(&buckets[b].cnd, &buckets[b].mtx, &deadline)
+            : pf_cnd_wait(&buckets[b].cnd, &buckets[b].mtx);
     }
     pf_mtx_unlock(&buckets[b].mtx);
     return rc == pf_thrd_timedout ? PF_ETIMEDOUT : 0;
@@ -493,12 +550,26 @@ PF_API int pf_atomic_wait(
     #if defined(SYS_futex_time64)
     /* 32-bit systems with a 64-bit time_t need the time64 call. */
     if (sizeof(time_t) > sizeof(long))
-        rc = syscall(SYS_futex_time64, (void *)addr, FUTEX_WAIT_PRIVATE,
-                     expected, timeout, NULL, 0);
+        rc = syscall(
+            SYS_futex_time64,
+            (void *)addr,
+            FUTEX_WAIT_PRIVATE,
+            expected,
+            timeout,
+            NULL,
+            0
+        );
     else
     #endif
-        rc = syscall(SYS_futex, (void *)addr, FUTEX_WAIT_PRIVATE, expected,
-                     timeout, NULL, 0);
+        rc = syscall(
+            SYS_futex,
+            (void *)addr,
+            FUTEX_WAIT_PRIVATE,
+            expected,
+            timeout,
+            NULL,
+            0
+        );
     if (rc == 0 || errno == EAGAIN || errno == EINTR)
         return 0;
     return errno == ETIMEDOUT ? PF_ETIMEDOUT : pf_error_from_errno(errno);
@@ -511,13 +582,14 @@ PF_API int pf_atomic_wait(
         return 0;
     if (timeout) {
         uint64_t t = (uint64_t)timeout->tv_sec * 1000000u
-                   + ((uint64_t)timeout->tv_nsec + 999u) / 1000u;
+            + ((uint64_t)timeout->tv_nsec + 999u) / 1000u;
         if (t == 0)
             return PF_ETIMEDOUT;
         us = t > UINT32_MAX ? UINT32_MAX : (uint32_t)t; /* 0 is forever */
     }
-    rc = __ulock_wait(UL_COMPARE_AND_WAIT | ULF_NO_ERRNO, (void *)addr,
-                      expected, us);
+    rc = __ulock_wait(
+        UL_COMPARE_AND_WAIT | ULF_NO_ERRNO, (void *)addr, expected, us
+    );
     if (rc >= 0 || rc == -EINTR || rc == -EFAULT)
         return 0;
     return rc == -ETIMEDOUT ? PF_ETIMEDOUT : pf_error_from_errno(-rc);
@@ -533,11 +605,17 @@ PF_API int pf_atomic_wait(
         t._timeout = *timeout;
         t._flags = 0; /* relative */
         t._clockid = CLOCK_MONOTONIC;
-        rc = _umtx_op((void *)addr, UMTX_OP_WAIT_UINT_PRIVATE, expected,
-                      (void *)sizeof(t), &t);
+        rc = _umtx_op(
+            (void *)addr,
+            UMTX_OP_WAIT_UINT_PRIVATE,
+            expected,
+            (void *)sizeof(t),
+            &t
+        );
     } else {
-        rc = _umtx_op((void *)addr, UMTX_OP_WAIT_UINT_PRIVATE, expected,
-                      NULL, NULL);
+        rc = _umtx_op(
+            (void *)addr, UMTX_OP_WAIT_UINT_PRIVATE, expected, NULL, NULL
+        );
     }
     if (rc == 0 || errno == EINTR)
         return 0;
@@ -548,8 +626,13 @@ PF_API int pf_atomic_wait(
         return PF_EINVAL;
     if (load32(addr) != expected)
         return 0;
-    rc = futex((volatile uint32_t *)addr, FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
-               (int)expected, timeout, NULL);
+    rc = futex(
+        (volatile uint32_t *)addr,
+        FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
+        (int)expected,
+        timeout,
+        NULL
+    );
     if (rc == 0 || errno == EAGAIN || errno == EINTR)
         return 0;
     return errno == ETIMEDOUT ? PF_ETIMEDOUT : pf_error_from_errno(errno);
@@ -561,7 +644,7 @@ PF_API int pf_atomic_wait(
         return 0;
     if (timeout) {
         uint64_t t = (uint64_t)timeout->tv_sec * 1000u
-                   + ((uint64_t)timeout->tv_nsec + 999999u) / 1000000u;
+            + ((uint64_t)timeout->tv_nsec + 999999u) / 1000000u;
         ms = t >= INFINITE ? INFINITE - 1 : (DWORD)t;
     }
     if (WaitOnAddress((volatile VOID *)addr, &expected, sizeof(expected), ms))
@@ -576,16 +659,31 @@ static void wake(const volatile void *addr, bool all) {
     if (!addr)
         return;
 #if WAIT_FUTEX
-    syscall(SYS_futex, (void *)addr, FUTEX_WAKE_PRIVATE, all ? INT_MAX : 1,
-            NULL, NULL, 0);
+    syscall(
+        SYS_futex,
+        (void *)addr,
+        FUTEX_WAKE_PRIVATE,
+        all ? INT_MAX : 1,
+        NULL,
+        NULL,
+        0
+    );
 #elif WAIT_ULOCK
-    __ulock_wake(UL_COMPARE_AND_WAIT | ULF_NO_ERRNO | (all ? ULF_WAKE_ALL : 0),
-                 (void *)addr, 0);
+    __ulock_wake(
+        UL_COMPARE_AND_WAIT | ULF_NO_ERRNO | (all ? ULF_WAKE_ALL : 0),
+        (void *)addr,
+        0
+    );
 #elif WAIT_UMTX
     _umtx_op((void *)addr, UMTX_OP_WAKE_PRIVATE, all ? INT_MAX : 1, NULL, NULL);
 #elif WAIT_OPENBSD
-    futex((volatile uint32_t *)addr, FUTEX_WAKE | FUTEX_PRIVATE_FLAG,
-          all ? INT_MAX : 1, NULL, NULL);
+    futex(
+        (volatile uint32_t *)addr,
+        FUTEX_WAKE | FUTEX_PRIVATE_FLAG,
+        all ? INT_MAX : 1,
+        NULL,
+        NULL
+    );
 #elif WAIT_WINDOWS
     if (all)
         WakeByAddressAll((PVOID)addr);
@@ -596,10 +694,6 @@ static void wake(const volatile void *addr, bool all) {
 #endif
 }
 
-PF_API void pf_atomic_wake_one(const volatile void *addr) {
-    wake(addr, false);
-}
+PF_API void pf_atomic_wake_one(const volatile void *addr) { wake(addr, false); }
 
-PF_API void pf_atomic_wake_all(const volatile void *addr) {
-    wake(addr, true);
-}
+PF_API void pf_atomic_wake_all(const volatile void *addr) { wake(addr, true); }
